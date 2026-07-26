@@ -60,6 +60,7 @@ export default function DashboardPage() {
     month: "long",
     year: "numeric",
   });
+  
   return (
     <div className="space-y-6">
       <PageHeader title={`${t("dash.greeting")}, ${user.full_name.split(" ")[0]}`} subtitle={`${today} · ${t("dash.subtitle")}`}>
