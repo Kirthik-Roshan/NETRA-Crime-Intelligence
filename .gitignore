@@ -1,20 +1,7 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# next.js
-/.next/
-/out/
-next-env.d.ts
-
-# env
+node_modules/
 .env
-.env*.local
-node_modules
-.next
-
-# editor
-.vscode/*
-!.vscode/extensions.json
-.idea
+.next/
+dist/
+build/
+coverage/
+*.log
