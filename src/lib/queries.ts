@@ -37,8 +37,29 @@ export function crimeByType() {
 }
 
 export function firGeoPoints() {
-  return all<FirPoint>(
-    "SELECT id, fir_number, crime_type, district, severity, lat, lng, occurred_at FROM firs WHERE lat IS NOT NULL"
+  return all<{
+    id: number;
+    fir_number: string;
+    crime_type: string;
+    district: string;
+    severity: string;
+    lat: number;
+    lng: number;
+    occurred_at: string;
+  }>(
+    `SELECT
+        id,
+        fir_number,
+        crime_type,
+        district,
+        severity,
+        lat,
+        lng,
+        occurred_at
+     FROM firs
+     WHERE lat IS NOT NULL
+     ORDER BY occurred_at DESC
+     LIMIT 500`
   );
 }
 
