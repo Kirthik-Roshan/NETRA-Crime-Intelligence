@@ -37,22 +37,32 @@ export function crimeByType() {
 }
 
 export function firGeoPoints() {
-    return all(
-        `SELECT
-            id,
-            fir_number,
-            crime_type,
-            district,
-            severity,
-            lat,
-            lng,
-            occurred_at
-         FROM firs
-         WHERE lat IS NOT NULL
-         ORDER BY occurred_at DESC
-         LIMIT 500`
-    );
+  return all<{
+    id: number;
+    fir_number: string;
+    crime_type: string;
+    district: string;
+    severity: string;
+    lat: number;
+    lng: number;
+    occurred_at: string;
+  }>(
+    `SELECT
+        id,
+        fir_number,
+        crime_type,
+        district,
+        severity,
+        lat,
+        lng,
+        occurred_at
+     FROM firs
+     WHERE lat IS NOT NULL
+     ORDER BY occurred_at DESC
+     LIMIT 500`
+  );
 }
+
 /** District-level aggregates (centroid + count + dominant crime) for the district heat view. */
 export function districtAggregates() {
   return all<{ district: string; cases: number; lat: number; lng: number; top_crime: string }>(
