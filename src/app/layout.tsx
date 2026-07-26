@@ -1,0 +1,29 @@
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
+
+// Self-hosted fonts — no external font CDN (Google Fonts) is contacted at
+// build or runtime. Variable woff2 files ship in the repo under app/fonts.
+const sans = localFont({ src: "./fonts/manrope.woff2", variable: "--font-sans", display: "swap", weight: "400 700" });
+const display = localFont({ src: "./fonts/space-grotesk.woff2", variable: "--font-display", display: "swap", weight: "400 700" });
+const mono = localFont({ src: "./fonts/jetbrains-mono.woff2", variable: "--font-mono", display: "swap", weight: "400 700" });
+
+export const metadata: Metadata = {
+  title: "NETRA — Crime Intelligence Platform | KSP",
+  description:
+    "AI-powered Crime Investigation Intelligence Platform for the Karnataka State Police. Natural-language investigation, criminal network analysis, and explainable predictive intelligence.",
+};
+
+// Set the theme before first paint to avoid a flash of the wrong palette.
+const themeInit = `(function(){try{var p=JSON.parse(localStorage.getItem('netra-prefs'));var t=p&&p.state&&p.state.theme;document.documentElement.setAttribute('data-theme',t||'midnight');}catch(e){document.documentElement.setAttribute('data-theme','midnight');}})();`;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" data-theme="midnight" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}

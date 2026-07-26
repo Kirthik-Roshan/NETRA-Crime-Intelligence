@@ -1,0 +1,23 @@
+{
+  "$comment": "NETRA — Zoho Catalyst project manifest. Run `catalyst init` on your machine to bind this to YOUR Catalyst project (it will inject your projectId/environment). The components below map to the platform services NETRA uses. See DEPLOY.md.",
+  "project_name": "netra",
+  "components": {
+    "appsail": {
+      "$comment": "The Next.js app runs on AppSail (managed Node runtime).",
+      "config": "app-config.json"
+    },
+    "functions": {
+      "$comment": "Serverless functions. ai_quickml proxies the production LLM (Catalyst QuickML) so the frontend never talks to a model directly.",
+      "dir": "functions"
+    }
+  },
+  "services": {
+    "data_store": "Primary relational store (mirrors the SQLite schema in src/lib/schema.sql)",
+    "stratus": "Object storage for evidence files / exported PDFs",
+    "cache": "Query + semantic response cache",
+    "authentication": "Officer login / RBAC",
+    "quickml": "LLM serving (VL-Qwen3.6-35B-A3B) + RAG + embeddings — the only AI backend",
+    "zia": "OCR / Speech-to-Text / Translation (Kannada) via Zia Services",
+    "api_gateway": "Routing, throttling and auth in front of Functions"
+  }
+}

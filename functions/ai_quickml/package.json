@@ -1,0 +1,7 @@
+{
+  "name": "ai_quickml",
+  "version": "1.0.0",
+  "description": "NETRA production LLM proxy → Catalyst QuickML",
+  "main": "index.js",
+  "dependencies": {}
+}

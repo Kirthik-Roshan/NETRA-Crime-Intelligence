@@ -1,0 +1,11 @@
+{
+  "deployment": {
+    "name": "ai_quickml",
+    "stack": "node18"
+  },
+  "execution": {
+    "main": "index.js"
+  },
+  "type": "advancedio",
+  "$comment": "Advanced I/O function: full HTTP control. Proxies NL queries to Catalyst QuickML LLM serving in production so the browser never talks to a model directly. Front this with the Catalyst API Gateway for throttling + auth."
+}

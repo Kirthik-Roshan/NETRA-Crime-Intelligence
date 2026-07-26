@@ -1,0 +1,534 @@
+"use client";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  Sparkles, Send, Database, ChevronDown, ShieldCheck, Lightbulb, User, CornerDownLeft, Loader2,
+  Mic, MicOff, Volume2, FileDown, History, Cpu, Route,
+  UserSearch, Network as NetworkIcon, Flame, GitCompare, Users,
+} from "lucide-react";
+import type { AiInsight } from "@/lib/types";
+import { TrendLine, BarSeries } from "@/components/charts";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/useAppStore";
+import { useT } from "@/lib/i18n-client";
+
+interface Turn {
+  id: number;
+  q: string;
+  insight?: AiInsight;
+  loading?: boolean;
+}
+
+const EXAMPLES = [
+  "Search FIR 104430006202600001",
+  "Look up phone 98xxxxxxxx",
+  "Details of criminal Ravi Shetty",
+  "Which suspects appear across multiple districts?",
+  "Show burglary cases involving repeat offenders near Mysuru in the last six months",
+  "High-risk criminals",
+  "ಮೈಸೂರಿನಲ್ಲಿ ಕಳ್ಳತನ ಪ್ರಕರಣಗಳು", // "theft cases in Mysuru" (Kannada)
+  "ಬೆಂಗಳೂರಿನಲ್ಲಿ ಪುನರಾವರ್ತಿತ ಅಪರಾಧಿಗಳು", // "repeat offenders in Bengaluru"
+];
+
+const SOURCE_LABEL: Record<string, string> = {
+  "template-sql": "Verified SQL",
+  llm: "Catalyst QuickML",
+  cache: "Cache",
+  "demo-engine": "Keyword search",
+  semantic: "Semantic search",
+  lookup: "Database dossier",
+};
+
+// Option A — task-specific one-click investigative prompts. Each maps to a
+// query the local engine answers directly (no external LLM ever).
+const TASKS: { icon: typeof UserSearch; label: string; q: string }[] = [
+  { icon: UserSearch, label: "Repeat offenders", q: "Which suspects are repeat offenders?" },
+  { icon: NetworkIcon, label: "Link analysis", q: "Which suspects appear across multiple districts?" },
+  { icon: Flame, label: "Hotspot scan", q: "Which districts are crime hotspots?" },
+  { icon: GitCompare, label: "Similar M.O.", q: "Find cases with similar modus operandi to vehicle theft" },
+  { icon: Users, label: "Gang detection", q: "Show organized gangs and their size" },
+];
+
+// Friendly label for the engine that handled a query (option C — smart routing).
+const ROUTE_LABEL: Record<string, string> = {
+  "rule-engine": "rule-engine (local · instant)",
+  "tfidf-embeddings": "semantic index (local)",
+  "db-lookup": "database lookup (local)",
+  fallback: "keyword fallback (local)",
+};
+function routeLabel(model: string): string {
+  if (ROUTE_LABEL[model]) return ROUTE_LABEL[model];
+  if (/rag/i.test(model)) return "Catalyst QuickML · RAG";
+  return `Catalyst QuickML · ${model}`;
+}
+
+/* Minimal typings for the Web Speech API (not in TS dom lib everywhere). */
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as Record<string, unknown>;
+  return (w.SpeechRecognition || w.webkitSpeechRecognition) as (new () => SpeechRecognitionLike) | null;
+}
+
+// Read a recorded audio Blob as a bare base64 string (no data: prefix).
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(String(r.result).split(",").pop() || "");
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+export function AssistantClient() {
+  const params = useSearchParams();
+  const lang = useAppStore((s) => s.lang);
+  const t = useT();
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [input, setInput] = useState("");
+  const [listening, setListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const catalystOnRef = useRef(false);
+  const turnsRef = useRef<Turn[]>([]);
+  turnsRef.current = turns;
+  const idRef = useRef(0);
+
+  useEffect(() => {
+    // Voice is available via the browser dictation API OR the Catalyst Zia path.
+    const browserStt = !!getSpeechRecognition();
+    const canRecord = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
+    fetch("/api/ai/status")
+      .then((r) => r.json())
+      .then((j) => {
+        catalystOnRef.current = !!j.online;
+        setVoiceSupported(browserStt || (!!j.online && canRecord));
+      })
+      .catch(() => setVoiceSupported(browserStt));
+  }, []);
+
+  const ask = useCallback(async (q: string, viaVoice = false) => {
+    if (!q.trim()) return;
+    setInput("");
+    // Conversation memory: send previous user turns so follow-ups
+    // ("what about vehicle theft?") resolve against earlier context.
+    const history = turnsRef.current.map((t) => t.q).slice(-8);
+    // Stable per-turn id so a response always updates its own turn, even if the
+    // user fires another question while this one is still loading.
+    const id = ++idRef.current;
+    setTurns((t) => [...t, { id, q, loading: true }]);
+    try {
+      const res = await fetch("/api/assistant/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q, history }),
+      });
+      const insight = (await res.json()) as AiInsight;
+      setTurns((t) => t.map((x) => (x.id === id ? { id, q, insight } : x)));
+      if (viaVoice) {
+        fetch("/api/audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "VOICE_QUERY", detail: q.slice(0, 120) }),
+        }).catch(() => {});
+      }
+    } catch {
+      setTurns((t) => t.map((x) => (x.id === id ? { id, q, insight: undefined } : x)));
+    }
+  }, []);
+
+  // Browser dictation (Web Speech API) — the offline dev fallback.
+  const startWebSpeech = useCallback(() => {
+    const SR = getSpeechRecognition();
+    if (!SR) { setListening(false); return; }
+    const rec = new SR();
+    rec.lang = lang === "kn" ? "kn-IN" : "en-IN";
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = (e) => {
+      const results = Array.from(e.results as ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>);
+      const transcript = results.map((r) => r[0]?.transcript ?? "").join(" ").trim();
+      setInput(transcript);
+      const last = results[results.length - 1];
+      if (last?.isFinal && transcript) {
+        setListening(false);
+        ask(transcript, true);
+      }
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recRef.current = rec;
+    setListening(true);
+    rec.start();
+  }, [lang, ask]);
+
+  // Voice input — Catalyst Zia Speech-to-Text in production (records mic audio
+  // and transcribes server-side via Zia); browser dictation as offline fallback.
+  const toggleMic = useCallback(async () => {
+    if (listening) {
+      if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
+      else recRef.current?.stop();
+      return;
+    }
+    const canRecord = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
+    // Prefer Catalyst Zia when configured; press mic to start, press again to stop.
+    if (catalystOnRef.current && canRecord) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mr = new MediaRecorder(stream);
+        const chunks: Blob[] = [];
+        mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+        mr.onstop = async () => {
+          stream.getTracks().forEach((tk) => tk.stop());
+          setListening(false);
+          try {
+            const b64 = await blobToBase64(new Blob(chunks, { type: mr.mimeType || "audio/webm" }));
+            const r = await fetch("/api/ai/transcribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ audio: b64, language: lang === "kn" ? "kn-IN" : "en-IN" }),
+            });
+            const j = (await r.json()) as { text?: string };
+            if (j.text) { setInput(j.text); ask(j.text, true); return; }
+          } catch { /* fall through to browser dictation */ }
+          startWebSpeech();
+        };
+        mediaRecRef.current = mr;
+        setListening(true);
+        mr.start();
+        return;
+      } catch {
+        // mic permission denied or unavailable → browser dictation
+      }
+    }
+    startWebSpeech();
+  }, [listening, lang, ask, startWebSpeech]);
+
+  // Conversation → PDF (print pipeline; audit-logged).
+  const exportPdf = useCallback(() => {
+    fetch("/api/audit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "CONVERSATION_EXPORTED", detail: `${turnsRef.current.length} turns` }),
+    }).catch(() => {});
+    window.print();
+  }, []);
+
+  // Auto-run a query passed via ?q= (from global search)
+  useEffect(() => {
+    const q = params.get("q");
+    if (q) ask(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [turns]);
+
+  const empty = turns.length === 0;
+
+  return (
+    <div className="flex h-[calc(100vh-8.5rem)] flex-col print:block print:h-auto">
+      {/* Header */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/10 print:hidden">
+          <Sparkles className="h-5 w-5 text-accent" />
+        </div>
+        <div>
+          <h1 className="font-display text-xl font-bold">{t("assistant.title")}</h1>
+          <p className="text-sm text-muted print:hidden">{t("assistant.subtitle")}</p>
+          <p className="hidden text-sm text-muted print:block" suppressHydrationWarning>
+            NETRA — Conversation transcript · Karnataka State Police (demo)
+          </p>
+        </div>
+        {!empty && (
+          <button onClick={exportPdf} className="btn-ghost ml-auto print:hidden" title="Export conversation as PDF">
+            <FileDown className="h-4 w-4" /> {t("assistant.export")}
+          </button>
+        )}
+      </div>
+
+      {/* Conversation */}
+      <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto pr-1 print:overflow-visible">
+        {empty && (
+          <div className="animate-fade-in">
+            <div className="card panel-pad">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Lightbulb className="h-4 w-4 text-accent" /> {t("assistant.try")}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {EXAMPLES.map((e) => (
+                  <button key={e} onClick={() => ask(e)} className="chip max-w-full text-left hover:border-accent/50 hover:text-fg">
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-elevated p-3 text-xs text-muted">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                NETRA never sends raw records to a black box. Queries run through intent detection → permission checks →
+                validated SQL → evidence verification → audit log. The officer stays in command.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {turns.map((t) => (
+          <div key={t.id} className="space-y-3">
+            {/* user */}
+            <div className="flex items-start justify-end gap-2">
+              <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-accent/10 px-4 py-2.5 text-sm text-fg">{t.q}</div>
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-elevated">
+                <User className="h-3.5 w-3.5 text-muted" />
+              </div>
+            </div>
+            {/* assistant */}
+            <div className="flex items-start gap-2">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent/10">
+                <Sparkles className="h-3.5 w-3.5 text-accent" />
+              </div>
+              <div className="min-w-0 flex-1">
+                {t.loading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Reasoning over crime records…
+                  </div>
+                ) : t.insight ? (
+                  <InsightCard insight={t.insight} onAlt={ask} lang={lang} />
+                ) : (
+                  <div className="text-sm text-danger">Something went wrong. Please try again.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Option A — one-click investigative tasks (all answered by the local engine) */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 print:hidden">
+        <span className="flex items-center gap-1 text-[11px] text-muted"><Route className="h-3 w-3" /> Quick tasks:</span>
+        {TASKS.map((task) => (
+          <button
+            key={task.label}
+            onClick={() => ask(task.q)}
+            className="chip text-[11px] hover:border-accent/50 hover:text-fg"
+            title={task.q}
+          >
+            <task.icon className="h-3 w-3 text-accent" /> {task.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Composer */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          ask(input);
+        }}
+        className="mt-3 flex items-center gap-2 print:hidden"
+      >
+        <div className="relative flex-1">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={listening ? "Listening… speak now" : t("assistant.placeholder")}
+            className={cn("input h-12 pr-24", listening && "border-accent/60")}
+          />
+          <span className="kbd pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+            <CornerDownLeft className="inline h-3 w-3" /> enter
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={toggleMic}
+          disabled={!voiceSupported}
+          className={cn(
+            "btn-ghost h-12 w-12 shrink-0 justify-center px-0",
+            listening && "border-accent/60 text-accent",
+            !voiceSupported && "opacity-40"
+          )}
+          title={
+            !voiceSupported
+              ? "Voice input needs Chrome or Edge (Web Speech API). Catalyst Zia Speech powers it in production."
+              : listening
+              ? "Stop listening"
+              : `Voice input (${lang === "kn" ? "ಕನ್ನಡ" : "English"})`
+          }
+          aria-label="Voice input"
+        >
+          {listening ? <MicOff className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
+        </button>
+        <button className="btn-accent h-12 px-5" disabled={!input.trim()}>
+          <Send className="h-4 w-4" />
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: string) => void; lang: string }) {
+  const [showSql, setShowSql] = useState(false);
+  const [showData, setShowData] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const e = insight.explain;
+  const pct = Math.round(e.confidence * 100);
+  const confTone = pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-muted";
+
+  const speak = useCallback(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(insight.answer);
+    u.lang = lang === "kn" ? "kn-IN" : "en-IN";
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+    setSpeaking(true);
+  }, [insight.answer, lang, speaking]);
+
+  return (
+    <div className="card panel-pad animate-fade-in space-y-4">
+      <div className="flex items-start gap-2">
+        <p className="flex-1 text-[15px] leading-relaxed text-fg">{insight.answer}</p>
+        <button
+          onClick={speak}
+          className={cn("shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-elevated hover:text-fg print:hidden", speaking && "text-accent")}
+          title={speaking ? "Stop reading" : "Read answer aloud"}
+          aria-label="Read answer aloud"
+        >
+          <Volume2 className={cn("h-4 w-4", speaking && "animate-pulse")} />
+        </button>
+      </div>
+
+      {/* meta */}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="chip">
+          <Database className="h-3 w-3 text-accent" /> {SOURCE_LABEL[e.source] || e.source}
+        </span>
+        {/* Option C — smart routing: which local engine handled this query */}
+        <span className="chip font-mono text-accent" title="Query was automatically routed to the best local engine — no external AI is ever used">
+          <Route className="h-3 w-3" /> routed to {routeLabel(e.ai_model)}
+        </span>
+        <span className={cn("chip font-mono", confTone)}>confidence {pct}%</span>
+        <span className="chip font-mono">{e.records_used} records</span>
+        <span className="chip font-mono">{e.processing_ms}ms</span>
+        <span className="chip font-mono text-muted"><Cpu className="h-3 w-3" /> on-device</span>
+      </div>
+
+      {/* conversation-memory context */}
+      {e.context_used && e.context_used.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="flex items-center gap-1 text-muted"><History className="h-3 w-3" /> Context:</span>
+          {e.context_used.map((c, i) => (
+            <span key={i} className="chip text-[10px] text-info">{c}</span>
+          ))}
+        </div>
+      )}
+
+      {/* chart */}
+      {insight.chart && insight.rows && insight.rows.length > 1 && (
+        <div className="rounded-lg border border-border bg-elevated p-3">
+          {insight.chart.kind === "line" ? (
+            <TrendLine data={insight.rows} x={insight.chart.x} y={insight.chart.y} height={200} />
+          ) : (
+            <BarSeries data={insight.rows.slice(0, 12)} x={insight.chart.x} y={insight.chart.y} height={220} />
+          )}
+        </div>
+      )}
+
+      {/* explainability */}
+      <div className="rounded-lg border border-border bg-elevated p-3 text-sm">
+        <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-accent">
+          <ShieldCheck className="h-3.5 w-3.5" /> Why this answer
+        </div>
+        <p className="text-muted">{e.reasoning}</p>
+        {e.evidence.length > 0 && (
+          <div className="mt-2">
+            <span className="stat-label">Records used</span>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {e.evidence.map((ev, i) => (
+                <span key={i} className="chip font-mono text-[10px]">{ev}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="mt-2 text-[11px] text-muted">Audit ID · <span className="font-mono">{e.audit_id}</span></div>
+      </div>
+
+      {/* data table */}
+      {insight.rows && insight.rows.length > 0 && (
+        <div className="print:hidden">
+          <button onClick={() => setShowData((s) => !s)} className="flex items-center gap-1 text-xs font-medium text-subtle hover:text-fg">
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showData && "rotate-180")} />
+            {showData ? "Hide" : "Show"} data ({insight.rows.length} rows)
+          </button>
+          {showData && (
+            <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-border">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 bg-elevated">
+                  <tr>
+                    {insight.columns?.map((c) => (
+                      <th key={c} className="whitespace-nowrap px-3 py-2 font-medium text-muted">{c}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {insight.rows.slice(0, 50).map((r, i) => (
+                    <tr key={i} className="border-t border-border/50">
+                      {insight.columns?.map((c) => (
+                        <td key={c} className="whitespace-nowrap px-3 py-1.5 font-mono text-subtle">{String(r[c] ?? "")}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SQL */}
+      {insight.sql && (
+        <div className="print:hidden">
+          <button onClick={() => setShowSql((s) => !s)} className="flex items-center gap-1 text-xs font-medium text-subtle hover:text-fg">
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showSql && "rotate-180")} />
+            {showSql ? "Hide" : "Show"} generated SQL
+          </button>
+          {showSql && (
+            <pre className="mt-2 overflow-x-auto rounded-lg border border-border bg-bg p-3 font-mono text-[11px] leading-relaxed text-subtle">
+              {insight.sql}
+            </pre>
+          )}
+        </div>
+      )}
+
+      {/* alternatives */}
+      {e.alternatives.length > 0 && (
+        <div className="print:hidden">
+          <span className="stat-label">Follow-up</span>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {e.alternatives.map((a, i) => (
+              <button key={i} onClick={() => onAlt(a)} className="chip hover:border-accent/50 hover:text-fg">
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

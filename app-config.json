@@ -1,0 +1,19 @@
+{
+  "$comment": "Catalyst AppSail configuration for the NETRA Next.js app (managed Node runtime). Adjust `name` / `stack` to match your Catalyst environment after `catalyst init`.",
+  "name": "netra-web",
+  "stack": "node18",
+  "type": "web",
+  "command": "npm run start",
+  "buildCommand": "npm install && npm run build",
+  "port": 3000,
+  "env": {
+    "NODE_ENV": "production",
+    "NETRA_SESSION_SECRET": "set-in-catalyst-console",
+    "CATALYST_DC_BASE": "https://api.catalyst.zoho.in",
+    "CATALYST_ORG": "set-in-catalyst-console",
+    "CATALYST_PROJECT_ID": "set-in-catalyst-console",
+    "CATALYST_QUICKML_TOKEN": "set-in-catalyst-console",
+    "CATALYST_LLM_MODEL": "VL-Qwen3.6-35B-A3B",
+    "CATALYST_LLM_PATH": "vlm/chat"
+  }
+}

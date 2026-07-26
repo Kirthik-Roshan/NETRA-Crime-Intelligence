@@ -1,0 +1,376 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   NETRA design system — CSS-variable driven dynamic themes.
+   Values are space-separated RGB triplets so Tailwind can do
+   rgb(var(--x) / <alpha>). Switching [data-theme] re-skins live.
+   ============================================================ */
+
+/* ── AXIOM theme engine — 5 signature themes. --glow drives the ambient
+   background lighting so each theme feels like a different OS. ── */
+
+/* Midnight Sapphire — deep, calm, focused (default) */
+:root,
+[data-theme="midnight"] {
+  --bg: 7 10 18;
+  --surface: 14 19 32;
+  --elevated: 20 27 44;
+  --border: 34 44 68;
+  --muted: 138 150 176;
+  --subtle: 184 196 218;
+  --fg: 233 239 248;
+  --accent: 56 160 255;
+  --accent-fg: 3 12 26;
+  --glow: 56 160 255;
+  --warning: 245 158 11;
+  --danger: 239 68 68;
+  --success: 16 185 129;
+  --info: 56 189 248;
+}
+
+/* Arctic Aurora — futuristic, cool, AI-driven */
+[data-theme="nocturne"] {
+  --bg: 10 9 22;
+  --surface: 19 17 36;
+  --elevated: 26 23 49;
+  --border: 44 38 72;
+  --muted: 150 144 185;
+  --subtle: 196 190 224;
+  --fg: 237 235 250;
+  --accent: 168 130 255;
+  --accent-fg: 245 243 255;
+  --glow: 140 120 255;
+  --warning: 245 158 11;
+  --danger: 244 63 94;
+  --success: 45 212 191;
+  --info: 96 165 250;
+}
+
+/* Sunset Ember — warm, professional, powerful */
+[data-theme="carbon"] {
+  --bg: 16 11 8;
+  --surface: 26 18 13;
+  --elevated: 34 24 17;
+  --border: 58 42 30;
+  --muted: 176 152 134;
+  --subtle: 216 198 182;
+  --fg: 246 238 232;
+  --accent: 249 115 22;
+  --accent-fg: 26 12 2;
+  --glow: 249 115 22;
+  --warning: 234 179 8;
+  --danger: 239 68 68;
+  --success: 34 197 94;
+  --info: 56 189 248;
+}
+
+/* Forest Sage — natural, tactical, calm */
+[data-theme="slate"] {
+  --bg: 8 15 12;
+  --surface: 14 24 19;
+  --elevated: 19 32 26;
+  --border: 34 54 44;
+  --muted: 138 165 150;
+  --subtle: 184 208 196;
+  --fg: 232 244 238;
+  --accent: 52 211 153;
+  --accent-fg: 4 24 16;
+  --glow: 52 211 153;
+  --warning: 245 158 11;
+  --danger: 239 68 68;
+  --success: 34 197 94;
+  --info: 96 165 250;
+}
+
+/* Crimson Command — alert, intense, critical */
+[data-theme="crimson"] {
+  --bg: 16 8 10;
+  --surface: 26 14 16;
+  --elevated: 34 18 21;
+  --border: 58 32 36;
+  --muted: 182 148 152;
+  --subtle: 220 194 197;
+  --fg: 246 234 235;
+  --accent: 244 63 94;
+  --accent-fg: 26 4 8;
+  --glow: 244 63 94;
+  --warning: 245 158 11;
+  --danger: 239 68 68;
+  --success: 34 197 94;
+  --info: 96 165 250;
+}
+
+[data-theme="daylight"] {
+  --bg: 245 247 250;
+  --surface: 255 255 255;
+  --elevated: 255 255 255;
+  --border: 226 232 240;
+  --muted: 91 100 114;
+  --subtle: 51 65 85;
+  --fg: 15 23 42;
+  --accent: 13 148 136;
+  --accent-fg: 255 255 255;
+  --glow: 13 148 136;
+  --warning: 217 119 6;
+  --danger: 220 38 38;
+  --success: 5 150 105;
+  --info: 37 99 235;
+}
+
+/* Warm light theme — recedes into warm paper, terracotta accent. */
+[data-theme="sandstone"] {
+  --bg: 245 239 230;        /* #F5EFE6 warm paper */
+  --surface: 250 246 240;
+  --elevated: 255 252 247;
+  --border: 224 214 200;
+  --muted: 140 122 102;
+  --subtle: 74 62 50;
+  --fg: 41 34 28;
+  --accent: 196 112 59;     /* #C4703B terracotta */
+  --accent-fg: 255 255 255;
+  --glow: 196 112 59;
+  --warning: 202 138 4;
+  --danger: 190 52 42;
+  --success: 90 128 72;
+  --info: 96 112 150;
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+/* ── Ambient cinematic background (theme-reactive glow blobs) ── */
+.ambient-blob {
+  position: absolute;
+  width: 46vw;
+  height: 46vw;
+  border-radius: 9999px;
+  filter: blur(30px);
+  will-change: transform;
+  animation: ambient-drift 26s ease-in-out infinite alternate;
+}
+@keyframes ambient-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(4vw, 3vh, 0) scale(1.12); }
+  100% { transform: translate3d(-3vw, -2vh, 0) scale(0.95); }
+}
+:root[data-motion="reduced"] .ambient-blob { animation: none; }
+
+/* Network graph — edges glow when hovered, and read as clickable. */
+.react-flow__edge { cursor: pointer; }
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: rgb(var(--accent)) !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 6px rgb(var(--accent) / 0.85));
+}
+.react-flow__edge:hover .react-flow__edge-text { fill: rgb(var(--fg)) !important; font-weight: 600; }
+.react-flow__node:hover { filter: drop-shadow(0 0 8px rgb(var(--accent) / 0.5)); }
+
+html {
+  color-scheme: dark;
+}
+[data-theme="daylight"],
+[data-theme="sandstone"] {
+  color-scheme: light;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Left-aligned, breathing layouts per the design brief. */
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border));
+  border-radius: 999px;
+  border: 2px solid rgb(var(--bg));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--muted) / 0.5);
+}
+
+/* ── Reusable component classes ────────────────────────────── */
+@layer components {
+  /* Premium dark glass — semi-transparent surface + blur + soft shadow +
+     a hairline top highlight so cards read as floating panes, not rectangles. */
+  .card {
+    @apply relative rounded-xl border shadow-card;
+    background: rgb(var(--surface) / 0.72);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    border-color: rgb(var(--border) / 0.7);
+    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.5);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .card-elevated {
+    @apply rounded-xl border;
+    background: rgb(var(--elevated) / 0.8);
+    backdrop-filter: blur(14px);
+    border-color: rgb(var(--border) / 0.7);
+  }
+  .glass {
+    background: rgb(var(--surface) / 0.6);
+    backdrop-filter: blur(16px) saturate(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.1);
+    border: 1px solid rgb(var(--border) / 0.6);
+  }
+  .panel-pad {
+    @apply p-5;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-elevated px-2.5 py-1 text-xs font-medium text-subtle;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-accent {
+    @apply btn bg-accent text-accent-fg hover:opacity-90;
+  }
+  .btn-ghost {
+    @apply btn border border-border bg-transparent text-subtle hover:bg-elevated hover:text-fg;
+  }
+  .input {
+    @apply w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-muted outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20 transition;
+  }
+  .stat-label {
+    @apply text-xs font-medium uppercase tracking-wider text-muted;
+  }
+  .kbd {
+    @apply rounded border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-muted;
+  }
+  /* Faded navigation — inactive rows recede into the background; only the
+     active row is legible, marked by a soft teal left-accent (no filled pill). */
+  .link-row {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted/60 transition-colors hover:text-fg;
+  }
+  .link-row-active {
+    @apply text-fg;
+    box-shadow: inset 2px 0 0 0 rgb(var(--accent));
+    background: linear-gradient(90deg, rgb(var(--accent) / 0.08), transparent 60%);
+  }
+  /* Skeleton shimmer for loading states */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-elevated;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--muted) / 0.08),
+      transparent
+    );
+    animation: shimmer 1.4s infinite;
+  }
+}
+
+/* ── Third-party overrides (React Flow + Leaflet) ──────────── */
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__edge-path {
+  stroke: rgb(var(--border));
+}
+.react-flow__controls button {
+  background: rgb(var(--elevated));
+  border-color: rgb(var(--border));
+  color: rgb(var(--fg));
+}
+.react-flow__controls button:hover {
+  background: rgb(var(--surface));
+}
+.leaflet-container {
+  background: rgb(var(--surface));
+  font-family: var(--font-sans);
+}
+.leaflet-bar,
+.leaflet-bar a {
+  background: rgb(var(--elevated));
+  color: rgb(var(--fg));
+  border-color: rgb(var(--border));
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: rgb(var(--elevated));
+  color: rgb(var(--fg));
+  box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.6);
+}
+
+/* Selection */
+::selection {
+  background: rgb(var(--accent) / 0.25);
+  color: rgb(var(--fg));
+}
+
+/* ── Print (PDF export of reports) ─────────────────────────── */
+/* User preference: reduce motion (Settings → Interface) */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* User preference: compact density (Settings → Interface) */
+:root[data-density="compact"] .panel-pad {
+  padding: 0.75rem !important;
+}
+:root[data-density="compact"] .card {
+  border-radius: 0.6rem;
+}
+
+@media print {
+  aside,
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    overflow: visible !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .card {
+    border-color: #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  /* Conversation transcript export: readable on white paper */
+  main, main * {
+    color: #111 !important;
+  }
+  main .card,
+  main .chip,
+  main [class*="bg-"] {
+    background: #fff !important;
+    border-color: #ddd !important;
+  }
+  main pre {
+    background: #f6f6f6 !important;
+  }
+}
