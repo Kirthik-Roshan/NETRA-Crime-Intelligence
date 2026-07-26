@@ -23,15 +23,33 @@ const ALERT_ICON: Record<string, typeof Flame> = {
 };
 
 export default function DashboardPage() {
-  const user = getSession()!;
-  const t = getT();
-  const stats = dashboardStats();
-  const trend = crimeTrend(12);
-  const byType = crimeByType();
-  const hotspots = districtHotspots();
-  const alerts = aiAlerts();
-  const activity = recentActivity(8);
-  const geo = firGeoPoints();
+  console.time("dashboardStats");
+const stats = dashboardStats();
+console.timeEnd("dashboardStats");
+
+console.time("crimeTrend");
+const trend = crimeTrend(12);
+console.timeEnd("crimeTrend");
+
+console.time("crimeByType");
+const byType = crimeByType();
+console.timeEnd("crimeByType");
+
+console.time("districtHotspots");
+const hotspots = districtHotspots();
+console.timeEnd("districtHotspots");
+
+console.time("aiAlerts");
+const alerts = aiAlerts();
+console.timeEnd("aiAlerts");
+
+console.time("recentActivity");
+const activity = recentActivity(8);
+console.timeEnd("recentActivity");
+
+console.time("firGeoPoints");
+const geo = firGeoPoints();
+console.timeEnd("firGeoPoints");
 
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
