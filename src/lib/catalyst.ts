@@ -17,6 +17,8 @@ const BASE = process.env.CATALYST_DC_BASE || "https://api.catalyst.zoho.in";
 const ORG = process.env.CATALYST_ORG || "60080085094";
 const PROJECT = process.env.CATALYST_PROJECT_ID || "56798000000013049";
 const TOKEN = process.env.CATALYST_QUICKML_TOKEN || "";
+console.log("TOKEN:", TOKEN);
+console.log("Catalyst configured:", catalystConfigured());
 
 export const LLM_MODEL = process.env.CATALYST_LLM_MODEL || "VL-Qwen3.6-35B-A3B";
 
