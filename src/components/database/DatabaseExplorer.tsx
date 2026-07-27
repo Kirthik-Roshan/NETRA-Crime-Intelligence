@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Table2, Database, Layers, Eye, ScrollText, Loader2, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useT } from "@/lib/i18n-client";
+import BAKED from "@/data/db-baked.json";
 
 interface TableInfo { name: string; count: number }
 interface Group { group: string; tables: TableInfo[] }
@@ -16,33 +17,28 @@ const GROUP_META: Record<string, { icon: typeof Table2; key: "database.official"
 
 export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const t = useT();
-  const [groups, setGroups] = useState<Group[]>([]);
+  const groups = (BAKED.groups as unknown as Group[]);
+  const allTables = BAKED.tables as unknown as Record<string, BakedTable>;
   const [active, setActive] = useState<string | null>(null);
   const [baked, setBaked] = useState<BakedTable | null>(null);
-  const [loading, setLoading] = useState(false);
+  const loading = false;
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState(""); // filters the table LIST (left)
   const [dataQuery, setDataQuery] = useState(""); // searches ROWS in the current table
   const LIMIT = 50;
 
-  // Load a table's baked JSON (static file served by Slate's CDN).
+  // All tables are bundled (served from _next/static) — Slate does not serve
+  // public/ files, so we read the baked module in memory instead of fetching.
   const load = useCallback((table: string) => {
     setActive(table);
-    setLoading(true);
     setOffset(0);
-    fetch(`/data/db/${encodeURIComponent(table)}.json`)
-      .then((r) => r.json())
-      .then((j) => setBaked(j))
-      .catch(() => setBaked({ table, columns: [], rows: [], total: 0 }))
-      .finally(() => setLoading(false));
+    setBaked(allTables[table] ?? { table, columns: [], rows: [], total: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    fetch("/data/db/_catalogue.json").then((r) => r.json()).then((j) => {
-      setGroups(j.groups || []);
-      const first = initialTable || j.groups?.[0]?.tables?.[0]?.name;
-      if (first) load(first);
-    });
+    const first = initialTable || groups?.[0]?.tables?.[0]?.name;
+    if (first) load(first);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

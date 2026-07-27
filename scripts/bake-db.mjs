@@ -1,21 +1,29 @@
 #!/usr/bin/env node
 /**
- * Bake the read-only database browser into static JSON for the Slate static
- * build. The old /api/database route can't exist in a static export, so at
- * build time we dump each whitelisted table to public/data/db/<table>.json and
- * a catalogue. The client DatabaseExplorer fetches these static files (which
- * Slate serves from its CDN) and does search + pagination in the browser.
+ * Bake the read-only database browser into ONE bundled JSON module for the
+ * Slate static build: src/data/db-baked.json.
  *
- * Pure SQL — no TypeScript imports needed. `users` is never exposed.
+ * Why a bundled module and not public/data/db/*.json: Slate serves the HTML
+ * routes and /_next/static/* (via CDN) but does NOT serve arbitrary public/
+ * files — even a committed public asset 404s through its OpenNext function. A
+ * file imported from src/ is bundled into the route's /_next/static chunk,
+ * which Slate does serve. The generated file is committed to the repo, so the
+ * build never depends on this script running on Slate.
+ *
+ * Regenerate after changing data/netra.db:  npm run bake
+ * Pure SQL — `users` is never exposed.
  */
 import Database from "better-sqlite3";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
 const DB = join(ROOT, "data", "netra.db");
-const OUT = join(ROOT, "public", "data", "db");
-const ROW_CAP = 1000; // every table in the demo DB is well under this
+const OUT_DIR = join(ROOT, "src", "data");
+const OUT = join(OUT_DIR, "db-baked.json");
+// Cap rows per table so the bundled chunk stays reasonable; the true row count
+// is still shown. The demo tables are small, so this rarely bites.
+const ROW_CAP = 500;
 
 const GROUPS = [
   {
@@ -49,26 +57,27 @@ const GROUPS = [
 ];
 
 const db = new Database(DB, { readonly: true });
-rmSync(OUT, { recursive: true, force: true });
-mkdirSync(OUT, { recursive: true });
+mkdirSync(OUT_DIR, { recursive: true });
 
-const catalogue = [];
+const groups = [];
+const tables = {};
 for (const g of GROUPS) {
-  const tables = [];
+  const list = [];
   for (const name of g.tables) {
-    let count = 0;
     try {
-      count = db.prepare(`SELECT COUNT(*) n FROM "${name}"`).get().n;
+      const count = db.prepare(`SELECT COUNT(*) n FROM "${name}"`).get().n;
       const rows = db.prepare(`SELECT * FROM "${name}" LIMIT ${ROW_CAP}`).all();
       const columns = rows.length ? Object.keys(rows[0]) : [];
-      writeFileSync(join(OUT, `${name}.json`), JSON.stringify({ table: name, columns, rows, total: count }));
+      tables[name] = { table: name, columns, rows, total: count };
+      list.push({ name, count });
     } catch (e) {
       console.warn(`[bake-db] skip ${name}: ${e.message}`);
-      continue;
     }
-    tables.push({ name, count });
   }
-  catalogue.push({ group: g.group, tables });
+  groups.push({ group: g.group, tables: list });
 }
-writeFileSync(join(OUT, "_catalogue.json"), JSON.stringify({ groups: catalogue }));
-console.log(`[bake-db] ✓ wrote ${catalogue.reduce((a, g) => a + g.tables.length, 0)} tables to public/data/db`);
+
+const payload = JSON.stringify({ groups, tables });
+writeFileSync(OUT, payload);
+const n = groups.reduce((a, g) => a + g.tables.length, 0);
+console.log(`[bake-db] ✓ ${n} tables → src/data/db-baked.json (${(payload.length / 1024) | 0} KB)`);

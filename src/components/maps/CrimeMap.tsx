@@ -4,6 +4,7 @@ import { MapContainer, GeoJSON, CircleMarker, Popup, Tooltip, useMap } from "rea
 import L, { LatLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
+import karnatakaGeo from "@/data/karnataka-districts.json";
 
 // Minimal local GeoJSON type (avoids a hard dependency on @types/geojson).
 type FeatureCollection = { type: "FeatureCollection"; features: Array<{ type: string; properties: Record<string, unknown>; geometry: unknown }> };
@@ -39,13 +40,8 @@ const KA_CENTER: [number, number] = [14.9, 75.9];
 
 /** Tile-free base map: Karnataka district outlines from a self-hosted GeoJSON. */
 function DistrictBaseLayer() {
-  const [geo, setGeo] = useState<FeatureCollection | null>(null);
-  useEffect(() => {
-    fetch("/karnataka-districts.geojson")
-      .then((r) => r.json())
-      .then(setGeo)
-      .catch(() => setGeo(null));
-  }, []);
+  // Bundled (served from _next/static) — Slate does not serve public/ files.
+  const geo = karnatakaGeo as unknown as FeatureCollection;
   if (!geo) return null;
   return (
     <GeoJSON

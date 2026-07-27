@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MapContainer, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import karnatakaGeo from "@/data/karnataka-districts.json";
 
 // Minimal local GeoJSON type (avoids a hard dependency on @types/geojson).
 type FeatureCollection = { type: "FeatureCollection"; features: Array<{ type: string; properties: Record<string, unknown>; geometry: unknown }> };
@@ -47,14 +48,8 @@ export default function KarnatakaGeoMap({
   onSelect?: (district: string) => void;
   height?: number;
 }) {
-  const [geo, setGeo] = useState<FeatureCollection | null>(null);
-
-  useEffect(() => {
-    fetch("/karnataka-districts.geojson")
-      .then((r) => r.json())
-      .then(setGeo)
-      .catch(() => setGeo(null));
-  }, []);
+  // Bundled (served from _next/static) — Slate does not serve public/ files.
+  const geo = karnatakaGeo as unknown as FeatureCollection;
 
   // Map GeoJSON district → our count (respecting aliases).
   const geoCount = useMemo(() => {

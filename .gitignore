@@ -5,3 +5,8 @@ dist/
 build/
 coverage/
 *.log
+
+# build output
+/.next/
+/out/
+tsconfig.tsbuildinfo
