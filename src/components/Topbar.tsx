@@ -5,9 +5,11 @@ import { ThemeSwitcher } from "./ThemeSwitcher";
 import { useAppStore } from "@/store/useAppStore";
 import type { SessionUser } from "@/lib/types";
 import { useT } from "@/lib/i18n-client";
+import { aiOnline as aiOnlineFn } from "@/lib/ai-client";
+import { logout as clearAuth } from "@/lib/auth-client";
 import { useState, useEffect } from "react";
 
-export function Topbar({ user }: { user: SessionUser }) {
+export function Topbar({ user: _user }: { user: SessionUser }) {
   const router = useRouter();
   const lang = useAppStore((s) => s.lang);
   const setLang = useAppStore((s) => s.setLang);
@@ -15,22 +17,17 @@ export function Topbar({ user }: { user: SessionUser }) {
   const [aiOnline, setAiOnline] = useState<boolean | null>(null);
 
   function toggleLang() {
+    // Client-side i18n only in the static build — no server components to refresh.
     setLang(lang === "en" ? "kn" : "en");
-    // Re-render server components so their cookie-based localization updates too.
-    router.refresh();
   }
 
   useEffect(() => {
-    fetch("/api/ai/status")
-      .then((r) => r.json())
-      .then((j) => setAiOnline(j.online))
-      .catch(() => setAiOnline(false));
+    setAiOnline(aiOnlineFn());
   }, []);
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+  function logout() {
+    clearAuth();
     router.push("/login");
-    router.refresh();
   }
 
   function goSearch(e: React.FormEvent<HTMLFormElement>) {

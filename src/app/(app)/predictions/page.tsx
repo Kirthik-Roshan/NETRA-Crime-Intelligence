@@ -2,13 +2,10 @@ import Link from "next/link";
 import {
   Radar, TrendingUp, TrendingDown, Minus, AlertTriangle, UserSearch, Sparkles, ShieldCheck,
 } from "lucide-react";
-import { getSession } from "@/lib/auth";
-import { audit } from "@/lib/audit";
 import { hotspotForecasts, repeatOffenderPredictions, escalationWarnings, crimeTypeForecasts } from "@/lib/predict";
 import { PageHeader, Badge, Avatar } from "@/components/ui";
 import { getT } from "@/lib/i18n-server";
 
-export const dynamic = "force-dynamic";
 
 const TREND_META = {
   rising: { icon: TrendingUp, cls: "text-danger", label: "Rising" },
@@ -17,13 +14,11 @@ const TREND_META = {
 } as const;
 
 export default function PredictionsPage() {
-  const user = getSession()!;
   const tPage = getT();
   const hotspots = hotspotForecasts();
   const repeat = repeatOffenderPredictions(12);
   const escalations = escalationWarnings();
   const types = crimeTypeForecasts();
-  audit({ user, action: "PREDICTION_GENERATED", entity: "predictions", ai_model: "rule-engine" });
 
   const risingDistricts = hotspots.filter((h) => h.trend === "rising");
   const risingTypes = types.filter((t) => t.trend === "rising");

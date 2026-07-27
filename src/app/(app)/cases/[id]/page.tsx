@@ -8,10 +8,11 @@ import { get, all } from "@/lib/db";
 import { similarFirs } from "@/lib/embeddings";
 import { PageHeader, Badge, StatusBadge, Avatar } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
-import { getSession } from "@/lib/auth";
-import { audit } from "@/lib/audit";
 
-export const dynamic = "force-dynamic";
+// Prerender every case page at build (static export — no runtime server).
+export function generateStaticParams() {
+  return all<{ id: number }>("SELECT id FROM cases").map((r) => ({ id: String(r.id) }));
+}
 
 export default function CaseWorkspace({ params }: { params: { id: string } }) {
   const id = Number(params.id);
@@ -20,7 +21,6 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
     [id]
   );
   if (!c) notFound();
-  audit({ user: getSession(), action: "CASE_VIEWED", entity: "case", entity_id: id, detail: c.case_number });
 
   const fir = get<{ id: number; fir_number: string; crime_type: string; ipc_sections: string; severity: string; modus: string; occurred_at: string; reported_at: string; description: string; status: string }>(
     "SELECT * FROM firs WHERE id=?", [c.fir_id]

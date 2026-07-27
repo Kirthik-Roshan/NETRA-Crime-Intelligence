@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/ui";
 import { MapsWorkspace } from "@/components/maps/MapsWorkspace";
 import { getT } from "@/lib/i18n-server";
 
-export const dynamic = "force-dynamic";
 
 export default function MapsPage() {
   const t = getT();

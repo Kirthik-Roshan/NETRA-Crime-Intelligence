@@ -1,16 +1,13 @@
-import "server-only";
-import { cookies } from "next/headers";
 import { t as translate, type TransKey } from "./i18n";
-import type { Lang } from "@/store/useAppStore";
 
-/** Read the active UI language from the `netra-lang` cookie (defaults to English). */
-export function getLang(): Lang {
-  const v = cookies().get("netra-lang")?.value;
-  return v === "kn" ? "kn" : "en";
-}
-
-/** Server-side translator bound to the request's language cookie. */
+/**
+ * Build-time translator for the static export.
+ *
+ * Server components render once at BUILD time, where there is no request and no
+ * language cookie, so their text is baked in English. Live language switching
+ * happens client-side via `useT()` (src/lib/i18n-client.ts), which re-renders
+ * the interactive components on toggle.
+ */
 export function getT(): (key: TransKey) => string {
-  const lang = getLang();
-  return (key: TransKey) => translate(lang, key);
+  return (key: TransKey) => translate("en", key);
 }

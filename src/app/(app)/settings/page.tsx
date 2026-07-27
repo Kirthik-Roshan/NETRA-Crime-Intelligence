@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useAppStore, THEMES } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
+import { aiOnline } from "@/lib/ai-client";
 
 export default function SettingsPage() {
   const t = useT();
@@ -20,7 +21,7 @@ export default function SettingsPage() {
   // Live AI backend status (Zoho Catalyst QuickML) for the System section.
   const [ai, setAi] = useState<boolean | null>(null);
   useEffect(() => {
-    fetch("/api/ai/status").then((r) => r.json()).then((j) => setAi(j.online)).catch(() => setAi(false));
+    setAi(aiOnline());
   }, []);
 
   return (

@@ -3,14 +3,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Lock, ArrowRight, ShieldCheck, Sparkles, Network, Zap, User } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { DEMO_USERS, login as clientLogin } from "@/lib/auth-client";
 
-const DEMO_ACCOUNTS = [
-  { username: "admin", label: "Administrator" },
-  { username: "dcp.mysuru", label: "Senior Officer" },
-  { username: "io.bengaluru", label: "Investigation Officer" },
-  { username: "analyst.scrb", label: "Analyst" },
-  { username: "desk.hubli", label: "Read-only" },
-];
+const DEMO_ACCOUNTS = DEMO_USERS.map((u) => ({ username: u.username, label: u.label }));
 const DEMO_PASSWORD = "police123";
 
 /** Lightweight animated particle-network background (theme-reactive, canvas). */
@@ -85,21 +80,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(false);
 
-  const doLogin = useCallback(async (u: string, p: string) => {
+  const doLogin = useCallback((u: string, p: string) => {
     setLoading(true);
     setError("");
     setBooting(true);
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: u, password: p }),
-    });
-    if (res.ok) {
+    const user = clientLogin(u, p);
+    if (user) {
       // brief boot sequence for the "OS" feel
-      setTimeout(() => { router.push("/dashboard"); router.refresh(); }, 650);
+      setTimeout(() => { router.push("/dashboard"); }, 650);
     } else {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error || "Login failed");
+      setError("Invalid officer ID or password");
       setLoading(false);
       setBooting(false);
     }

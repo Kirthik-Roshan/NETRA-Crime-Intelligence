@@ -7,6 +7,7 @@ import type { GraphEdge, GraphNode } from "@/lib/types";
 import { useT } from "@/lib/i18n-client";
 
 interface CrimOption { id: number; name: string; risk_score: number; home_district: string }
+type Graph = { nodes: GraphNode[]; edges: GraphEdge[] };
 
 const TYPES: { id: GraphNode["type"]; label: string; varName: string }[] = [
   { id: "criminal", label: "Criminals", varName: "--danger" },
@@ -19,32 +20,23 @@ const TYPES: { id: GraphNode["type"]; label: string; varName: string }[] = [
 
 export function NetworkExplorer({
   options,
-  initialGraph,
-  initialId,
-  initialName,
+  graphs,
 }: {
   options: CrimOption[];
-  initialGraph: { nodes: GraphNode[]; edges: GraphEdge[] };
-  initialId?: number;
-  initialName?: string;
+  graphs: Record<string, Graph>;
 }) {
   const t = useT();
   const router = useRouter();
-  const [graph, setGraph] = useState(initialGraph);
-  const [selected, setSelected] = useState<{ id?: number; name: string }>({ id: initialId, name: initialName || "Highest-priority network" });
+  const [graph, setGraph] = useState<Graph>(graphs.top);
+  const [selected, setSelected] = useState<{ id?: number; name: string }>({ name: "Highest-priority network" });
   const [q, setQ] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  async function load(id: number, name: string) {
-    setLoading(true);
+  // Static build: all ego-networks are prebuilt, so focus switching is in-memory.
+  function load(id: number, name: string) {
     setSelected({ id, name });
-    try {
-      const res = await fetch(`/api/network/${id}`);
-      setGraph(await res.json());
-    } finally {
-      setLoading(false);
-    }
+    setGraph(graphs[String(id)] ?? { nodes: [], edges: [] });
   }
 
   function toggleType(type: string) {

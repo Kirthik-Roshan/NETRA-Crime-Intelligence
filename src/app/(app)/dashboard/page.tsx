@@ -3,7 +3,7 @@ import {
   FolderKanban, AlertTriangle, UserSearch, Fingerprint, TrendingUp, Sparkles,
   MapPin, Activity, ArrowRight, Flame, Network, Radar,
 } from "lucide-react";
-import { getSession } from "@/lib/auth";
+import { OfficerFirstName } from "@/components/OfficerName";
 import {
   dashboardStats, crimeTrend, crimeByType, districtHotspots, aiAlerts, recentActivity, firGeoPoints,
 } from "@/lib/queries";
@@ -13,7 +13,6 @@ import { MapPanel } from "@/components/maps/MapPanel";
 import { timeAgo } from "@/lib/utils";
 import { getT } from "@/lib/i18n-server";
 
-export const dynamic = "force-dynamic";
 
 const ALERT_ICON: Record<string, typeof Flame> = {
   repeat_offender: UserSearch,
@@ -23,7 +22,6 @@ const ALERT_ICON: Record<string, typeof Flame> = {
 };
 
 export default function DashboardPage() {
-  const user = getSession()!;
   const t = getT();
 
   console.time("dashboardStats");
@@ -63,7 +61,7 @@ export default function DashboardPage() {
   
   return (
     <div className="space-y-6">
-      <PageHeader title={`${t("dash.greeting")}, ${user.full_name.split(" ")[0]}`} subtitle={`${today} · ${t("dash.subtitle")}`}>
+      <PageHeader title={<>{t("dash.greeting")}, <OfficerFirstName /></>} subtitle={`${today} · ${t("dash.subtitle")}`}>
         <Link href="/assistant" className="btn-accent">
           <Sparkles className="h-4 w-4" /> {t("dash.ask")}
         </Link>

@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Table2, Database, Layers, Eye, ScrollText, Loader2, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useT } from "@/lib/i18n-client";
 
 interface TableInfo { name: string; count: number }
 interface Group { group: string; tables: TableInfo[] }
-interface TableData { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number; limit: number; offset: number; q?: string }
+interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number }
 
 const GROUP_META: Record<string, { icon: typeof Table2; key: "database.official" | "database.intel" | "database.views" | "admin.audit" }> = {
   official: { icon: Database, key: "database.official" },
@@ -18,46 +18,52 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const t = useT();
   const [groups, setGroups] = useState<Group[]>([]);
   const [active, setActive] = useState<string | null>(null);
-  const [data, setData] = useState<TableData | null>(null);
+  const [baked, setBaked] = useState<BakedTable | null>(null);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState(""); // filters the table LIST (left)
   const [dataQuery, setDataQuery] = useState(""); // searches ROWS in the current table
-  const activeRef = useRef<string | null>(null);
   const LIMIT = 50;
 
-  const load = useCallback((table: string, off: number, q: string) => {
+  // Load a table's baked JSON (static file served by Slate's CDN).
+  const load = useCallback((table: string) => {
     setActive(table);
-    activeRef.current = table;
     setLoading(true);
-    setOffset(off);
-    fetch(`/api/database?table=${encodeURIComponent(table)}&limit=${LIMIT}&offset=${off}&q=${encodeURIComponent(q)}`)
+    setOffset(0);
+    fetch(`/data/db/${encodeURIComponent(table)}.json`)
       .then((r) => r.json())
-      .then((j) => setData(j))
+      .then((j) => setBaked(j))
+      .catch(() => setBaked({ table, columns: [], rows: [], total: 0 }))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    fetch("/api/database").then((r) => r.json()).then((j) => {
+    fetch("/data/db/_catalogue.json").then((r) => r.json()).then((j) => {
       setGroups(j.groups || []);
       const first = initialTable || j.groups?.[0]?.tables?.[0]?.name;
-      if (first) load(first, 0, "");
+      if (first) load(first);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced row search on the active table.
-  useEffect(() => {
-    if (!active) return;
-    const id = setTimeout(() => load(active, 0, dataQuery), 280);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataQuery]);
-
   function selectTable(table: string) {
     setDataQuery("");
-    load(table, 0, "");
+    load(table);
   }
+
+  // Client-side row search over the baked rows + pagination.
+  const matched = useMemo(() => {
+    if (!baked) return [];
+    const q = dataQuery.trim().toLowerCase();
+    if (!q) return baked.rows;
+    return baked.rows.filter((r) => Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q)));
+  }, [baked, dataQuery]);
+
+  useEffect(() => { setOffset(0); }, [dataQuery]);
+
+  const data = baked
+    ? { table: baked.table, columns: baked.columns, rows: matched.slice(offset, offset + LIMIT), total: matched.length, q: dataQuery.trim() || undefined }
+    : null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
@@ -154,11 +160,11 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
             {/* Pagination */}
             {data.total > LIMIT && (
               <div className="mt-3 flex items-center justify-end gap-2 text-xs">
-                <button onClick={() => load(data.table, Math.max(0, offset - LIMIT), dataQuery)} disabled={offset === 0 || loading} className="btn-ghost h-8 px-2 disabled:opacity-40">
+                <button onClick={() => setOffset(Math.max(0, offset - LIMIT))} disabled={offset === 0 || loading} className="btn-ghost h-8 px-2 disabled:opacity-40">
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </button>
                 <span className="font-mono text-muted">{offset + 1}–{Math.min(offset + LIMIT, data.total)} / {data.total}</span>
-                <button onClick={() => load(data.table, offset + LIMIT, dataQuery)} disabled={offset + LIMIT >= data.total || loading} className="btn-ghost h-8 px-2 disabled:opacity-40">
+                <button onClick={() => setOffset(offset + LIMIT)} disabled={offset + LIMIT >= data.total || loading} className="btn-ghost h-8 px-2 disabled:opacity-40">
                   <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>

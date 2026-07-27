@@ -8,18 +8,17 @@ import { networkGraph } from "@/lib/queries";
 import { GraphView } from "@/components/network/GraphView";
 import { Avatar, RiskMeter, StatusBadge, Badge } from "@/components/ui";
 import { parseJsonArray, formatDate, riskBand } from "@/lib/utils";
-import { getSession } from "@/lib/auth";
-import { audit } from "@/lib/audit";
 import type { Criminal } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+// Prerender every criminal profile at build (static export — no runtime server).
+export function generateStaticParams() {
+  return all<{ id: number }>("SELECT id FROM criminals").map((r) => ({ id: String(r.id) }));
+}
 
 export default function CriminalProfile({ params }: { params: { id: string } }) {
   const id = Number(params.id);
   const c = get<Criminal>("SELECT * FROM criminals WHERE id=?", [id]);
   if (!c) notFound();
-  // Real audit trail — every profile view is logged.
-  audit({ user: getSession(), action: "CRIMINAL_VIEWED", entity: "criminal", entity_id: id, detail: c.name });
 
   const firs = all<{ id: number; fir_number: string; crime_type: string; district: string; status: string; severity: string; occurred_at: string; role: string }>(
     `SELECT f.id, f.fir_number, f.crime_type, f.district, f.status, f.severity, f.occurred_at, fc.role

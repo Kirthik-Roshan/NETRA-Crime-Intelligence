@@ -6,7 +6,6 @@ import Link from "next/link";
 import { BarChart3, TrendingUp, MapPin, Layers, Users, Database } from "lucide-react";
 import { getT } from "@/lib/i18n-server";
 
-export const dynamic = "force-dynamic";
 
 export default function AnalyticsPage() {
   const t = getT();

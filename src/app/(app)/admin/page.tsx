@@ -1,19 +1,15 @@
-import { redirect } from "next/navigation";
-import { ShieldCheck, Users, ScrollText, Cpu } from "lucide-react";
-import { getSession, can } from "@/lib/auth";
+import { Users, ScrollText, Cpu } from "lucide-react";
 import { all } from "@/lib/db";
 import { PageHeader, Badge } from "@/components/ui";
 import { ROLE_LABEL, type Role } from "@/lib/types";
 import { timeAgo } from "@/lib/utils";
 import { DataImport } from "@/components/admin/DataImport";
 import { getT } from "@/lib/i18n-server";
+import { RequireRole, RoleBadge } from "@/components/OfficerName";
 
-export const dynamic = "force-dynamic";
 
 export default function AdminPage() {
-  const user = getSession()!;
   const t = getT();
-  if (!(user.role === "administrator" || user.role === "senior_officer")) redirect("/dashboard");
 
   const users = all<{ id: number; username: string; full_name: string; role: Role; rank: string }>(
     "SELECT id, username, full_name, role, rank FROM users ORDER BY id"
@@ -21,12 +17,12 @@ export default function AdminPage() {
   const audit = all<{ ts: string; username: string; role: string; action: string; entity: string; ai_model: string; processing_ms: number; request_id: string }>(
     "SELECT ts, username, role, action, entity, ai_model, processing_ms, request_id FROM audit_logs ORDER BY ts DESC LIMIT 40"
   );
-  const canManage = can(user.role, "*");
 
   return (
+    <RequireRole roles={["administrator", "senior_officer"]}>
     <div className="space-y-6">
       <PageHeader title={t("admin.title")} subtitle={t("admin.subtitle")}>
-        <Badge tone="accent"><ShieldCheck className="h-3 w-3" /> {ROLE_LABEL[user.role]}</Badge>
+        <RoleBadge />
       </PageHeader>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -44,7 +40,6 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
-          {!canManage && <p className="mt-3 text-xs text-muted">Read access. User management requires Administrator role.</p>}
         </div>
 
         {/* AI config */}
@@ -65,7 +60,7 @@ export default function AdminPage() {
       </div>
 
       {/* Real-data import */}
-      <DataImport canImport={user.role === "administrator"} />
+      <DataImport />
 
       {/* Audit trail */}
       <div className="card panel-pad">
@@ -100,6 +95,7 @@ export default function AdminPage() {
         </div>
       </div>
     </div>
+    </RequireRole>
   );
 }
 
