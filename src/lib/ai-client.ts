@@ -22,6 +22,37 @@ export function aiOnline(): boolean {
   return aiConfigured();
 }
 
+export interface RagSource {
+  title: string;
+  snippet: string;
+  score?: number | null;
+}
+
+/**
+ * Ask over the case-document knowledge base (RAG). The Catalyst Function calls
+ * QuickML RAG, which retrieves the relevant passages from the case PDFs you
+ * uploaded to the knowledge base and grounds the answer in them.
+ * Returns the answer plus the source documents, or null if unavailable.
+ */
+export async function askRag(
+  query: string,
+): Promise<{ answer: string; sources: RagSource[] } | null> {
+  if (!FN_URL) return null;
+  try {
+    const res = await fetch(FN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "rag", query }),
+    });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { answer?: string; response?: string; sources?: RagSource[] };
+    const answer = (j.answer || j.response || "").trim();
+    return answer ? { answer, sources: Array.isArray(j.sources) ? j.sources : [] } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Ask the Catalyst Function. Returns the answer text, or null if unavailable. */
 export async function askAssistant(
   prompt: string,

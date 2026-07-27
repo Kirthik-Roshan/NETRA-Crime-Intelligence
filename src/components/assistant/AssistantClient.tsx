@@ -11,7 +11,7 @@ import { TrendLine, BarSeries } from "@/components/charts";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
-import { askAssistant, aiConfigured } from "@/lib/ai-client";
+import { askAssistant, askRag, aiConfigured, type RagSource } from "@/lib/ai-client";
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -32,6 +32,30 @@ function textInsight(answer: string, source: AiInsight["explain"]["source"]): Ai
       audit_id: `A-${Date.now().toString(36).toUpperCase()}`,
       processing_ms: 0,
       ai_model: source === "llm" ? "VL-Qwen3.6-35B-A3B" : "none",
+    },
+  };
+}
+
+/** Build an AiInsight from a RAG answer + the case documents it was grounded on. */
+function ragInsight(answer: string, sources: RagSource[]): AiInsight {
+  const evidence = sources
+    .map((s) => (s.title || s.snippet || "").toString().slice(0, 80))
+    .filter(Boolean)
+    .slice(0, 8);
+  return {
+    answer,
+    explain: {
+      confidence: 0.85,
+      reasoning: sources.length
+        ? `Grounded in ${sources.length} case document${sources.length === 1 ? "" : "s"} retrieved from the knowledge base by Zoho Catalyst QuickML RAG.`
+        : "Answered by Zoho Catalyst QuickML RAG (no source passages returned).",
+      records_used: sources.length,
+      evidence,
+      alternatives: [],
+      source: "rag",
+      audit_id: `A-${Date.now().toString(36).toUpperCase()}`,
+      processing_ms: 0,
+      ai_model: "rag",
     },
   };
 }
@@ -57,6 +81,7 @@ const EXAMPLES = [
 const SOURCE_LABEL: Record<string, string> = {
   "template-sql": "Verified SQL",
   llm: "Catalyst QuickML",
+  rag: "Catalyst QuickML · RAG",
   cache: "Cache",
   "demo-engine": "Keyword search",
   semantic: "Semantic search",
@@ -158,10 +183,18 @@ export function AssistantClient() {
       return;
     }
     try {
-      const text = await askAssistant(q, { system: NETRA_SYSTEM });
-      const insight = text
-        ? textInsight(text, "llm")
-        : textInsight("The AI backend didn't return an answer. Check the Catalyst Function and QuickML token, then try again.", "demo-engine");
+      // RAG first: retrieve the relevant case documents and answer grounded in
+      // them. Fall back to a plain LLM answer if the knowledge base isn't set up.
+      const rag = await askRag(q);
+      let insight: AiInsight;
+      if (rag) {
+        insight = ragInsight(rag.answer, rag.sources);
+      } else {
+        const text = await askAssistant(q, { system: NETRA_SYSTEM });
+        insight = text
+          ? textInsight(text, "llm")
+          : textInsight("The AI backend didn't return an answer. Check the Catalyst Function, the QuickML token, and that case documents are uploaded to the RAG knowledge base, then try again.", "demo-engine");
+      }
       setTurns((t) => t.map((x) => (x.id === id ? { id, q, insight } : x)));
     } catch {
       setTurns((t) => t.map((x) => (x.id === id ? { id, q, insight: undefined } : x)));
@@ -472,7 +505,7 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
         <p className="text-muted">{e.reasoning}</p>
         {e.evidence.length > 0 && (
           <div className="mt-2">
-            <span className="stat-label">Records used</span>
+            <span className="stat-label">{e.source === "rag" ? "Source documents" : "Records used"}</span>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {e.evidence.map((ev, i) => (
                 <span key={i} className="chip font-mono text-[10px]">{ev}</span>

@@ -1,0 +1,13 @@
+NETRA case dossiers for the QuickML RAG knowledge base.
+Upload every .pdf here in Catalyst console -> QuickML -> your RAG knowledge base.
+
+FIR-104110021202600004.pdf  —  Vehicle Theft in Udupi (104110021202600004)
+FIR-104020004202600005.pdf  —  Burglary in Mysuru (104020004202600005)
+FIR-104070013202600007.pdf  —  Burglary in Ballari (104070013202600007)
+FIR-104040007202600007.pdf  —  Assault in Hubballi-Dharwad (104040007202600007)
+FIR-104080016202600007.pdf  —  Vehicle Theft in Vijayapura (104080016202600007)
+FIR-104050009202600010.pdf  —  Vehicle Theft in Belagavi (104050009202600010)
+FIR-104120024202600005.pdf  —  Burglary in Mandya (104120024202600005)
+FIR-104040008202600015.pdf  —  Assault in Hubballi-Dharwad (104040008202600015)
+FIR-104090017202600004.pdf  —  Vehicle Theft in Shivamogga (104090017202600004)
+FIR-104040008202600002.pdf  —  Cybercrime in Hubballi-Dharwad (104040008202600002)

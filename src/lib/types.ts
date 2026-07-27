@@ -91,7 +91,7 @@ export interface AiInsight {
     alternatives: string[];
     /** Entities carried over from earlier turns (conversation memory). */
     context_used?: string[];
-    source: "template-sql" | "llm" | "cache" | "demo-engine" | "semantic" | "lookup";
+    source: "template-sql" | "llm" | "cache" | "demo-engine" | "semantic" | "lookup" | "rag";
     audit_id: string;
     processing_ms: number;
     ai_model: string;
