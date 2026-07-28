@@ -10,8 +10,13 @@
  *   NEXT_PUBLIC_AI_FN_URL = https://<project>.catalystserverless.in/server/ai_quickml/
  *
  * When unset, AI features show a clean "not connected" state instead of failing.
+ * Defaults to the deployed KspHacks ai_quickml Function (public endpoint,
+ * CORS-restricted to the onslate.in origin; the QuickML credentials live only
+ * inside the Function). Override with NEXT_PUBLIC_AI_FN_URL at build time.
  */
-const FN_URL = process.env.NEXT_PUBLIC_AI_FN_URL || "";
+const FN_URL =
+  process.env.NEXT_PUBLIC_AI_FN_URL ||
+  "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/";
 
 export function aiConfigured(): boolean {
   return FN_URL.length > 0;

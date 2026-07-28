@@ -10,3 +10,8 @@ coverage/
 /.next/
 /out/
 tsconfig.tsbuildinfo
+
+# function config carries deploy secrets — never commit
+functions/*/catalyst-config.json
+functions/ai_quickml/catalyst-config.json
+.env
