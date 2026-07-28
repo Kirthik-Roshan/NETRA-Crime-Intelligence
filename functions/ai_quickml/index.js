@@ -26,11 +26,19 @@ const SCHEME = process.env.QML_AUTH_SCHEME || "Zoho-oauthtoken";
 const RAG_PATH = process.env.QML_RAG_PATH || "rag/answer";
 const LLM_PATH = process.env.QML_LLM_PATH || "vlm/chat";
 
-function send(res, code, obj) {
+// Allow any *.onslate.in origin (the app may live on different Slate URLs), or a
+// specific CORS_ALLOW_ORIGIN, else "*". Reflecting the request origin keeps the
+// AI working whichever onslate deployment calls it.
+function allowedOrigin(origin) {
+  if (origin && /\.onslate\.in$/i.test(origin)) return origin;
+  return process.env.CORS_ALLOW_ORIGIN || "*";
+}
+
+function send(res, code, obj, origin) {
   const bytes = Buffer.from(JSON.stringify(obj));
   res.writeHead(code, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": process.env.CORS_ALLOW_ORIGIN || "*",
+    "Access-Control-Allow-Origin": allowedOrigin(origin),
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
@@ -92,31 +100,33 @@ function readBody(req) {
 }
 
 module.exports = async (req, res) => {
+  const origin = (req.headers && req.headers.origin) || "";
+  const reply = (code, obj) => send(res, code, obj, origin);
   try {
-    if (req.method === "OPTIONS") { send(res, 204, {}); return; }
-    if (req.method !== "POST") { send(res, 405, { error: "Method not allowed" }); return; }
+    if (req.method === "OPTIONS") { reply(204, {}); return; }
+    if (req.method !== "POST") { reply(405, { error: "Method not allowed" }); return; }
 
     const raw = await readBody(req);
     const payload = JSON.parse(raw || "{}");
     const mode = payload.mode || "chat";
 
     if (mode === "ping") {
-      send(res, 200, { ok: true, have: {
+      reply(200, { ok: true, have: {
         org: !!ORG, project: !!PROJECT,
         client: !!process.env.QML_CLIENT_ID, secret: !!process.env.QML_CLIENT_SECRET, refresh: !!process.env.QML_REFRESH_TOKEN,
       }});
       return;
     }
 
-    if (!ORG || !PROJECT) { send(res, 503, { error: "Function not configured (ORG/PROJECT)" }); return; }
+    if (!ORG || !PROJECT) { reply(503, { error: "Function not configured (ORG/PROJECT)" }); return; }
     const token = await accessToken();
-    if (!token) { send(res, 503, { error: "No credentials: set QML_CLIENT_ID/SECRET/REFRESH_TOKEN" }); return; }
+    if (!token) { reply(503, { error: "No credentials: set QML_CLIENT_ID/SECRET/REFRESH_TOKEN" }); return; }
 
     if (mode === "rag") {
       const query = payload.query || payload.prompt;
-      if (!query) { send(res, 400, { error: "query required" }); return; }
+      if (!query) { reply(400, { error: "query required" }); return; }
       const up = await quickml(RAG_PATH, { query }, token);
-      if (!up.ok) { send(res, 502, { error: "QuickML RAG error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
+      if (!up.ok) { reply(502, { error: "QuickML RAG error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
       const answer = d.answer ?? d.response ?? d.output ?? null;
       // QuickML RAG returns the citations under `retrieved_nodes`.
@@ -131,13 +141,13 @@ module.exports = async (req, res) => {
           score: s.score ?? s.relevance ?? s.similarity ?? null,
         };
       });
-      send(res, 200, { answer, sources });
+      reply(200, { answer, sources });
       return;
     }
 
     // Qwen LLM chat.
     const { prompt, system, temperature, images, guided_prompt } = payload;
-    if (!prompt) { send(res, 400, { error: "prompt required" }); return; }
+    if (!prompt) { reply(400, { error: "prompt required" }); return; }
     const reqBody = {
       prompt,
       images: Array.isArray(images) ? images : [],
@@ -146,10 +156,10 @@ module.exports = async (req, res) => {
       max_tokens: 700,
     };
     const up = await quickml(LLM_PATH, reqBody, token);
-    if (!up.ok) { send(res, 502, { error: "QuickML LLM error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
+    if (!up.ok) { reply(502, { error: "QuickML LLM error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
     const d = up.json || {};
-    send(res, 200, { response: d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? null });
+    reply(200, { response: d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? null });
   } catch (e) {
-    try { send(res, 500, { error: String(e && e.message || e) }); } catch { /* res already gone */ }
+    try { reply(500, { error: String(e && e.message || e) }); } catch { /* res already gone */ }
   }
 };
