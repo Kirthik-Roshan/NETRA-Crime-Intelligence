@@ -119,12 +119,18 @@ module.exports = async (req, res) => {
       if (!up.ok) { send(res, 502, { error: "QuickML RAG error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
       const answer = d.answer ?? d.response ?? d.output ?? null;
-      const rawSrc = d.sources || d.citations || d.documents || [];
-      const sources = (Array.isArray(rawSrc) ? rawSrc : []).map((s) => ({
-        title: s.title || s.document || s.file || s.source || s.name || "Case document",
-        snippet: s.snippet || s.text || s.content || s.chunk || "",
-        score: s.score ?? s.relevance ?? null,
-      }));
+      // QuickML RAG returns the citations under `retrieved_nodes`.
+      const rawSrc = d.retrieved_nodes || d.sources || d.citations || d.documents || [];
+      const sources = (Array.isArray(rawSrc) ? rawSrc : []).map((s) => {
+        if (typeof s === "string") return { title: "Case document", snippet: s.slice(0, 240), score: null };
+        const meta = s.metadata || s.node || {};
+        return {
+          title: s.file_name || s.document || s.file || s.source || s.title || s.name ||
+                 meta.file_name || meta.source || meta.document || "Case document",
+          snippet: (s.text || s.content || s.chunk || s.node_text || meta.text || "").toString().slice(0, 240),
+          score: s.score ?? s.relevance ?? s.similarity ?? null,
+        };
+      });
       send(res, 200, { answer, sources });
       return;
     }
