@@ -46,7 +46,10 @@ export async function askRag(
   try {
     const res = await fetch(FN_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // text/plain keeps this a CORS "simple request" → no preflight. Catalyst
+      // intercepts OPTIONS without CORS headers, so a preflight would be blocked;
+      // the Function parses the raw JSON body regardless of content-type.
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ mode: "rag", query }),
     });
     if (!res.ok) return null;
@@ -67,7 +70,10 @@ export async function askAssistant(
   try {
     const res = await fetch(FN_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // text/plain keeps this a CORS "simple request" → no preflight. Catalyst
+      // intercepts OPTIONS without CORS headers, so a preflight would be blocked;
+      // the Function parses the raw JSON body regardless of content-type.
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ prompt, system: opts?.system, temperature: opts?.temperature ?? 0.2 }),
     });
     if (!res.ok) return null;
