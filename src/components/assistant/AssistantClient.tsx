@@ -67,15 +67,13 @@ interface Turn {
   loading?: boolean;
 }
 
+// Queries that hit the QuickML RAG knowledge base (the uploaded case dossiers).
 const EXAMPLES = [
-  "Search FIR 104430006202600001",
-  "Look up phone 98xxxxxxxx",
-  "Details of criminal Ravi Shetty",
-  "Which suspects appear across multiple districts?",
-  "Show burglary cases involving repeat offenders near Mysuru in the last six months",
-  "High-risk criminals",
-  "ಮೈಸೂರಿನಲ್ಲಿ ಕಳ್ಳತನ ಪ್ರಕರಣಗಳು", // "theft cases in Mysuru" (Kannada)
-  "ಬೆಂಗಳೂರಿನಲ್ಲಿ ಪುನರಾವರ್ತಿತ ಅಪರಾಧಿಗಳು", // "repeat offenders in Bengaluru"
+  "What crimes are recorded in the case files?",
+  "Summarise the burglary cases and the accused",
+  "Tell me about the cybercrime OTP fraud case",
+  "Which cases involve vehicle theft?",
+  "What evidence was collected in these cases?",
 ];
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -88,14 +86,13 @@ const SOURCE_LABEL: Record<string, string> = {
   lookup: "Database dossier",
 };
 
-// Option A — task-specific one-click investigative prompts. Each maps to a
-// query the local engine answers directly (no external LLM ever).
+// One-click prompts, each grounded in the RAG knowledge base (case dossiers).
 const TASKS: { icon: typeof UserSearch; label: string; q: string }[] = [
-  { icon: UserSearch, label: "Repeat offenders", q: "Which suspects are repeat offenders?" },
-  { icon: NetworkIcon, label: "Link analysis", q: "Which suspects appear across multiple districts?" },
-  { icon: Flame, label: "Hotspot scan", q: "Which districts are crime hotspots?" },
-  { icon: GitCompare, label: "Similar M.O.", q: "Find cases with similar modus operandi to vehicle theft" },
-  { icon: Users, label: "Gang detection", q: "Show organized gangs and their size" },
+  { icon: Flame, label: "All crimes", q: "What crimes are recorded in the case files?" },
+  { icon: UserSearch, label: "Burglary", q: "Summarise the burglary cases and the accused" },
+  { icon: NetworkIcon, label: "Cybercrime", q: "Tell me about the cybercrime OTP fraud case" },
+  { icon: GitCompare, label: "Vehicle theft", q: "Which cases involve vehicle theft?" },
+  { icon: Users, label: "Evidence", q: "What evidence was collected in these cases?" },
 ];
 
 // Friendly label for the engine that handled a query (option C — smart routing).
