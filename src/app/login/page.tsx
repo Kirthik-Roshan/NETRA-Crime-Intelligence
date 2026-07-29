@@ -118,8 +118,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 space-y-6">
           <h1 className="max-w-md font-display text-4xl font-bold leading-tight">
-            An AI Investigation Operating System — not a dashboard.
-          </h1>
+            An AI Investigation Operating System </h1>
           <p className="max-w-md text-sm leading-relaxed text-muted">
             Reason over FIRs, criminal networks, evidence and geography in natural language.
             Every insight is explainable, auditable, and keeps the officer in command.
