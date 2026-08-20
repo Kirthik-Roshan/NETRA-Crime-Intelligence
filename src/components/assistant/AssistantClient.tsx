@@ -11,7 +11,7 @@ import { TrendLine, BarSeries } from "@/components/charts";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
-import { askAssistant, askRag, aiConfigured, type RagSource } from "@/lib/ai-client";
+import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, transcribeAudio, type RagSource } from "@/lib/ai-client";
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -244,13 +244,9 @@ export function AssistantClient() {
           setListening(false);
           try {
             const b64 = await blobToBase64(new Blob(chunks, { type: mr.mimeType || "audio/webm" }));
-            const r = await fetch("/api/ai/transcribe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ audio: b64, language: lang === "kn" ? "kn-IN" : "en-IN" }),
-            });
-            const j = (await r.json()) as { text?: string };
-            if (j.text) { setInput(j.text); ask(j.text, true); return; }
+            // Catalyst Zia transcription via the Function (token stays server-side).
+            const text = await transcribeAudio(b64, lang === "kn" ? "kn-IN" : "en-IN");
+            if (text) { setInput(text); ask(text, true); return; }
           } catch { /* fall through to browser dictation */ }
           startWebSpeech();
         };
@@ -424,30 +420,67 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
   const [showSql, setShowSql] = useState(false);
   const [showData, setShowData] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [kannada, setKannada] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const e = insight.explain;
   const pct = Math.round(e.confidence * 100);
   const confTone = pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-muted";
+  const spoken = kannada ?? insight.answer;
 
-  const speak = useCallback(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  // Read aloud via Catalyst Zia TTS; fall back to the browser voice if the
+  // Function/Zia is unavailable so the button always does something.
+  const speak = useCallback(async () => {
     if (speaking) {
-      window.speechSynthesis.cancel();
+      audioRef.current?.pause();
+      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
       setSpeaking(false);
       return;
     }
-    const u = new SpeechSynthesisUtterance(insight.answer);
-    u.lang = lang === "kn" ? "kn-IN" : "en-IN";
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
     setSpeaking(true);
-  }, [insight.answer, lang, speaking]);
+    const b64 = await synthesizeSpeech(spoken, kannada ? "kn-IN" : lang === "kn" ? "kn-IN" : "en-IN");
+    if (b64) {
+      const audio = new Audio(b64.startsWith("data:") ? b64 : `data:audio/mp3;base64,${b64}`);
+      audioRef.current = audio;
+      audio.onended = () => setSpeaking(false);
+      audio.onerror = () => setSpeaking(false);
+      audio.play().catch(() => setSpeaking(false));
+      return;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      const u = new SpeechSynthesisUtterance(spoken);
+      u.lang = kannada ? "kn-IN" : lang === "kn" ? "kn-IN" : "en-IN";
+      u.onend = () => setSpeaking(false);
+      u.onerror = () => setSpeaking(false);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+      return;
+    }
+    setSpeaking(false);
+  }, [spoken, kannada, lang, speaking]);
+
+  // Translate the answer to Kannada via Catalyst Zia.
+  const translate = useCallback(async () => {
+    if (kannada) { setKannada(null); return; }
+    setTranslating(true);
+    const kn = await translateText(insight.answer, "kn", "en");
+    setKannada(kn);
+    setTranslating(false);
+  }, [insight.answer, kannada]);
 
   return (
     <div className="card panel-pad animate-fade-in space-y-4">
       <div className="flex items-start gap-2">
-        <p className="flex-1 text-[15px] leading-relaxed text-fg">{insight.answer}</p>
+        <p className="flex-1 text-[15px] leading-relaxed text-fg">{spoken}</p>
+        <button
+          onClick={translate}
+          disabled={translating}
+          className={cn("shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-elevated hover:text-fg disabled:opacity-50 print:hidden", kannada && "text-accent")}
+          title={kannada ? "Show English" : "Translate to Kannada (ಕನ್ನಡ)"}
+          aria-label="Translate to Kannada"
+        >
+          {translating ? <Loader2 className="h-4 w-4 animate-spin" /> : kannada ? "EN" : "ಕನ್ನಡ"}
+        </button>
         <button
           onClick={speak}
           className={cn("shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-elevated hover:text-fg print:hidden", speaking && "text-accent")}

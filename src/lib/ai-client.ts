@@ -61,6 +61,40 @@ export async function askRag(
   }
 }
 
+/** Post a Zia job to the Function (token stays server-side). */
+async function ziaCall<T>(body: Record<string, unknown>): Promise<T | null> {
+  if (!FN_URL) return null;
+  try {
+    const res = await fetch(FN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Translate text (default English → Kannada) via Zia. */
+export async function translateText(text: string, target = "kn", source = "en"): Promise<string | null> {
+  const j = await ziaCall<{ translation?: string }>({ mode: "translate", text, target, source });
+  return (j?.translation || "").trim() || null;
+}
+
+/** Text-to-speech via Zia. Returns base64 audio (or null). */
+export async function synthesizeSpeech(text: string, language = "en-IN"): Promise<string | null> {
+  const j = await ziaCall<{ audio?: string }>({ mode: "tts", text, language });
+  return j?.audio || null;
+}
+
+/** Speech-to-text via Zia. audio = base64 (no data: prefix). */
+export async function transcribeAudio(audio: string, language = "en-IN"): Promise<string | null> {
+  const j = await ziaCall<{ text?: string }>({ mode: "transcribe", audio, language });
+  return (j?.text || "").trim() || null;
+}
+
 /** Ask the Catalyst Function. Returns the answer text, or null if unavailable. */
 export async function askAssistant(
   prompt: string,

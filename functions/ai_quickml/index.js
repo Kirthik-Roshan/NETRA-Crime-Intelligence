@@ -90,6 +90,18 @@ async function quickml(path, body, token) {
   return { ok: r.ok, status: r.status, json, text };
 }
 
+// Zia model endpoints (TTS / translate / transcribe) — same token + org.
+async function zia(path, body, token) {
+  const r = await tfetch(`${DC_BASE}/quickml/api/v1/models/zia/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `${SCHEME} ${token}`, "CATALYST-ORG": ORG },
+    body: JSON.stringify(body),
+  }, 18000, `zia:${path}`);
+  const text = await r.text();
+  let json = null; try { json = JSON.parse(text); } catch { /* non-JSON */ }
+  return { ok: r.ok, status: r.status, json, text };
+}
+
 function readBody(req) {
   return new Promise((resolve) => {
     let b = "";
@@ -121,6 +133,32 @@ module.exports = async (req, res) => {
     if (!ORG || !PROJECT) { reply(503, { error: "Function not configured (ORG/PROJECT)" }); return; }
     const token = await accessToken();
     if (!token) { reply(503, { error: "No credentials: set QML_CLIENT_ID/SECRET/REFRESH_TOKEN" }); return; }
+
+    if (mode === "tts") {
+      if (!payload.text) { reply(400, { error: "text required" }); return; }
+      const up = await zia("tts/synthesize", { text: payload.text, language: payload.language || "en-IN" }, token);
+      if (!up.ok) { reply(502, { error: "Zia TTS error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
+      reply(200, { audio: (up.json || {}).audio ?? null });
+      return;
+    }
+
+    if (mode === "translate") {
+      if (!payload.text) { reply(400, { error: "text required" }); return; }
+      const up = await zia("translate", { text: payload.text, target_language: payload.target || "kn", source_language: payload.source || "en" }, token);
+      if (!up.ok) { reply(502, { error: "Zia translate error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
+      const d = up.json || {};
+      reply(200, { translation: d.translation ?? d.text ?? d.output ?? null });
+      return;
+    }
+
+    if (mode === "transcribe") {
+      if (!payload.audio) { reply(400, { error: "audio required" }); return; }
+      const up = await zia("audio/transcribe", { audio: payload.audio, language: payload.language || "en-IN" }, token);
+      if (!up.ok) { reply(502, { error: "Zia transcribe error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
+      const d = up.json || {};
+      reply(200, { text: d.text ?? d.transcript ?? null });
+      return;
+    }
 
     if (mode === "rag") {
       const query = payload.query || payload.prompt;
