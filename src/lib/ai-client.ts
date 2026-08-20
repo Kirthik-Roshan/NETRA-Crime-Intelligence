@@ -95,6 +95,20 @@ export async function transcribeAudio(audio: string, language = "en-IN"): Promis
   return (j?.text || "").trim() || null;
 }
 
+export interface OcrResult { text: string; file_id?: string | null; record_id?: string | null }
+
+/** OCR an FIR scan via Zia; the Function also stores it (Stratus + Data Store). */
+export async function extractText(image: string, language = "eng", name = ""): Promise<OcrResult | null> {
+  const j = await ziaCall<OcrResult>({ mode: "ocr", image, language, name });
+  return j && typeof j.text === "string" ? j : null;
+}
+
+/** List stored OCR results from the Data Store (via the Function). */
+export async function listOcr(): Promise<Array<Record<string, unknown>>> {
+  const j = await ziaCall<{ rows?: Array<Record<string, unknown>> }>({ mode: "records:list" });
+  return j?.rows || [];
+}
+
 /** Ask the Catalyst Function. Returns the answer text, or null if unavailable. */
 export async function askAssistant(
   prompt: string,

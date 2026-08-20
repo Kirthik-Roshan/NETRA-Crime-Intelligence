@@ -18,6 +18,32 @@
  * Body `mode`: "rag" → {answer,sources} · "chat" (default) → {response} · "ping".
  */
 
+const catalyst = require("zcatalyst-sdk-node");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const OCR_TABLE = process.env.OCR_TABLE || "OcrResult";
+const STRATUS_BUCKET = process.env.STRATUS_BUCKET || "netra-evidence";
+
+// base64 (with or without data: prefix) → temp file path.
+function tmpFromBase64(b64, ext) {
+  const clean = String(b64).replace(/^data:[^;]+;base64,/, "");
+  const p = path.join(os.tmpdir(), `netra-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext || "jpg"}`);
+  fs.writeFileSync(p, Buffer.from(clean, "base64"));
+  return p;
+}
+
+// Zia OCR result shape varies by model — pull the text out defensively.
+function ocrText(r) {
+  if (!r) return "";
+  if (typeof r === "string") return r;
+  if (r.text) return r.text;
+  if (Array.isArray(r.lines)) return r.lines.map((l) => l.text || l).join("\n");
+  if (r.data && (r.data.text || Array.isArray(r.data.lines))) return r.data.text || r.data.lines.map((l) => l.text || l).join("\n");
+  return "";
+}
+
 const ACCOUNTS = process.env.QML_ACCOUNTS_BASE || "https://accounts.zoho.in";
 const DC_BASE = process.env.QML_DC_BASE || "https://api.catalyst.zoho.in";
 const ORG = process.env.QML_ORG;
@@ -133,6 +159,55 @@ module.exports = async (req, res) => {
     if (!ORG || !PROJECT) { reply(503, { error: "Function not configured (ORG/PROJECT)" }); return; }
     const token = await accessToken();
     if (!token) { reply(503, { error: "No credentials: set QML_CLIENT_ID/SECRET/REFRESH_TOKEN" }); return; }
+
+    // ── Zia OCR (SDK) — extract text from an FIR scan, store the original in
+    // Stratus + the result in Data Store. Storage is best-effort so OCR still
+    // returns text before the bucket/table are provisioned. ────────────────
+    if (mode === "ocr") {
+      if (!payload.image) { reply(400, { error: "image required" }); return; }
+      const app = catalyst.initialize(req, { scope: "admin" });
+      const tmp = tmpFromBase64(payload.image, payload.ext || "jpg");
+      try {
+        const result = await app.zia().extractOpticalCharacters(fs.createReadStream(tmp), {
+          modelType: "OCR",
+          language: payload.language || "eng",
+        });
+        const text = ocrText(result);
+
+        let file_id = null;
+        try {
+          const key = `ocr/${path.basename(tmp)}`;
+          await app.stratus().bucket(STRATUS_BUCKET).putObject(key, fs.createReadStream(tmp));
+          file_id = key;
+        } catch (e) { /* bucket not provisioned yet — skip blob storage */ }
+
+        let record_id = null;
+        try {
+          const row = await app.datastore().table(OCR_TABLE).insertRow({
+            ocr_text: text.slice(0, 60000),
+            language: payload.language || "eng",
+            source_key: file_id || "",
+            source_name: payload.name || "",
+          });
+          record_id = (row && (row.ROWID || row.rowid)) || null;
+        } catch (e) { /* table not provisioned yet — skip persistence */ }
+
+        reply(200, { text, file_id, record_id });
+      } finally {
+        try { fs.unlinkSync(tmp); } catch { /* temp cleanup */ }
+      }
+      return;
+    }
+
+    // List stored OCR results (Data Store read).
+    if (mode === "records:list") {
+      const app = catalyst.initialize(req, { scope: "admin" });
+      try {
+        const page = await app.datastore().table(OCR_TABLE).getPagedRows({ maxRows: 50 });
+        reply(200, { rows: (page && page.data) || [] });
+      } catch (e) { reply(200, { rows: [] }); }
+      return;
+    }
 
     if (mode === "tts") {
       if (!payload.text) { reply(400, { error: "text required" }); return; }

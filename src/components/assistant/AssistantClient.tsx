@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Sparkles, Send, Database, ChevronDown, ShieldCheck, Lightbulb, User, CornerDownLeft, Loader2,
-  Mic, MicOff, Volume2, FileDown, History, Cpu, Route,
+  Mic, MicOff, Volume2, FileDown, History, Cpu, Route, ScanText,
   UserSearch, Network as NetworkIcon, Flame, GitCompare, Users,
 } from "lucide-react";
 import type { AiInsight } from "@/lib/types";
@@ -11,7 +11,7 @@ import { TrendLine, BarSeries } from "@/components/charts";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
-import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, transcribeAudio, type RagSource } from "@/lib/ai-client";
+import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, transcribeAudio, extractText, type RagSource } from "@/lib/ai-client";
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -144,6 +144,8 @@ export function AssistantClient() {
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const mediaRecRef = useRef<MediaRecorder | null>(null);
@@ -260,6 +262,24 @@ export function AssistantClient() {
     }
     startWebSpeech();
   }, [listening, lang, ask, startWebSpeech]);
+
+  // Scan an FIR document — Catalyst Zia OCR via the Function. Extracted text
+  // drops into the ask box (and the Function stores the scan + result).
+  const onScan = useCallback(async (file: File | null) => {
+    if (!file) return;
+    setScanning(true);
+    try {
+      const b64 = await blobToBase64(file);
+      const res = await extractText(b64, lang === "kn" ? "kan" : "eng", file.name);
+      if (res?.text) setInput((prev) => (prev ? `${prev}\n${res.text}` : res.text));
+      else setInput("Could not read text from that document. Try a clearer scan.");
+    } catch {
+      setInput("Document scan failed — check the Catalyst Function / Zia OCR.");
+    } finally {
+      setScanning(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [lang]);
 
   // Conversation → PDF (print pipeline; audit-logged).
   const exportPdf = useCallback(() => {
@@ -388,6 +408,23 @@ export function AssistantClient() {
             <CornerDownLeft className="inline h-3 w-3" /> enter
           </span>
         </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => onScan(e.target.files?.[0] ?? null)}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={scanning}
+          className={cn("btn-ghost h-12 w-12 shrink-0 justify-center px-0", scanning && "text-accent")}
+          title="Scan an FIR document (Zia OCR)"
+          aria-label="Scan document"
+        >
+          {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
+        </button>
         <button
           type="button"
           onClick={toggleMic}
