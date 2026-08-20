@@ -112,13 +112,13 @@ export default function LoginPage() {
           </div>
           <div>
             <div className="font-display text-xl font-bold tracking-tight">Crime Intelligence</div>
-            <div className="text-xs text-muted">Karnataka State Police · AI Investigation OS</div>
+            <div className="text-xs text-muted">Karnataka State Police · AI-Assisted Investigation Platform </div>
           </div>
         </div>
 
         <div className="relative z-10 space-y-6">
           <h1 className="max-w-md font-display text-4xl font-bold leading-tight">
-            An AI Investigation Operating System </h1>
+            An AI-Native Investigation Platform </h1>
           <p className="max-w-md text-sm leading-relaxed text-muted">
             Reason over FIRs, criminal networks, evidence and geography in natural language.
             Every insight is explainable, auditable, and keeps the officer in command.
