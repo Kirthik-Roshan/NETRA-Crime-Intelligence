@@ -1,7 +1,8 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Lock, ArrowRight, ShieldCheck, Sparkles, Network, Zap, User } from "lucide-react";
+import { Lock, ArrowRight, ShieldCheck, Sparkles, Network, Zap, User } from "lucide-react";
+import { Emblem } from "@/components/Emblem";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { DEMO_USERS, login as clientLogin } from "@/lib/auth-client";
 
@@ -107,18 +108,16 @@ export default function LoginPage() {
       <div className="relative hidden flex-col justify-between overflow-hidden border-r border-border/60 p-12 lg:flex">
         <NetworkCanvas />
         <div className="relative z-10 flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-accent text-accent-fg shadow-glow">
-            <Eye className="h-6 w-6" />
-          </div>
+          <Emblem size={48} />
           <div>
             <div className="font-display text-xl font-bold tracking-tight">Crime Intelligence</div>
-            <div className="text-xs text-muted">Karnataka State Police · AI-Assisted Investigation Platform </div>
+            <div className="text-xs text-muted">Karnataka State Police · Advanced Criminal Intelligence Platform</div>
           </div>
         </div>
 
         <div className="relative z-10 space-y-6">
           <h1 className="max-w-md font-display text-4xl font-bold leading-tight">
-            An AI-Native Investigation Platform </h1>
+            Advanced Criminal Intelligence Platform</h1>
           <p className="max-w-md text-sm leading-relaxed text-muted">
             Reason over FIRs, criminal networks, evidence and geography in natural language.
             Every insight is explainable, auditable, and keeps the officer in command.
@@ -149,7 +148,7 @@ export default function LoginPage() {
         <div className="absolute right-6 top-6"><ThemeSwitcher /></div>
         <div className="w-full max-w-sm animate-fade-in">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-accent-fg"><Eye className="h-5 w-5" /></div>
+            <Emblem size={40} />
             <div className="font-display text-lg font-bold">Crime Intelligence</div>
           </div>
 

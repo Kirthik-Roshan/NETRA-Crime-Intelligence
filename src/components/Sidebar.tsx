@@ -11,7 +11,6 @@ import {
   Map,
   FileText,
   Settings,
-  Eye,
   ChevronLeft,
   ShieldCheck,
   Radar,
@@ -21,6 +20,7 @@ import { cn, initials } from "@/lib/utils";
 import { type SessionUser } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { useT, type TransKey } from "@/lib/i18n-client";
+import { Emblem } from "@/components/Emblem";
 
 const NAV: { href: string; key: TransKey; icon: typeof LayoutDashboard }[] = [
   { href: "/dashboard", key: "nav.dashboard", icon: LayoutDashboard },
@@ -57,8 +57,8 @@ export function Sidebar({ user }: { user: SessionUser }) {
       )}
     >
       <div className={cn("flex items-center gap-3 px-4 py-4", collapsed && "flex-col gap-2 px-2")}>
-        <Link href="/dashboard" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-fg" title="Crime Intelligence">
-          <Eye className="h-5 w-5" />
+        <Link href="/dashboard" className="shrink-0" title="Crime Intelligence">
+          <Emblem size={38} />
         </Link>
         {!collapsed && (
           <div className="min-w-0">
