@@ -1,13 +1,12 @@
-import { all } from "@/lib/db";
+"use client";
+import { useEffect, useState } from "react";
 import { CasesList, type CaseRow } from "@/components/cases/CasesList";
+import { fetchCases } from "@/lib/cloudscale";
 
-// Static export: bake every case; filtering happens client-side in CasesList.
+// Reads from Cloud Scale Data Store via the Catalyst Function (not baked data).
 export default function CasesPage() {
-  const cases = all<CaseRow>(
-    `SELECT c.id, c.case_number, c.title, c.status, c.priority, c.district, c.updated_at, c.officer,
-            f.crime_type
-     FROM cases c LEFT JOIN firs f ON f.id=c.fir_id
-     ORDER BY (c.priority='critical') DESC, c.updated_at DESC`
-  );
+  const [cases, setCases] = useState<CaseRow[] | null>(null);
+  useEffect(() => { fetchCases().then(setCases).catch(() => setCases([])); }, []);
+  if (cases === null) return <div className="p-6 text-sm text-muted">Loading cases from Cloud Scale…</div>;
   return <CasesList cases={cases} />;
 }

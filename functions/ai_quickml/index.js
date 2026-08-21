@@ -238,7 +238,7 @@ module.exports = async (req, res) => {
     // Set DATASTORE_TABLES="OcrResult,Cases,Firs" to expose more tables.
     if (mode === "records" || mode === "records:list") {
       const app = catalyst.initialize(req, { scope: "admin" });
-      const allow = (process.env.DATASTORE_TABLES || OCR_TABLE).split(",").map((s) => s.trim()).filter(Boolean);
+      const allow = (process.env.DATASTORE_TABLES || `${OCR_TABLE},Cases,Criminals,Firs`).split(",").map((s) => s.trim()).filter(Boolean);
       const table = mode === "records:list" ? OCR_TABLE : (payload.table || OCR_TABLE);
       if (!allow.includes(table)) { reply(403, { error: "table not allowed", allowed: allow }); return; }
       try {

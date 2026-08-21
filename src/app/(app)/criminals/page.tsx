@@ -1,13 +1,12 @@
-import { all } from "@/lib/db";
+"use client";
+import { useEffect, useState } from "react";
 import { CriminalsList, type CrimRow } from "@/components/criminals/CriminalsList";
+import { fetchCriminals } from "@/lib/cloudscale";
 
-// Static export: bake every criminal; search + risk filter run client-side.
+// Reads from Cloud Scale Data Store via the Catalyst Function (not baked data).
 export default function CriminalsPage() {
-  const criminals = all<CrimRow>(
-    `SELECT c.id, c.name, c.aliases, c.age, c.gender, c.status, c.risk_score, c.crime_category, c.home_district,
-            (SELECT COUNT(*) FROM fir_criminals fc WHERE fc.criminal_id=c.id) AS fir_count,
-            (SELECT COUNT(*) FROM arrests a WHERE a.criminal_id=c.id) AS arrest_count
-     FROM criminals c ORDER BY c.risk_score DESC`
-  );
+  const [criminals, setCriminals] = useState<CrimRow[] | null>(null);
+  useEffect(() => { fetchCriminals().then(setCriminals).catch(() => setCriminals([])); }, []);
+  if (criminals === null) return <div className="p-6 text-sm text-muted">Loading criminals from Cloud Scale…</div>;
   return <CriminalsList criminals={criminals} />;
 }
