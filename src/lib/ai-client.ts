@@ -118,6 +118,35 @@ export async function listRecords(table: string, max = 50): Promise<Array<Record
   return j?.rows || [];
 }
 
+/* ── Notifications — durable state in a Cloud Scale Data Store table ──────── */
+export interface NotificationRow {
+  id: string; ts: string; kind: string; severity: string;
+  title: string; detail: string; entity: string; entity_id: string; status: string;
+}
+
+/** List notifications from the Data Store (via the Function). Empty-safe. */
+export async function fetchNotifications(max = 50): Promise<NotificationRow[]> {
+  const j = await ziaCall<{ rows?: Array<Record<string, unknown>> }>({ mode: "notif:list", max });
+  const s = (r: Record<string, unknown>, ...k: string[]) => { for (const x of k) if (r[x] != null) return String(r[x]); return ""; };
+  return (j?.rows || []).map((r) => ({
+    id: s(r, "ROWID", "id"),
+    ts: s(r, "ts", "CREATEDTIME"),
+    kind: s(r, "kind") || "system",
+    severity: s(r, "severity"),
+    title: s(r, "title"),
+    detail: s(r, "detail"),
+    entity: s(r, "entity"),
+    entity_id: s(r, "entity_id"),
+    status: s(r, "status") || "unread",
+  }));
+}
+
+/** Update one notification's status (read / archived / unread). Returns success. */
+export async function setNotificationStatus(rowid: string, status: "read" | "archived" | "unread"): Promise<boolean> {
+  const j = await ziaCall<{ ok?: boolean }>({ mode: "notif:update", rowid, status });
+  return !!(j && j.ok);
+}
+
 /* ── NLP over case text (via the Function's `nlp` mode → QuickML) ─────────── */
 export interface NlpExtract { names: string[]; locations: string[]; dates: string[]; organizations: string[]; vehicles: string[]; phones: string[]; financial: string[]; confidence: number }
 export interface NlpSummary { summary: string; confidence: number }

@@ -1,7 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Search, Bell, LogOut, Languages, Cpu } from "lucide-react";
+import { Search, LogOut, Languages, Cpu } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { NotificationsBell } from "./NotificationsBell";
 import { useAppStore } from "@/store/useAppStore";
 import type { SessionUser } from "@/lib/types";
 import { useT } from "@/lib/i18n-client";
@@ -71,13 +72,7 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
 
         <ThemeSwitcher />
 
-        <button
-          className="relative grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:bg-elevated hover:text-fg"
-          aria-label="Notifications"
-        >
-          <Bell className="h-[18px] w-[18px]" />
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-danger" />
-        </button>
+        <NotificationsBell />
 
         <button
           onClick={logout}

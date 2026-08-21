@@ -258,6 +258,30 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // Notifications — durable read/unread/archived state in a Data Store table
+    // (NOTIF_TABLE, default "Notifications"). Read + status update only.
+    // Empty-safe: an unprovisioned table lists nothing rather than erroring.
+    if (mode === "notif:list" || mode === "notif:update") {
+      const app = catalyst.initialize(req, { scope: "admin" });
+      const ds = app.datastore().table(process.env.NOTIF_TABLE || "Notifications");
+      if (mode === "notif:list") {
+        try {
+          const page = await ds.getPagedRows({ maxRows: Math.min(100, Number(payload.max) || 50) });
+          reply(200, { rows: (page && page.data) || [] });
+        } catch (e) { reply(200, { rows: [] }); }
+        return;
+      }
+      const rowid = payload.rowid || payload.id;
+      const status = payload.status;
+      const allowed = ["unread", "read", "archived", "action_required"];
+      if (!rowid || !allowed.includes(status)) { reply(400, { error: "rowid and valid status required", allowed }); return; }
+      try {
+        await ds.updateRow({ ROWID: rowid, status });
+        reply(200, { ok: true, rowid, status });
+      } catch (e) { reply(200, { ok: false, error: String((e && e.message) || e) }); }
+      return;
+    }
+
     if (mode === "tts") {
       if (!payload.text) { reply(400, { error: "text required" }); return; }
       const up = await zia("tts/synthesize", { text: payload.text, language: payload.language || "en-IN" }, token);
