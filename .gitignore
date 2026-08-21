@@ -14,4 +14,13 @@ tsconfig.tsbuildinfo
 # function config carries deploy secrets — never commit
 functions/*/catalyst-config.json
 functions/ai_quickml/catalyst-config.json
+
+# local env & secrets (never commit) — .env.example stays tracked
 .env
+.env*.local
+
+# local editor / agent config
+.claude/
+
+# generated KB text (regenerate from source; not source of truth)
+/data/kb_txt_gen/
