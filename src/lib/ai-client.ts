@@ -109,6 +109,15 @@ export async function listOcr(): Promise<Array<Record<string, unknown>>> {
   return j?.rows || [];
 }
 
+/**
+ * Read rows from a Cloud Scale Data Store table (allowlisted server-side via
+ * DATASTORE_TABLES). Read-only, row-capped — the app's live-data read path.
+ */
+export async function listRecords(table: string, max = 50): Promise<Array<Record<string, unknown>>> {
+  const j = await ziaCall<{ rows?: Array<Record<string, unknown>> }>({ mode: "records", table, max });
+  return j?.rows || [];
+}
+
 /** Ask the Catalyst Function. Returns the answer text, or null if unavailable. */
 export async function askAssistant(
   prompt: string,
