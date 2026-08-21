@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   FolderKanban, AlertTriangle, UserSearch, Fingerprint, TrendingUp, Sparkles,
-  MapPin, ArrowRight, Flame, Radar,
+  MapPin, ArrowRight, Flame, Radar, Activity,
 } from "lucide-react";
 import { OfficerFirstName } from "@/components/OfficerName";
 import { StatCard, PageHeader, Badge } from "@/components/ui";
@@ -15,6 +15,8 @@ import { fetchDashboard, type DashboardData } from "@/lib/cloudscale";
 const EMPTY: DashboardData = {
   stats: { activeCases: 0, critical: 0, totalFirs: 0, atLarge: 0, arrests30: 0, solveRate: 0 },
   trend: [], byType: [], hotspots: [], geo: [],
+  heat: [], velocity: { open: 0, active: 0, closed: 0, escalated: 0, avgClosureDays: 0 },
+  confidence: { dataQuality: 0, caseLinkage: 0, patternSignal: 0, extractionReadiness: 0, overall: 0 },
 };
 
 // Reads all stats from Cloud Scale Data Store via the Catalyst Function.
@@ -23,7 +25,7 @@ export default function DashboardPage() {
   const [d, setD] = useState<DashboardData | null>(null);
   useEffect(() => { fetchDashboard().then(setD).catch(() => setD(EMPTY)); }, []);
 
-  const { stats, trend, byType, hotspots, geo } = d ?? EMPTY;
+  const { stats, trend, byType, hotspots, geo, heat, velocity, confidence } = d ?? EMPTY;
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   // Insights derived from the Cloud Scale data itself (no separate source).
@@ -54,10 +56,25 @@ export default function DashboardPage() {
         <div className="card panel-pad lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="font-display text-base font-semibold">{t("dash.crime_trends")}</h2>
-              <p className="text-xs text-muted">FIRs registered per month · from Cloud Scale</p>
+              <h2 className="flex items-center gap-2 font-display text-base font-semibold"><Flame className="h-4 w-4 text-accent" /> Crime Heat Evolution</h2>
+              <p className="text-xs text-muted">Incident volume across timescales · Δ vs previous window · from Cloud Scale</p>
             </div>
             <Badge tone="accent"><TrendingUp className="h-3 w-3" /> live</Badge>
+          </div>
+          {/* Windowed density evolution — 24h → 6mo, anchored to the newest FIR */}
+          <div className="mb-4 grid grid-cols-4 gap-2">
+            {(heat.length ? heat : [{ key: "24h", label: "24 hours", count: 0, delta: 0 }, { key: "7d", label: "7 days", count: 0, delta: 0 }, { key: "30d", label: "30 days", count: 0, delta: 0 }, { key: "6mo", label: "6 months", count: 0, delta: 0 }]).map((w) => {
+              const up = w.delta > 0, flat = w.delta === 0;
+              return (
+                <div key={w.key} className="rounded-lg border border-border p-2.5">
+                  <div className="stat-label">{w.label}</div>
+                  <div className="font-display text-xl font-bold">{w.count}</div>
+                  <div className={`mt-0.5 text-[11px] font-mono ${flat ? "text-muted" : up ? "text-danger" : "text-success"}`}>
+                    {flat ? "±0%" : `${up ? "▲" : "▼"} ${Math.abs(w.delta)}%`}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           {trend.length ? <TrendLine data={trend} /> : <div className="grid h-48 place-items-center text-sm text-muted">No FIR records in Cloud Scale yet.</div>}
         </div>
@@ -80,6 +97,29 @@ export default function DashboardPage() {
               </div>
             </>
           ) : <div className="grid h-48 place-items-center text-sm text-muted">No categories yet.</div>}
+        </div>
+      </div>
+
+      {/* Investigation velocity + intelligence confidence — derived from Cloud Scale records */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="card panel-pad lg:col-span-2">
+          <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold"><Activity className="h-4 w-4 text-accent" /> Investigation Velocity</h2>
+          <p className="mb-3 text-xs text-muted">Live case throughput across the state · from Cloud Scale</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <VelocityTile label="Open" value={velocity.open} />
+            <VelocityTile label="Active" value={velocity.active} />
+            <VelocityTile label="Closed" value={velocity.closed} tone="success" />
+            <VelocityTile label="Escalated" value={velocity.escalated} tone="danger" />
+            <VelocityTile label="Avg closure" value={velocity.avgClosureDays ? `${velocity.avgClosureDays}d` : "—"} />
+          </div>
+        </div>
+        <div className="card panel-pad">
+          <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold"><Radar className="h-4 w-4 text-accent" /> Intelligence Confidence</h2>
+          <p className="mb-3 text-xs text-muted">Overall <span className="font-mono text-accent">{Math.round(confidence.overall * 100)}%</span> · from record completeness & linkage</p>
+          <ConfidenceBar label="Data quality" v={confidence.dataQuality} />
+          <ConfidenceBar label="Case linkage" v={confidence.caseLinkage} />
+          <ConfidenceBar label="Pattern signal" v={confidence.patternSignal} />
+          <ConfidenceBar label="Extraction readiness" v={confidence.extractionReadiness} />
         </div>
       </div>
 
@@ -128,6 +168,32 @@ export default function DashboardPage() {
           <p className="mb-2 text-xs text-muted">FIRs by district</p>
           {hotspots.length ? <BarSeries data={hotspots.slice(0, 8)} x="district" y="cases" color="warning" height={300} /> : <div className="grid h-64 place-items-center text-sm text-muted">No district data yet.</div>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function VelocityTile({ label, value, tone }: { label: string; value: string | number; tone?: "success" | "danger" }) {
+  const color = tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-fg";
+  return (
+    <div className="rounded-lg border border-border p-2.5">
+      <div className="stat-label">{label}</div>
+      <div className={`font-display text-2xl font-bold ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function ConfidenceBar({ label, v }: { label: string; v: number }) {
+  const pct = Math.round(v * 100);
+  const tone = pct >= 75 ? "bg-success" : pct >= 50 ? "bg-warning" : "bg-danger";
+  return (
+    <div className="mb-2.5">
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="text-subtle">{label}</span>
+        <span className="font-mono text-muted">{pct}%</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-elevated">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

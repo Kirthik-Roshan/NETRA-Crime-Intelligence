@@ -100,12 +100,66 @@ export async function fetchMaps(): Promise<MapsData> {
   return { points, districts, crimeTypes: [...crimeTypes].filter(Boolean).sort(), hotspots };
 }
 
+export interface HeatWindow { key: string; label: string; count: number; delta: number }
+export interface Velocity { open: number; active: number; closed: number; escalated: number; avgClosureDays: number }
+export interface Confidence { dataQuality: number; caseLinkage: number; patternSignal: number; extractionReadiness: number; overall: number }
+
 export interface DashboardData {
   stats: { activeCases: number; critical: number; totalFirs: number; atLarge: number; arrests30: number; solveRate: number };
   trend: { month: string; cases: number }[];
   byType: { crime_type: string; count: number }[];
   hotspots: { district: string; cases: number }[];
   geo: FirPoint[];
+  heat: HeatWindow[];
+  velocity: Velocity;
+  confidence: Confidence;
+}
+
+const firTime = (f: Row): number => { const t = Date.parse(str(f, "occurred_at", "IncidentFromDate", "CREATEDTIME")); return Number.isNaN(t) ? 0 : t; };
+
+/** Trailing-window FIR counts anchored to the newest FIR, each vs the previous equal window. */
+function crimeHeatEvolution(firs: Row[]): HeatWindow[] {
+  const windows = [
+    { key: "24h", label: "24 hours", days: 1 },
+    { key: "7d", label: "7 days", days: 7 },
+    { key: "30d", label: "30 days", days: 30 },
+    { key: "6mo", label: "6 months", days: 182 },
+  ];
+  const times = firs.map(firTime).filter(Boolean);
+  if (!times.length) return windows.map((w) => ({ key: w.key, label: w.label, count: 0, delta: 0 }));
+  const anchor = Math.max(...times);
+  return windows.map((w) => {
+    const span = w.days * 86400000;
+    const cur = times.filter((t) => t >= anchor - span && t <= anchor).length;
+    const prev = times.filter((t) => t >= anchor - 2 * span && t < anchor - span).length;
+    const delta = prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100);
+    return { key: w.key, label: w.label, count: cur, delta };
+  });
+}
+
+/** Case throughput from status/priority. avgClosureDays is 0 until Data Store carries closure timestamps. */
+function investigationVelocity(cases: CaseRow[]): Velocity {
+  const openS = (s: string) => s === "registered" || s === "under_investigation";
+  return {
+    open: cases.filter((c) => openS(c.status)).length,
+    active: cases.filter((c) => c.status === "under_investigation").length,
+    closed: cases.filter((c) => c.status === "closed" || c.status === "charge_sheeted").length,
+    escalated: cases.filter((c) => c.priority === "critical" && openS(c.status)).length,
+    avgClosureDays: 0,
+  };
+}
+
+/** Honest record-completeness/linkage signals over the FIR rows — not a fabricated model score. */
+function intelligenceConfidence(firs: Row[]): Confidence {
+  const n = firs.length;
+  if (!n) return { dataQuality: 0, caseLinkage: 0, patternSignal: 0, extractionReadiness: 0, overall: 0 };
+  const has = (f: Row, ...k: string[]) => str(f, ...k).trim() !== "";
+  const frac = (p: (f: Row) => boolean) => firs.filter(p).length / n;
+  const dataQuality = frac((f) => has(f, "description", "Description", "BriefFacts") && num(f, "lat", "latitude", "Latitude") !== 0);
+  const caseLinkage = frac((f) => has(f, "case_number", "CaseNo", "CrimeNo"));
+  const patternSignal = frac((f) => has(f, "modus", "ModusOperandi", "crime_type", "CrimeType"));
+  const extractionReadiness = frac((f) => has(f, "ipc_sections", "IPCSections", "sections") && has(f, "description", "Description", "BriefFacts"));
+  return { dataQuality, caseLinkage, patternSignal, extractionReadiness, overall: (dataQuality + caseLinkage + patternSignal + extractionReadiness) / 4 };
 }
 
 /** Pull the base tables and derive the dashboard stats client-side. */
@@ -137,5 +191,8 @@ export async function fetchDashboard(): Promise<DashboardData> {
     byType: [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([crime_type, count]) => ({ crime_type, count })),
     hotspots: [...byDist.entries()].sort((a, b) => b[1] - a[1]).map(([district, cases]) => ({ district, cases })),
     geo: toGeoPoints(firs),
+    heat: crimeHeatEvolution(firs),
+    velocity: investigationVelocity(cases),
+    confidence: intelligenceConfidence(firs),
   };
 }
