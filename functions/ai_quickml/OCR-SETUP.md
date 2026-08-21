@@ -17,15 +17,17 @@ Columns (all Text unless noted):
 (`ROWID`, `CREATEDTIME` are added by Catalyst automatically.)
 Override the table name with the `OCR_TABLE` env var on the Function.
 
-## 2. Stratus bucket — `netra-evidence`
-Create a Stratus bucket named `netra-evidence` (or set `STRATUS_BUCKET`).
-Objects are written under the `ocr/` prefix.
+## 2. File Store folder — for scanned evidence
+Cloud Scale → **File Store** → create a folder (e.g. `netra-evidence`). Copy its
+**numeric folder ID** and set it on the Function as `FILESTORE_FOLDER_ID`.
+Scans are uploaded there as `ocr-<name>`; the file id is stored in
+`OcrResult.source_key`. Leave the env unset to skip file storage (OCR still runs).
 
 ## 3. Function env (Configuration)
 Already set for the LLM/RAG path (`QML_CLIENT_ID/SECRET/REFRESH_TOKEN/ORG/PROJECT`).
 The SDK (`catalyst.initialize(req, {scope:'admin'})`) reuses the Function's own
 project credentials for Zia / Stratus / Data Store — no extra token needed.
-Optional overrides: `OCR_TABLE`, `STRATUS_BUCKET`.
+Set `FILESTORE_FOLDER_ID` (from step 2). Optional override: `OCR_TABLE`.
 
 ## 4. Deploy
 From a `catalyst init` + `slate:link` bound checkout:

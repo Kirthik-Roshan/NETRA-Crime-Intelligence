@@ -24,7 +24,9 @@ const os = require("os");
 const path = require("path");
 
 const OCR_TABLE = process.env.OCR_TABLE || "OcrResult";
-const STRATUS_BUCKET = process.env.STRATUS_BUCKET || "netra-evidence";
+// File Store folder ID (numeric) for scanned evidence — create the folder in
+// the console and set FILESTORE_FOLDER_ID. Empty → file storage is skipped.
+const FILESTORE_FOLDER_ID = process.env.FILESTORE_FOLDER_ID || "";
 
 // base64 (with or without data: prefix) → temp file path.
 function tmpFromBase64(b64, ext) {
@@ -176,10 +178,14 @@ module.exports = async (req, res) => {
 
         let file_id = null;
         try {
-          const key = `ocr/${path.basename(tmp)}`;
-          await app.stratus().bucket(STRATUS_BUCKET).putObject(key, fs.createReadStream(tmp));
-          file_id = key;
-        } catch (e) { /* bucket not provisioned yet — skip blob storage */ }
+          if (FILESTORE_FOLDER_ID) {
+            const up = await app.filestore().folder(FILESTORE_FOLDER_ID).uploadFile({
+              code: fs.createReadStream(tmp),
+              name: `ocr-${path.basename(tmp)}`,
+            });
+            file_id = String((up && (up.id || up.file_id)) || "");
+          }
+        } catch (e) { /* folder not provisioned yet — skip file storage */ }
 
         let record_id = null;
         try {
