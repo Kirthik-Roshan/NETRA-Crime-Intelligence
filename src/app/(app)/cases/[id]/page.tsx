@@ -7,6 +7,7 @@ import {
 import { get, all } from "@/lib/db";
 import { similarFirs } from "@/lib/embeddings";
 import { PageHeader, Badge, StatusBadge, Avatar } from "@/components/ui";
+import { CaseIntelligence } from "@/components/ai/CaseIntelligence";
 import { formatDate } from "@/lib/utils";
 
 // Prerender every case page at build (static export — no runtime server).
@@ -128,6 +129,9 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
             <p className="text-sm leading-relaxed text-subtle">{c.summary}</p>
             {fir && <p className="mt-2 text-sm leading-relaxed text-muted">{fir.description}</p>}
           </div>
+
+          <CaseIntelligence text={[c.summary, fir?.description].filter(Boolean).join("\n\n")} />
+
 
           <div className="card panel-pad">
             <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><Clock className="h-4 w-4 text-muted" /> Case Timeline</h3>

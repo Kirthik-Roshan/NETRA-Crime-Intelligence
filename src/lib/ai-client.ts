@@ -118,6 +118,24 @@ export async function listRecords(table: string, max = 50): Promise<Array<Record
   return j?.rows || [];
 }
 
+/* ── NLP over case text (via the Function's `nlp` mode → QuickML) ─────────── */
+export interface NlpExtract { names: string[]; locations: string[]; dates: string[]; organizations: string[]; vehicles: string[]; phones: string[]; financial: string[]; confidence: number }
+export interface NlpSummary { summary: string; confidence: number }
+export interface NlpLink { from: string; type: string; to: string; confidence: number }
+export interface NlpEntities { links: NlpLink[]; confidence: number }
+export type NlpOp = "extract" | "summarize" | "entities";
+
+/**
+ * Run an NLP op over supplied case text. The text is grounded in the Cloud Scale
+ * Data Store (whatever the page holds); QuickML only analyses it. Returns the
+ * parsed JSON result, or null when the Function/model is unavailable.
+ */
+export async function analyzeCase<T = Record<string, unknown>>(op: NlpOp, text: string): Promise<T | null> {
+  if (!text.trim()) return null;
+  const j = await ziaCall<{ op?: string; result?: T | null }>({ mode: "nlp", op, text });
+  return (j && j.result) || null;
+}
+
 /** Ask the Catalyst Function. Returns the answer text, or null if unavailable. */
 export async function askAssistant(
   prompt: string,

@@ -138,6 +138,16 @@ function readBody(req) {
   });
 }
 
+// Parse a JSON object out of an LLM reply that may wrap it in ```json fences
+// or prose. Returns null if no valid JSON object is found.
+function parseJsonLoose(raw) {
+  if (raw == null) return null;
+  const body = String(raw).replace(/```json/gi, "").replace(/```/g, "").trim();
+  const s = body.indexOf("{"), e = body.lastIndexOf("}");
+  const slice = s >= 0 && e > s ? body.slice(s, e + 1) : body;
+  try { return JSON.parse(slice); } catch { return null; }
+}
+
 module.exports = async (req, res) => {
   const origin = (req.headers && req.headers.origin) || "";
   const reply = (code, obj) => send(res, code, obj, origin);
@@ -317,6 +327,43 @@ module.exports = async (req, res) => {
       const answer = d.response ?? d.answer ?? d.output ?? d.text ?? null;
       const sources = hits.map((h) => ({ title: h.table, snippet: JSON.stringify(h.row).slice(0, 240), score: null }));
       reply(200, { answer, sources });
+      return;
+    }
+
+    // ── NLP over supplied case text — entity extraction / summarization /
+    // entity linking. Pure LLM over the text the caller passes (which the app
+    // pulls from the Cloud Scale Data Store); no DB access here. Strict JSON. ──
+    if (mode === "nlp") {
+      const op = payload.op || "extract";
+      const text = String(payload.text || "").slice(0, 8000);
+      if (!text) { reply(400, { error: "text required" }); return; }
+      const SPECS = {
+        extract: {
+          sys: "You are an intelligence-extraction engine for the Karnataka State Police. Output strict JSON only.",
+          prompt: `Extract structured intelligence entities from this crime record text. Return ONLY JSON with keys ` +
+            `names, locations, dates, organizations, vehicles, phones, financial (each an array of strings) and ` +
+            `confidence (0-1). Do not invent entities not present in the text.\n\nTEXT:\n${text}`,
+        },
+        summarize: {
+          sys: "You are NETRA, a crime-intelligence assistant. Summarise only from supplied records. JSON only.",
+          prompt: `Summarise this FIR for an investigating officer in 2-3 sentences, factual and concrete. ` +
+            `Return ONLY JSON: {"summary": string, "confidence": 0-1}.\n\nTEXT:\n${text}`,
+        },
+        entities: {
+          sys: "You are an intelligence link-analysis engine. Output strict JSON only.",
+          prompt: `Identify relationships between entities mentioned in this crime record. Relationship types must be one of: ` +
+            `"Associated With","Called","Visited","Owns","Related To","Investigated In","Mentioned In","Connected Through". ` +
+            `Return ONLY JSON: {"links":[{"from":string,"type":string,"to":string,"confidence":0-1}],"confidence":0-1}. ` +
+            `Only include relationships supported by the text.\n\nTEXT:\n${text}`,
+        },
+      };
+      const spec = SPECS[op];
+      if (!spec) { reply(400, { error: "unknown op", allowed: Object.keys(SPECS) }); return; }
+      const up = await quickml(LLM_PATH, { prompt: spec.prompt, guided_prompt: spec.sys, temperature: 0.1, max_tokens: 700 }, token);
+      if (!up.ok) { reply(502, { error: "QuickML NLP error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
+      const d = up.json || {};
+      const out = d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? "";
+      reply(200, { op, result: parseJsonLoose(out) });
       return;
     }
 
