@@ -199,6 +199,35 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // ── Zia image services (SDK) — analysis only, result returned as-is.
+    // face · object · moderate · barcode · compareFace. ────────────────────
+    if (mode === "face" || mode === "object" || mode === "moderate" || mode === "barcode" || mode === "compareFace") {
+      const app = catalyst.initialize(req, { scope: "admin" });
+      const zia = app.zia();
+      if (mode === "compareFace") {
+        if (!payload.image || !payload.image2) { reply(400, { error: "image and image2 required" }); return; }
+        const a = tmpFromBase64(payload.image, "jpg");
+        const b = tmpFromBase64(payload.image2, "jpg");
+        try {
+          const result = await zia.compareFace(fs.createReadStream(a), fs.createReadStream(b));
+          reply(200, { result });
+        } finally { try { fs.unlinkSync(a); fs.unlinkSync(b); } catch { /* cleanup */ } }
+        return;
+      }
+      if (!payload.image) { reply(400, { error: "image required" }); return; }
+      const tmp = tmpFromBase64(payload.image, "jpg");
+      try {
+        const stream = fs.createReadStream(tmp);
+        let result;
+        if (mode === "face") result = await zia.analyseFace(stream, { mode: payload.faceMode || "moderate", gender: String(payload.gender ?? "true") });
+        else if (mode === "object") result = await zia.detectObject(stream);
+        else if (mode === "moderate") result = await zia.moderateImage(stream, { mode: payload.modMode || "advanced" });
+        else if (mode === "barcode") result = await zia.scanBarcode(stream, { format: payload.format || "all" });
+        reply(200, { result });
+      } finally { try { fs.unlinkSync(tmp); } catch { /* cleanup */ } }
+      return;
+    }
+
     // List stored OCR results (Data Store read).
     if (mode === "records:list") {
       const app = catalyst.initialize(req, { scope: "admin" });
