@@ -51,7 +51,6 @@ const DC_BASE = process.env.QML_DC_BASE || "https://api.catalyst.zoho.in";
 const ORG = process.env.QML_ORG;
 const PROJECT = process.env.QML_PROJECT_ID;
 const SCHEME = process.env.QML_AUTH_SCHEME || "Zoho-oauthtoken";
-const RAG_PATH = process.env.QML_RAG_PATH || "rag/answer";
 const LLM_PATH = process.env.QML_LLM_PATH || "vlm/chat";
 
 // Allow any *.onslate.in origin (the app may live on different Slate URLs), or a
@@ -275,25 +274,48 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // RAG, Cloud Scale edition: retrieval comes from Cloud Scale Search over the
+    // Data Store (the ONLY data source); QuickML LLM only phrases the answer from
+    // the retrieved rows. Which tables/columns to search is env-driven so the
+    // schema stays owned by the app, not hardcoded here:
+    //   SEARCH_TABLE_COLUMNS = {"Firs":["BriefFacts","CrimeNo"],"Cases":["title"]}
+    //   SEARCH_SELECT_COLUMNS (optional) = same shape — columns to return
     if (mode === "rag") {
       const query = payload.query || payload.prompt;
       if (!query) { reply(400, { error: "query required" }); return; }
-      const up = await quickml(RAG_PATH, { query }, token);
-      if (!up.ok) { reply(502, { error: "QuickML RAG error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
+      const app = catalyst.initialize(req, { scope: "admin" });
+
+      // 1. Retrieve from Cloud Scale Search.
+      const hits = [];
+      try {
+        const cfg = JSON.parse(process.env.SEARCH_TABLE_COLUMNS || "{}");
+        if (Object.keys(cfg).length) {
+          const s = app.search();
+          const exec = (s.executeSearch || s.searchDocuments).bind(s);
+          const req2 = { search_string: query, search_table_columns: cfg };
+          if (process.env.SEARCH_SELECT_COLUMNS) req2.select_table_columns = JSON.parse(process.env.SEARCH_SELECT_COLUMNS);
+          const found = await exec(req2);
+          for (const [tbl, rows] of Object.entries(found || {})) {
+            for (const r of (Array.isArray(rows) ? rows : []).slice(0, 6)) hits.push({ table: tbl, row: r });
+          }
+        }
+      } catch (e) { /* Search not configured/indexed yet — graceful empty */ }
+
+      if (!hits.length) {
+        reply(200, { answer: "No matching records were found in Cloud Scale for that query. (Configure Cloud Scale Search + SEARCH_TABLE_COLUMNS.)", sources: [] });
+        return;
+      }
+
+      // 2. Ground the LLM answer strictly in the retrieved Cloud Scale rows.
+      const context = hits.map((h) => `[${h.table}] ${JSON.stringify(h.row)}`).join("\n").slice(0, 4000);
+      const up = await quickml(LLM_PATH, {
+        prompt: `Records retrieved from Cloud Scale:\n${context}\n\nOfficer's question: ${query}`,
+        guided_prompt: "You are NETRA, a Karnataka State Police assistant. Answer ONLY from the supplied Cloud Scale records. Be factual and brief. If they don't answer it, say so.",
+        temperature: 0.2, max_tokens: 700,
+      }, token);
       const d = up.json || {};
-      const answer = d.answer ?? d.response ?? d.output ?? null;
-      // QuickML RAG returns the citations under `retrieved_nodes`.
-      const rawSrc = d.retrieved_nodes || d.sources || d.citations || d.documents || [];
-      const sources = (Array.isArray(rawSrc) ? rawSrc : []).map((s) => {
-        if (typeof s === "string") return { title: "Case document", snippet: s.slice(0, 240), score: null };
-        const meta = s.metadata || s.node || {};
-        return {
-          title: s.file_name || s.document || s.file || s.source || s.title || s.name ||
-                 meta.file_name || meta.source || meta.document || "Case document",
-          snippet: (s.text || s.content || s.chunk || s.node_text || meta.text || "").toString().slice(0, 240),
-          score: s.score ?? s.relevance ?? s.similarity ?? null,
-        };
-      });
+      const answer = d.response ?? d.answer ?? d.output ?? d.text ?? null;
+      const sources = hits.map((h) => ({ title: h.table, snippet: JSON.stringify(h.row).slice(0, 240), score: null }));
       reply(200, { answer, sources });
       return;
     }
