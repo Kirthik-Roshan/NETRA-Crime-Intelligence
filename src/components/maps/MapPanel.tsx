@@ -17,12 +17,14 @@ export function MapPanel({
   crimeTypes,
   height,
   enableControls,
+  onIncidentClick,
 }: {
   points: FirPoint[];
   districts?: DistrictAgg[];
   crimeTypes?: string[];
   height?: number;
   enableControls?: boolean;
+  onIncidentClick?: (p: FirPoint) => void;
 }) {
-  return <CrimeMap points={points} districts={districts} crimeTypes={crimeTypes} height={height} enableControls={enableControls} />;
+  return <CrimeMap points={points} districts={districts} crimeTypes={crimeTypes} height={height} enableControls={enableControls} onIncidentClick={onIncidentClick} />;
 }

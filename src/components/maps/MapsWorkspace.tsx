@@ -1,8 +1,8 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Map as MapIcon, Layers, MapPin, ExternalLink } from "lucide-react";
+import { Map as MapIcon, Layers, MapPin, ExternalLink, X } from "lucide-react";
 import { MapPanel } from "./MapPanel";
 import type { FirPoint, DistrictAgg } from "./CrimeMap";
 
@@ -30,6 +30,7 @@ export function MapsWorkspace({
 }) {
   const [style, setStyle] = useState<Style>("map");
   const [selected, setSelected] = useState<string | null>(hotspots[0]?.district ?? null);
+  const [incident, setIncident] = useState<FirPoint | null>(null);
 
   const counts = useMemo(() => Object.fromEntries(hotspots.map((h) => [h.district, h.cases])), [hotspots]);
 
@@ -125,27 +126,33 @@ export function MapsWorkspace({
       )}
 
       {style === "layers" && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-          <MapPanel points={points} districts={districts} crimeTypes={crimeTypes} height={620} enableControls />
-          <div className="card panel-pad">
-            <h2 className="mb-3 font-display text-base font-semibold">District Ranking</h2>
-            <div className="space-y-1.5">
-              {hotspots.map((h, i) => {
-                const max = hotspots[0]?.cases || 1;
-                return (
-                  <button key={h.district} onClick={() => setSelected(h.district)} className="block w-full text-left">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={selected === h.district ? "text-accent" : "text-subtle"}>{i + 1}. {h.district}</span>
-                      <span className="font-mono text-muted">{h.cases}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated">
-                      <div className={`h-full rounded-full ${selected === h.district ? "bg-accent" : "bg-warning"}`} style={{ width: `${(h.cases / max) * 100}%` }} />
-                    </div>
-                  </button>
-                );
-              })}
+        <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+          <MapPanel points={points} districts={districts} crimeTypes={crimeTypes} height={620} enableControls onIncidentClick={setIncident} />
+          {incident ? (
+            <IncidentPanel p={incident} onClose={() => setIncident(null)} />
+          ) : (
+            <div className="card panel-pad">
+              <h2 className="mb-1 font-display text-base font-semibold">District Ranking</h2>
+              <p className="mb-3 text-[11px] text-muted">On the Incidents layer, click a marker for detail.</p>
+              <div className="space-y-1.5">
+                {hotspots.map((h, i) => {
+                  const max = hotspots[0]?.cases || 1;
+                  return (
+                    <button key={h.district} onClick={() => setSelected(h.district)} className="block w-full text-left">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className={selected === h.district ? "text-accent" : "text-subtle"}>{i + 1}. {h.district}</span>
+                        <span className="font-mono text-muted">{h.cases}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated">
+                        <div className={`h-full rounded-full ${selected === h.district ? "bg-accent" : "bg-warning"}`} style={{ width: `${(h.cases / max) * 100}%` }} />
+                      </div>
+                    </button>
+                  );
+                })}
+                {hotspots.length === 0 && <p className="text-xs text-muted">No district data in Cloud Scale yet.</p>}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
@@ -157,6 +164,44 @@ function Tile({ label, value }: { label: string; value: string | number }) {
     <div className="rounded-lg border border-border p-2.5">
       <div className="stat-label">{label}</div>
       <div className="font-display text-xl font-bold">{value}</div>
+    </div>
+  );
+}
+
+const SEV_COLOR: Record<string, string> = { critical: "text-danger", high: "text-warning", medium: "text-info", low: "text-success" };
+
+/** Incident detail built purely from the Cloud Scale FIR row we already hold. */
+function IncidentPanel({ p, onClose }: { p: FirPoint; onClose: () => void }) {
+  return (
+    <div className="card panel-pad">
+      <div className="mb-2 flex items-center gap-2">
+        <MapPin className="h-4 w-4 text-accent" />
+        <h3 className="font-display text-sm font-semibold">{p.fir_number || "Incident"}</h3>
+        <button onClick={onClose} className="ml-auto rounded-md p-1 text-muted hover:bg-elevated hover:text-fg" aria-label="Close incident">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="space-y-1.5 text-xs">
+        <Row label="Type" value={p.crime_type || "—"} />
+        <Row label="District" value={p.district || "—"} />
+        <Row label="Severity" value={<span className={`capitalize ${SEV_COLOR[p.severity] ?? "text-subtle"}`}>{p.severity || "—"}</span>} />
+        <Row label="Coordinates" value={p.lat && p.lng ? `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}` : "—"} />
+      </div>
+      {p.fir_number && (
+        <Link href={`/cases?fir=${encodeURIComponent(p.fir_number)}`} className="btn-ghost mt-3 w-full justify-center text-xs">
+          Open full case <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+      )}
+      <p className="mt-3 text-[11px] text-muted">Detail is limited to fields held in Cloud Scale. Suspect &amp; linkage joins appear once those Data Store tables are provisioned.</p>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-subtle">{label}</span>
+      <span className="text-right text-muted">{value}</span>
     </div>
   );
 }

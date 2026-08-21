@@ -87,12 +87,14 @@ export default function CrimeMap({
   crimeTypes = [],
   height = 420,
   enableControls = false,
+  onIncidentClick,
 }: {
   points: FirPoint[];
   districts?: DistrictAgg[];
   crimeTypes?: string[];
   height?: number;
   enableControls?: boolean;
+  onIncidentClick?: (p: FirPoint) => void;
 }) {
   const [view, setView] = useState<"heatmap" | "district" | "incident">(enableControls ? "heatmap" : "incident");
   const [districtFilter, setDistrictFilter] = useState("all");
@@ -215,6 +217,7 @@ export default function CrimeMap({
                   center={[p.lat, p.lng]}
                   radius={p.severity === "critical" ? 7 : p.severity === "high" ? 5 : 3.5}
                   pathOptions={{ color, fillColor: color, fillOpacity: 0.6, weight: 1 }}
+                  eventHandlers={onIncidentClick ? { click: () => onIncidentClick(p) } : undefined}
                 >
                   <Popup>
                     <div style={{ minWidth: 160 }}>
