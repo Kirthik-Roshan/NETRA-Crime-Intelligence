@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   BarChart3, FolderKanban, AlertTriangle, Users, Fingerprint, Clock,
   Flame, MapPin, Radar, Activity, Database, ArrowRight, ScanText,
+  Network, Phone, Car, Landmark,
 } from "lucide-react";
 import { PageHeader, StatCard, Badge, Avatar } from "@/components/ui";
 import { MapPanel } from "@/components/maps/MapPanel";
@@ -41,6 +42,27 @@ export default function AnalyticsPage() {
   const repeat = criminals.filter((c) => c.fir_count > 1).length;
   const active = useMemo(() => ranked.find((c) => c.id === sel) ?? ranked[0] ?? null, [ranked, sel]);
   const queue = useMemo(() => [...cases].sort((a, b) => (PRI[a.priority] ?? 9) - (PRI[b.priority] ?? 9)).slice(0, 6), [cases]);
+
+  // Cross-case connections — derived proxies (no link tables in Cloud Scale yet).
+  // Linked = cases that share a district+crime_type with at least one other case.
+  const links = useMemo(() => {
+    const districts = new Set(cases.map((c) => c.district).filter(Boolean));
+    const types = new Set(cases.map((c) => c.crime_type).filter(Boolean));
+    const groups = new Map<string, number>();
+    for (const c of cases) if (c.district && c.crime_type) groups.set(`${c.district}|${c.crime_type}`, (groups.get(`${c.district}|${c.crime_type}`) ?? 0) + 1);
+    const linkedCases = cases.filter((c) => c.district && c.crime_type && (groups.get(`${c.district}|${c.crime_type}`) ?? 0) > 1).length;
+    return {
+      linkedCases,
+      entities: [
+        { icon: MapPin, label: "Locations", value: districts.size, cls: "text-info", note: "distinct districts" },
+        { icon: Fingerprint, label: "Modus Operandi", value: types.size, cls: "text-warning", note: "distinct crime types" },
+        { icon: Users, label: "Associates", value: criminals.length, cls: "text-accent", note: "profiles on record" },
+        { icon: Phone, label: "Phone Numbers", value: 0, cls: "text-muted", note: "needs Data Store link tables" },
+        { icon: Car, label: "Vehicles", value: 0, cls: "text-muted", note: "needs Data Store link tables" },
+        { icon: Landmark, label: "Bank Accounts", value: 0, cls: "text-muted", note: "needs Data Store link tables" },
+      ],
+    };
+  }, [cases, criminals]);
 
   const heat30 = heat.find((h) => h.key === "30d");
   const summary = [
@@ -174,6 +196,38 @@ export default function AnalyticsPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Cross-case connections */}
+      <div className="card panel-pad">
+        <div className="mb-3 flex items-center gap-2">
+          <Network className="h-4 w-4 text-accent" />
+          <h2 className="font-display text-base font-semibold">Cross-Case Connections</h2>
+          <Badge tone="info">Derived</Badge>
+        </div>
+        {cases.length === 0 && criminals.length === 0 ? (
+          <p className="text-sm text-muted">No linked entities derived yet.</p>
+        ) : (
+          <div className="grid items-center gap-4 lg:grid-cols-[200px_1fr]">
+            <div className="flex flex-col items-center justify-center rounded-lg border border-accent/30 bg-accent/10 p-6 text-center">
+              <div className="font-display text-4xl font-bold text-accent">{links.linkedCases}</div>
+              <div className="mt-1 text-sm font-medium text-subtle">Linked Cases</div>
+              <div className="mt-1 text-[10px] text-muted">shared district + crime type</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {links.entities.map((e) => (
+                <div key={e.label} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between">
+                    <e.icon className={`h-4 w-4 ${e.cls}`} />
+                    <span className="font-display text-lg font-bold">{e.value}</span>
+                  </div>
+                  <div className="mt-1 text-xs font-medium text-subtle">{e.label}</div>
+                  <div className="text-[10px] text-muted">{e.note}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Queue + evidence */}
