@@ -155,11 +155,14 @@ export function AssistantClient() {
   const idRef = useRef(0);
 
   useEffect(() => {
-    // Voice is available via the browser dictation API OR the Catalyst Zia path.
-    // Static build: voice uses the browser Web Speech API (no server Zia path).
+    // Voice is available via the Catalyst Zia path (record mic → Function
+    // `transcribe`) OR the browser Web Speech API. Prefer Zia when the Function
+    // is configured and the browser can record — that's the only path that works
+    // outside Chrome and for Kannada; Web Speech stays as the offline fallback.
     const browserStt = !!getSpeechRecognition();
-    catalystOnRef.current = false;
-    setVoiceSupported(browserStt);
+    const canRecord = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
+    catalystOnRef.current = aiConfigured() && canRecord;
+    setVoiceSupported(browserStt || (aiConfigured() && canRecord));
   }, []);
 
   const ask = useCallback(async (q: string, viaVoice = false) => {
