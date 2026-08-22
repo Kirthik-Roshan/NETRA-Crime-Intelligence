@@ -1,88 +1,224 @@
-import { all } from "@/lib/db";
-import { crimeTrend, crimeByType, districtHotspots, complainantOccupations, victimGenderSplit } from "@/lib/queries";
-import { PageHeader, StatCard, Badge } from "@/components/ui";
-import { TrendLine, BarSeries, Donut } from "@/components/charts";
+"use client";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BarChart3, TrendingUp, MapPin, Layers, Users, Database } from "lucide-react";
-import { getT } from "@/lib/i18n-server";
+import {
+  BarChart3, FolderKanban, AlertTriangle, Users, Fingerprint, Clock,
+  Flame, MapPin, Radar, Activity, Database, ArrowRight, ScanText,
+} from "lucide-react";
+import { PageHeader, StatCard, Badge, Avatar } from "@/components/ui";
+import { MapPanel } from "@/components/maps/MapPanel";
+import { fetchDashboard, type DashboardData } from "@/lib/cloudscale";
+import { fetchCriminals } from "@/lib/cloudscale";
+import { fetchCases } from "@/lib/cloudscale";
+import { listOcr } from "@/lib/ai-client";
+import type { CrimRow } from "@/components/criminals/CriminalsList";
+import type { CaseRow } from "@/components/cases/CasesList";
 
+const EMPTY: DashboardData = {
+  stats: { activeCases: 0, critical: 0, totalFirs: 0, atLarge: 0, arrests30: 0, solveRate: 0 },
+  trend: [], byType: [], hotspots: [], geo: [],
+  heat: [], velocity: { open: 0, active: 0, closed: 0, escalated: 0, avgClosureDays: 0 },
+  confidence: { dataQuality: 0, caseLinkage: 0, patternSignal: 0, extractionReadiness: 0, overall: 0 },
+};
+const PRI = { critical: 0, high: 1, medium: 2, low: 3 } as Record<string, number>;
 
 export default function AnalyticsPage() {
-  const t = getT();
-  const trend = crimeTrend(12);
-  const byType = crimeByType();
-  const hotspots = districtHotspots();
-  const bySeverity = all<{ severity: string; count: number }>("SELECT severity, COUNT(*) count FROM firs GROUP BY severity ORDER BY count DESC");
-  const byStatus = all<{ status: string; count: number }>("SELECT status, COUNT(*) count FROM firs GROUP BY status");
-  const byHour = all<{ hour: string; count: number }>("SELECT substr(occurred_at,12,2) AS hour, COUNT(*) count FROM firs GROUP BY hour ORDER BY hour");
-  const occupations = complainantOccupations();
-  const victimGender = victimGenderSplit();
+  const [d, setD] = useState<DashboardData | null>(null);
+  const [criminals, setCriminals] = useState<CrimRow[]>([]);
+  const [cases, setCases] = useState<CaseRow[]>([]);
+  const [ocr, setOcr] = useState(0);
+  const [sel, setSel] = useState<number | null>(null);
 
-  const totalFirs = byType.reduce((a, b) => a + b.count, 0);
-  const criticalShare = Math.round(((bySeverity.find((s) => s.severity === "critical")?.count || 0) / totalFirs) * 100);
+  useEffect(() => {
+    fetchDashboard().then(setD).catch(() => setD(EMPTY));
+    fetchCriminals().then(setCriminals).catch(() => setCriminals([]));
+    fetchCases().then(setCases).catch(() => setCases([]));
+    listOcr().then((r) => setOcr(r.length)).catch(() => setOcr(0));
+  }, []);
+
+  const { stats, byType, hotspots, geo, heat, velocity } = d ?? EMPTY;
+  const ranked = useMemo(() => [...criminals].sort((a, b) => (b.risk_score - a.risk_score) || (b.fir_count - a.fir_count)), [criminals]);
+  const repeat = criminals.filter((c) => c.fir_count > 1).length;
+  const active = useMemo(() => ranked.find((c) => c.id === sel) ?? ranked[0] ?? null, [ranked, sel]);
+  const queue = useMemo(() => [...cases].sort((a, b) => (PRI[a.priority] ?? 9) - (PRI[b.priority] ?? 9)).slice(0, 6), [cases]);
+
+  const heat30 = heat.find((h) => h.key === "30d");
+  const summary = [
+    byType[0] && `${byType[0].crime_type} leads with ${byType[0].count} FIRs on record.`,
+    hotspots[0] && `${hotspots[0].district} is the top hotspot (${hotspots[0].cases} FIRs).`,
+    heat30 && `Incidents ${heat30.delta >= 0 ? "up" : "down"} ${Math.abs(heat30.delta)}% over the last 30 days.`,
+    repeat > 0 && `${repeat} repeat offenders across the state.`,
+  ].filter(Boolean) as string[];
+
+  const threats = hotspots.slice(0, 4).map((h, i) => ({
+    title: `Elevated activity in ${h.district}`,
+    detail: `${h.cases} FIRs registered · ${byType[i]?.crime_type ?? "mixed offences"}`,
+    tone: i === 0 ? "danger" : i < 2 ? "warning" : "info",
+  }));
+
+  const perf = [
+    { label: "FIRs Filed", value: stats.totalFirs, max: Math.max(1, stats.totalFirs), color: "bg-info" },
+    { label: "FIRs Closed", value: velocity.closed, max: Math.max(1, stats.totalFirs), color: "bg-success" },
+    { label: "Escalated", value: velocity.escalated, max: Math.max(1, stats.totalFirs), color: "bg-warning" },
+    { label: "Solve Rate", value: stats.solveRate, max: 100, color: "bg-accent", pct: true },
+  ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("analytics.title")} subtitle={t("analytics.subtitle")}>
-        <Link href="/database?table=firs" className="btn-ghost text-sm">
-          <Database className="h-4 w-4" /> Open in database
-        </Link>
+      <PageHeader title="Crime Intelligence Overview" subtitle="Real-time intelligence and investigation insights · from Cloud Scale">
+        <Link href="/database?table=firs" className="btn-ghost text-sm"><Database className="h-4 w-4" /> Open in database</Link>
       </PageHeader>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total FIRs" value={totalFirs} icon={BarChart3} tone="accent" />
-        <StatCard label="Crime Types" value={byType.length} icon={Layers} />
-        <StatCard label="Districts" value={hotspots.length} icon={MapPin} tone="warning" />
-        <StatCard label="Critical share" value={`${criticalShare}%`} icon={TrendingUp} tone="danger" />
+      {d === null && <p className="text-sm text-muted">Loading analytics from Cloud Scale…</p>}
+
+      {/* Stat row */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <StatCard label="Total Cases" value={cases.length || stats.totalFirs} icon={BarChart3} tone="accent" />
+        <StatCard label="Open Investigations" value={stats.activeCases} icon={FolderKanban} />
+        <StatCard label="Critical Alerts" value={stats.critical} icon={AlertTriangle} tone="danger" />
+        <StatCard label="Repeat Offenders" value={repeat} icon={Users} tone="warning" />
+        <StatCard label="Cases Solved" value={`${stats.solveRate}%`} icon={Fingerprint} tone="success" />
+        <StatCard label="Avg Investigation" value={velocity.avgClosureDays ? `${velocity.avgClosureDays}d` : "—"} icon={Clock} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* AI summary + hotspots + threats */}
+      <div className="grid gap-4 lg:grid-cols-3">
         <div className="card panel-pad">
-          <h2 className="mb-3 font-display text-base font-semibold">Monthly Trend</h2>
-          <TrendLine data={trend} />
-        </div>
-        <div className="card panel-pad">
-          <h2 className="mb-3 font-display text-base font-semibold">Crime by Type</h2>
-          <BarSeries data={byType} x="crime_type" y="count" color="info" height={260} />
-        </div>
-        <div className="card panel-pad">
-          <h2 className="mb-3 font-display text-base font-semibold">District Distribution</h2>
-          <BarSeries data={hotspots} x="district" y="cases" color="warning" height={260} />
-        </div>
-        <div className="card panel-pad">
-          <h2 className="mb-3 font-display text-base font-semibold">Time-of-Day Pattern</h2>
-          <BarSeries data={byHour} x="hour" y="count" color="accent" height={260} />
-        </div>
-        <div className="card panel-pad">
-          <h2 className="mb-3 font-display text-base font-semibold">Severity Split</h2>
-          <Donut data={bySeverity} nameKey="severity" valueKey="count" />
-        </div>
-        <div className="card panel-pad">
-          <h2 className="mb-3 font-display text-base font-semibold">Investigation Status</h2>
-          <Donut data={byStatus} nameKey="status" valueKey="count" />
-        </div>
-      </div>
-
-      {/* Socio-demographic insights — official ComplainantDetails / Victim lookups */}
-      <div>
-        <div className="mb-3 flex items-center gap-2">
-          <Users className="h-4 w-4 text-accent" />
-          <h2 className="font-display text-base font-semibold">{t("analytics.socio")}</h2>
-          <Badge tone="accent">official SCRB lookups</Badge>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="card panel-pad">
-            <h3 className="mb-1 text-sm font-semibold">Complainants by Occupation</h3>
-            <p className="mb-2 text-xs text-muted">Who reports crime — from ComplainantDetails × OccupationMaster</p>
-            <BarSeries data={occupations} x="occupation" y="count" color="info" height={260} />
+          <div className="mb-3 flex items-center gap-2"><Radar className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">AI Intelligence Summary</h2></div>
+          <div className="space-y-2.5">
+            {summary.length === 0 && <p className="text-sm text-muted">No Cloud Scale records yet.</p>}
+            {summary.map((s, i) => <div key={i} className="flex gap-2 text-sm text-subtle"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />{s}</div>)}
           </div>
-          <div className="card panel-pad">
-            <h3 className="mb-1 text-sm font-semibold">Victims by Gender</h3>
-            <p className="mb-2 text-xs text-muted">From the official Victim table (GenderID lookup)</p>
-            <Donut data={victimGender} nameKey="gender" valueKey="count" />
+        </div>
+
+        <div className="card panel-pad">
+          <div className="mb-3 flex items-center gap-2"><Flame className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Crime Hotspots</h2></div>
+          <MapPanel points={geo} height={210} />
+          <div className="mt-3 space-y-1">
+            {hotspots.slice(0, 5).map((h, i) => (
+              <div key={h.district} className="flex items-center justify-between text-xs">
+                <span className="text-subtle">{i + 1}. {h.district}</span>
+                <Badge tone={i === 0 ? "danger" : i < 2 ? "warning" : "info"}>{h.cases}</Badge>
+              </div>
+            ))}
+            {hotspots.length === 0 && <p className="text-xs text-muted">No geolocated FIRs yet.</p>}
+          </div>
+        </div>
+
+        <div className="card panel-pad">
+          <div className="mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Active Threats & Alerts</h2></div>
+          <div className="space-y-2">
+            {threats.length === 0 && <p className="text-sm text-muted">No alerts derived yet.</p>}
+            {threats.map((tr, i) => (
+              <div key={i} className="rounded-lg border border-border p-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">{tr.title}</span>
+                  <Badge tone={tr.tone as "danger" | "warning" | "info"} >{tr.tone === "danger" ? "HIGH" : tr.tone === "warning" ? "MED" : "LOW"}</Badge>
+                </div>
+                <p className="mt-0.5 text-xs text-muted">{tr.detail}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* Repeat offenders (selectable) + performance */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="card panel-pad lg:col-span-2">
+          <div className="mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Repeat Offender Analysis</h2></div>
+          {active ? (
+            <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
+              <div className="flex flex-col items-center rounded-lg border border-border p-4 text-center">
+                <Avatar name={active.name} size={64} />
+                <div className="mt-2 font-display text-base font-semibold">{active.name}</div>
+                <div className="font-mono text-xs text-accent">KSP-{active.id}</div>
+                <div className="mt-0.5 text-xs text-muted">Age {active.age || "—"} · {active.home_district || "—"}</div>
+                <div className="mt-3 w-full">
+                  <div className="flex items-center justify-between text-xs"><span className="text-subtle">Risk Score</span><span className="font-mono text-danger">{active.risk_score}%</span></div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated"><div className="h-full rounded-full bg-danger" style={{ width: `${Math.min(100, active.risk_score)}%` }} /></div>
+                </div>
+                <div className="mt-3 grid w-full grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-border p-2"><div className="stat-label">FIRs</div><div className="font-display text-lg font-bold">{active.fir_count}</div></div>
+                  <div className="rounded-lg border border-border p-2"><div className="stat-label">Arrests</div><div className="font-display text-lg font-bold">{active.arrest_count}</div></div>
+                </div>
+                <div className="mt-2 text-xs text-muted capitalize">{active.crime_category || active.status}</div>
+                <Link href={`/criminals/${active.id}`} className="btn-ghost mt-3 w-full justify-center text-xs">View profile <ArrowRight className="h-3.5 w-3.5" /></Link>
+              </div>
+              <div>
+                <div className="mb-1 stat-label">Select an offender</div>
+                <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                  {ranked.map((c) => (
+                    <button key={c.id} onClick={() => setSel(c.id)} className={`flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left ${active.id === c.id ? "bg-elevated" : "hover:bg-elevated"}`}>
+                      <Avatar name={c.name} size={28} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{c.name}</div>
+                        <div className="text-[10px] text-muted capitalize">{c.crime_category || c.home_district} · {c.fir_count} FIRs</div>
+                      </div>
+                      <span className="font-mono text-xs text-danger">{c.risk_score}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : <p className="text-sm text-muted">No criminals in Cloud Scale yet.</p>}
+        </div>
+
+        <div className="card panel-pad">
+          <div className="mb-3 flex items-center gap-2"><Activity className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Investigation Performance</h2></div>
+          <div className="space-y-3">
+            {perf.map((p) => (
+              <div key={p.label}>
+                <div className="mb-1 flex items-center justify-between text-xs"><span className="text-subtle">{p.label}</span><span className="font-mono text-muted">{p.value}{p.pct ? "%" : ""}</span></div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-elevated"><div className={`h-full rounded-full ${p.color}`} style={{ width: `${Math.min(100, (p.value / p.max) * 100)}%` }} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Queue + evidence */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="card panel-pad lg:col-span-2">
+          <h2 className="mb-3 font-display text-base font-semibold">Investigation Queue (Priority)</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-xs text-muted"><th className="pb-2">Priority</th><th className="pb-2">Case</th><th className="pb-2">Type</th><th className="pb-2">District</th><th className="pb-2">Status</th></tr></thead>
+              <tbody>
+                {queue.map((c) => (
+                  <tr key={c.id} className="border-t border-border/50">
+                    <td className="py-2"><Badge tone={c.priority === "critical" ? "danger" : c.priority === "high" ? "warning" : "info"}>{c.priority}</Badge></td>
+                    <td className="py-2 font-mono text-xs">{c.case_number || `#${c.id}`}</td>
+                    <td className="py-2 text-subtle">{c.crime_type || "—"}</td>
+                    <td className="py-2 text-muted">{c.district || "—"}</td>
+                    <td className="py-2 text-xs capitalize text-muted">{c.status?.replace(/_/g, " ")}</td>
+                  </tr>
+                ))}
+                {queue.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-muted">No cases in Cloud Scale yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="card panel-pad">
+          <h2 className="mb-3 font-display text-base font-semibold">Evidence & Processing</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Stat icon={ScanText} label="OCR Documents" value={ocr} />
+            <Stat icon={MapPin} label="Geolocated FIRs" value={geo.length} />
+            <Stat icon={FolderKanban} label="Total Cases" value={cases.length} />
+            <Stat icon={Users} label="Profiles" value={criminals.length} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ icon: Icon, label, value }: { icon: typeof MapPin; label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <Icon className="h-5 w-5 text-accent" />
+      <div className="mt-2 font-display text-xl font-bold">{value}</div>
+      <div className="text-[11px] text-muted">{label}</div>
     </div>
   );
 }
