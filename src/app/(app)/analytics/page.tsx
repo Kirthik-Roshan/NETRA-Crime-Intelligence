@@ -6,7 +6,7 @@ import {
   Flame, MapPin, Radar, Activity, Database, ArrowRight, ScanText,
   Network, Phone, Car, Landmark,
 } from "lucide-react";
-import { PageHeader, StatCard, Badge, Avatar } from "@/components/ui";
+import { PageHeader, StatCard, Badge, Avatar, EmptyState } from "@/components/ui";
 import { MapPanel } from "@/components/maps/MapPanel";
 import { fetchDashboard, type DashboardData } from "@/lib/cloudscale";
 import { fetchCriminals } from "@/lib/cloudscale";
@@ -93,16 +93,25 @@ export default function AnalyticsPage() {
         <Link href="/database?table=firs" className="btn-ghost text-sm"><Database className="h-4 w-4" /> Open in database</Link>
       </PageHeader>
 
-      {d === null && <p className="text-sm text-muted">Loading analytics from Cloud Scale…</p>}
-
       {/* Stat row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Total Cases" value={cases.length || stats.totalFirs} icon={BarChart3} tone="accent" />
-        <StatCard label="Open Investigations" value={stats.activeCases} icon={FolderKanban} />
-        <StatCard label="Critical Alerts" value={stats.critical} icon={AlertTriangle} tone="danger" />
-        <StatCard label="Repeat Offenders" value={repeat} icon={Users} tone="warning" />
-        <StatCard label="Cases Solved" value={`${stats.solveRate}%`} icon={Fingerprint} tone="success" />
-        <StatCard label="Avg Investigation" value={velocity.avgClosureDays ? `${velocity.avgClosureDays}d` : "—"} icon={Clock} />
+        {d === null ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="card panel-pad">
+              <div className="skeleton h-3 w-20" />
+              <div className="skeleton mt-4 h-8 w-16" />
+            </div>
+          ))
+        ) : (
+          <>
+            <StatCard label="Total Cases" value={cases.length || stats.totalFirs} icon={BarChart3} tone="accent" />
+            <StatCard label="Open Investigations" value={stats.activeCases} icon={FolderKanban} />
+            <StatCard label="Critical Alerts" value={stats.critical} icon={AlertTriangle} tone="danger" />
+            <StatCard label="Repeat Offenders" value={repeat} icon={Users} tone="warning" />
+            <StatCard label="Cases Solved" value={`${stats.solveRate}%`} icon={Fingerprint} tone="success" />
+            <StatCard label="Avg Investigation" value={velocity.avgClosureDays ? `${velocity.avgClosureDays}d` : "—"} icon={Clock} />
+          </>
+        )}
       </div>
 
       {/* AI summary + hotspots + threats */}
@@ -142,7 +151,7 @@ export default function AnalyticsPage() {
           <div className="space-y-2">
             {threats.length === 0 && <p className="text-sm text-muted">No alerts derived yet.</p>}
             {threats.map((tr, i) => (
-              <div key={i} className="rounded-lg border border-border p-2.5">
+              <div key={i} className="rounded-lg border border-border/70 bg-elevated/20 p-2.5 transition-colors hover:border-border">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">{tr.title}</span>
                   <Badge tone={tr.tone as "danger" | "warning" | "info"} >{tr.tone === "danger" ? "HIGH" : tr.tone === "warning" ? "MED" : "LOW"}</Badge>
@@ -166,12 +175,12 @@ export default function AnalyticsPage() {
                 <div className="font-mono text-xs text-accent">KSP-{active.id}</div>
                 <div className="mt-0.5 text-xs text-muted">Age {active.age || "—"} · {active.home_district || "—"}</div>
                 <div className="mt-3 w-full">
-                  <div className="flex items-center justify-between text-xs"><span className="text-subtle">Risk Score</span><span className="font-mono text-danger">{active.risk_score}%</span></div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated"><div className="h-full rounded-full bg-danger" style={{ width: `${Math.min(100, active.risk_score)}%` }} /></div>
+                  <div className="flex items-center justify-between text-xs"><span className="text-subtle">Risk Score</span><span className="font-mono tabular-nums text-danger">{active.risk_score}%</span></div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border/60"><div className="h-full rounded-full bg-danger transition-[width] duration-500 ease-out" style={{ width: `${Math.min(100, active.risk_score)}%` }} /></div>
                 </div>
                 <div className="mt-3 grid w-full grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-border p-2"><div className="stat-label">FIRs</div><div className="font-display text-lg font-bold">{active.fir_count}</div></div>
-                  <div className="rounded-lg border border-border p-2"><div className="stat-label">Arrests</div><div className="font-display text-lg font-bold">{active.arrest_count}</div></div>
+                  <div className="rounded-lg border border-border/70 bg-elevated/20 p-2"><div className="stat-label">FIRs</div><div className="font-display text-lg font-bold tabular-nums">{active.fir_count}</div></div>
+                  <div className="rounded-lg border border-border/70 bg-elevated/20 p-2"><div className="stat-label">Arrests</div><div className="font-display text-lg font-bold tabular-nums">{active.arrest_count}</div></div>
                 </div>
                 <div className="mt-2 text-xs text-muted capitalize">{active.crime_category || active.status}</div>
                 <Link href={`/criminals/${active.id}`} className="btn-ghost mt-3 w-full justify-center text-xs">View profile <ArrowRight className="h-3.5 w-3.5" /></Link>
@@ -180,19 +189,19 @@ export default function AnalyticsPage() {
                 <div className="mb-1 stat-label">Select an offender</div>
                 <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
                   {ranked.map((c) => (
-                    <button key={c.id} onClick={() => setSel(c.id)} className={`flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left ${active.id === c.id ? "bg-elevated" : "hover:bg-elevated"}`}>
+                    <button key={c.id} onClick={() => setSel(c.id)} className={`flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors ${active.id === c.id ? "bg-elevated ring-1 ring-inset ring-accent/40" : "hover:bg-elevated"}`}>
                       <Avatar name={c.name} size={28} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium">{c.name}</div>
                         <div className="text-[10px] text-muted capitalize">{c.crime_category || c.home_district} · {c.fir_count} FIRs</div>
                       </div>
-                      <span className="font-mono text-xs text-danger">{c.risk_score}</span>
+                      <span className="font-mono tabular-nums text-xs text-danger">{c.risk_score}</span>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
-          ) : <p className="text-sm text-muted">No criminals in Cloud Scale yet.</p>}
+          ) : <EmptyState icon={Users} title="No offenders on record" hint="Repeat-offender analysis appears once criminal profiles sync from Cloud Scale." />}
         </div>
 
         <div className="card panel-pad">
@@ -200,8 +209,8 @@ export default function AnalyticsPage() {
           <div className="space-y-3">
             {perf.map((p) => (
               <div key={p.label}>
-                <div className="mb-1 flex items-center justify-between text-xs"><span className="text-subtle">{p.label}</span><span className="font-mono text-muted">{p.value}{p.pct ? "%" : ""}</span></div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-elevated"><div className={`h-full rounded-full ${p.color}`} style={{ width: `${Math.min(100, (p.value / p.max) * 100)}%` }} /></div>
+                <div className="mb-1 flex items-center justify-between text-xs"><span className="text-subtle">{p.label}</span><span className="font-mono tabular-nums text-muted">{p.value}{p.pct ? "%" : ""}</span></div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border/60"><div className={`h-full rounded-full transition-[width] duration-500 ease-out ${p.color}`} style={{ width: `${Math.min(100, (p.value / p.max) * 100)}%` }} /></div>
               </div>
             ))}
           </div>
@@ -216,20 +225,20 @@ export default function AnalyticsPage() {
           <Badge tone="info">Derived</Badge>
         </div>
         {cases.length === 0 && criminals.length === 0 ? (
-          <p className="text-sm text-muted">No linked entities derived yet.</p>
+          <EmptyState icon={Network} title="No connections derived yet" hint="Links surface once cases share a district and crime type." />
         ) : (
           <div className="grid items-center gap-4 lg:grid-cols-[200px_1fr]">
             <div className="flex flex-col items-center justify-center rounded-lg border border-accent/30 bg-accent/10 p-6 text-center">
-              <div className="font-display text-4xl font-bold text-accent">{links.linkedCases}</div>
+              <div className="font-display text-4xl font-bold tabular-nums text-accent">{links.linkedCases}</div>
               <div className="mt-1 text-sm font-medium text-subtle">Linked Cases</div>
               <div className="mt-1 text-[10px] text-muted">shared district + crime type</div>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {links.entities.map((e) => (
-                <div key={e.label} className="rounded-lg border border-border p-3">
+                <div key={e.label} className="rounded-lg border border-border/70 bg-elevated/20 p-3 transition-colors hover:border-border">
                   <div className="flex items-center justify-between">
                     <e.icon className={`h-4 w-4 ${e.cls}`} />
-                    <span className="font-display text-lg font-bold">{e.value}</span>
+                    <span className="font-display text-lg font-bold tabular-nums">{e.value}</span>
                   </div>
                   <div className="mt-1 text-xs font-medium text-subtle">{e.label}</div>
                   <div className="text-[10px] text-muted">{e.note}</div>
@@ -246,10 +255,10 @@ export default function AnalyticsPage() {
           <h2 className="mb-3 font-display text-base font-semibold">Investigation Queue (Priority)</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-xs text-muted"><th className="pb-2">Priority</th><th className="pb-2">Case</th><th className="pb-2">Type</th><th className="pb-2">District</th><th className="pb-2">Status</th></tr></thead>
+              <thead><tr className="text-left text-[11px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">Priority</th><th className="pb-2 font-semibold">Case</th><th className="pb-2 font-semibold">Type</th><th className="pb-2 font-semibold">District</th><th className="pb-2 font-semibold">Status</th></tr></thead>
               <tbody>
                 {queue.map((c) => (
-                  <tr key={c.id} className="border-t border-border/50">
+                  <tr key={c.id} className="border-t border-border/50 transition-colors hover:bg-elevated/40">
                     <td className="py-2"><Badge tone={c.priority === "critical" ? "danger" : c.priority === "high" ? "warning" : "info"}>{c.priority}</Badge></td>
                     <td className="py-2 font-mono text-xs">{c.case_number || `#${c.id}`}</td>
                     <td className="py-2 text-subtle">{c.crime_type || "—"}</td>
@@ -257,7 +266,7 @@ export default function AnalyticsPage() {
                     <td className="py-2 text-xs capitalize text-muted">{c.status?.replace(/_/g, " ")}</td>
                   </tr>
                 ))}
-                {queue.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-muted">No cases in Cloud Scale yet.</td></tr>}
+                {queue.length === 0 && <tr><td colSpan={5} className="py-10 text-center text-sm text-muted">No cases in Cloud Scale yet.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -279,9 +288,9 @@ export default function AnalyticsPage() {
 
 function Stat({ icon: Icon, label, value }: { icon: typeof MapPin; label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className="rounded-lg border border-border/70 bg-elevated/20 p-3 transition-colors hover:border-border">
       <Icon className="h-5 w-5 text-accent" />
-      <div className="mt-2 font-display text-xl font-bold">{value}</div>
+      <div className="mt-2 font-display text-xl font-bold tabular-nums">{value}</div>
       <div className="text-[11px] text-muted">{label}</div>
     </div>
   );

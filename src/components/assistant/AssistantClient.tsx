@@ -13,6 +13,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
 import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, transcribeAudio, extractText, type RagSource } from "@/lib/ai-client";
 import { Translated } from "@/components/Translated";
+import { Badge } from "@/components/ui";
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -325,44 +326,49 @@ export function AssistantClient() {
   return (
     <div className="flex h-[calc(100vh-8.5rem)] flex-col print:block print:h-auto">
       {/* Header */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/10 print:hidden">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border/60 bg-accent/10 shadow-glow print:hidden">
           <Sparkles className="h-5 w-5 text-accent" />
         </div>
-        <div>
-          <h1 className="font-display text-xl font-bold">{t("assistant.title")}</h1>
-          <p className="text-sm text-muted print:hidden">{t("assistant.subtitle")}</p>
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-bold tracking-tight">{t("assistant.title")}</h1>
+          <p className="mt-0.5 text-sm text-muted print:hidden">{t("assistant.subtitle")}</p>
           <p className="hidden text-sm text-muted print:block" suppressHydrationWarning>
             NETRA — Conversation transcript · Karnataka State Police (demo)
           </p>
         </div>
-        {!empty && (
-          <button onClick={exportPdf} className="btn-ghost ml-auto print:hidden" title="Export conversation as PDF">
-            <FileDown className="h-4 w-4" /> {t("assistant.export")}
-          </button>
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-2 print:hidden">
+          <Badge tone="accent"><Cpu className="h-3 w-3" /> On-device routing</Badge>
+          {!empty && (
+            <button onClick={exportPdf} className="btn-ghost" title="Export conversation as PDF">
+              <FileDown className="h-4 w-4" /> {t("assistant.export")}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Conversation */}
       <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto pr-1 print:overflow-visible">
         {empty && (
-          <div className="animate-fade-in">
-            <div className="card panel-pad">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Lightbulb className="h-4 w-4 text-accent" /> {t("assistant.try")}
+          <div className="card panel-pad animate-fade-in space-y-5">
+            <div>
+              <div className="flex items-center gap-1.5 stat-label text-accent">
+                <Lightbulb className="h-3.5 w-3.5" /> {t("assistant.try")}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {EXAMPLES.map((e) => (
-                  <button key={e} onClick={() => ask(e)} className="chip max-w-full text-left hover:border-accent/50 hover:text-fg">
+                  <button key={e} onClick={() => ask(e)} className="chip max-w-full text-left transition-colors hover:border-accent/50 hover:text-fg">
                     {e}
                   </button>
                 ))}
               </div>
-              <div className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-elevated p-3 text-xs text-muted">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+            </div>
+            <div className="flex items-start gap-2.5 rounded-lg border border-border/70 bg-elevated/60 p-3.5 text-xs leading-relaxed text-muted">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+              <span>
                 NETRA never sends raw records to a black box. Queries run through intent detection → permission checks →
                 validated SQL → evidence verification → audit log. The officer stays in command.
-              </div>
+              </span>
             </div>
           </div>
         )}
@@ -383,8 +389,15 @@ export function AssistantClient() {
               </div>
               <div className="min-w-0 flex-1">
                 {t.loading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Reasoning over crime records…
+                  <div className="card panel-pad animate-fade-in space-y-3.5">
+                    <div className="flex items-center gap-2 text-sm text-muted">
+                      <Loader2 className="h-4 w-4 animate-spin text-accent" /> Reasoning over crime records…
+                    </div>
+                    <div className="space-y-2" aria-hidden>
+                      <div className="skeleton h-3 w-full" />
+                      <div className="skeleton h-3 w-11/12" />
+                      <div className="skeleton h-3 w-3/4" />
+                    </div>
                   </div>
                 ) : t.insight ? (
                   <InsightCard insight={t.insight} onAlt={ask} lang={lang} />
@@ -398,7 +411,7 @@ export function AssistantClient() {
       </div>
 
       {/* Option A — one-click investigative tasks (all answered by the local engine) */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 print:hidden">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-3 print:hidden">
         <span className="flex items-center gap-1 text-[11px] text-muted"><Route className="h-3 w-3" /> Quick tasks:</span>
         {TASKS.map((task) => (
           <button

@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   FolderKanban, AlertTriangle, UserSearch, Fingerprint, TrendingUp, Sparkles,
-  MapPin, ArrowRight, Flame, Radar, Activity,
+  MapPin, ArrowRight, Flame, Radar, Activity, PieChart, BarChart3,
 } from "lucide-react";
 import { OfficerFirstName } from "@/components/OfficerName";
-import { StatCard, PageHeader, Badge } from "@/components/ui";
+import { StatCard, PageHeader, Badge, EmptyState } from "@/components/ui";
 import { TrendLine, BarSeries, Donut } from "@/components/charts";
 import { MapPanel } from "@/components/maps/MapPanel";
 import { useT } from "@/lib/i18n-client";
@@ -41,7 +41,12 @@ export default function DashboardPage() {
         </Link>
       </PageHeader>
 
-      {d === null && <div className="text-sm text-muted">Loading dashboard from Cloud Scale…</div>}
+      {d === null && (
+        <div className="chip">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+          Loading live data from Cloud Scale…
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -66,17 +71,17 @@ export default function DashboardPage() {
             {(heat.length ? heat : [{ key: "24h", label: "24 hours", count: 0, delta: 0 }, { key: "7d", label: "7 days", count: 0, delta: 0 }, { key: "30d", label: "30 days", count: 0, delta: 0 }, { key: "6mo", label: "6 months", count: 0, delta: 0 }]).map((w) => {
               const up = w.delta > 0, flat = w.delta === 0;
               return (
-                <div key={w.key} className="rounded-lg border border-border p-2.5">
+                <div key={w.key} className="rounded-lg border border-border/60 bg-elevated/40 p-3 transition-colors hover:border-border">
                   <div className="stat-label">{w.label}</div>
-                  <div className="font-display text-xl font-bold">{w.count}</div>
-                  <div className={`mt-0.5 text-[11px] font-mono ${flat ? "text-muted" : up ? "text-danger" : "text-success"}`}>
+                  <div className="mt-1 font-display text-xl font-bold tabular-nums">{w.count}</div>
+                  <div className={`mt-0.5 font-mono text-[11px] tabular-nums ${flat ? "text-muted" : up ? "text-danger" : "text-success"}`}>
                     {flat ? "±0%" : `${up ? "▲" : "▼"} ${Math.abs(w.delta)}%`}
                   </div>
                 </div>
               );
             })}
           </div>
-          {trend.length ? <TrendLine data={trend} /> : <div className="grid h-48 place-items-center text-sm text-muted">No FIR records in Cloud Scale yet.</div>}
+          {trend.length ? <TrendLine data={trend} /> : <EmptyState icon={Activity} title="No FIR records yet" hint="Incident trends appear here once Cloud Scale has data." />}
         </div>
         <div className="card panel-pad">
           <h2 className="mb-1 font-display text-base font-semibold">{t("dash.crime_mix")}</h2>
@@ -96,7 +101,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             </>
-          ) : <div className="grid h-48 place-items-center text-sm text-muted">No categories yet.</div>}
+          ) : <EmptyState icon={PieChart} title="No categories yet" hint="Offence breakdown appears once FIRs are on record." />}
         </div>
       </div>
 
@@ -166,7 +171,7 @@ export default function DashboardPage() {
         <div className="card panel-pad">
           <h2 className="mb-1 font-display text-base font-semibold">{t("dash.district_load")}</h2>
           <p className="mb-2 text-xs text-muted">FIRs by district</p>
-          {hotspots.length ? <BarSeries data={hotspots.slice(0, 8)} x="district" y="cases" color="warning" height={300} /> : <div className="grid h-64 place-items-center text-sm text-muted">No district data yet.</div>}
+          {hotspots.length ? <BarSeries data={hotspots.slice(0, 8)} x="district" y="cases" color="warning" height={300} /> : <EmptyState icon={BarChart3} title="No district data yet" hint="District load ranks appear once FIRs are geotagged." />}
         </div>
       </div>
     </div>
@@ -176,9 +181,9 @@ export default function DashboardPage() {
 function VelocityTile({ label, value, tone }: { label: string; value: string | number; tone?: "success" | "danger" }) {
   const color = tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-fg";
   return (
-    <div className="rounded-lg border border-border p-2.5">
+    <div className="rounded-lg border border-border/60 bg-elevated/40 p-3 transition-colors hover:border-border">
       <div className="stat-label">{label}</div>
-      <div className={`font-display text-2xl font-bold ${color}`}>{value}</div>
+      <div className={`mt-1 font-display text-2xl font-bold tabular-nums ${color}`}>{value}</div>
     </div>
   );
 }
@@ -190,10 +195,10 @@ function ConfidenceBar({ label, v }: { label: string; v: number }) {
     <div className="mb-2.5">
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="text-subtle">{label}</span>
-        <span className="font-mono text-muted">{pct}%</span>
+        <span className="font-mono tabular-nums text-muted">{pct}%</span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-elevated">
-        <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct}%` }} />
+      <div className="h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border/60">
+        <div className={`h-full rounded-full transition-[width] duration-500 ease-out ${tone}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

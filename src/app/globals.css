@@ -170,6 +170,10 @@
 
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--border)) transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 [data-theme="daylight"],
 [data-theme="sandstone"] {
@@ -181,14 +185,19 @@ body {
   color: rgb(var(--fg));
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* Left-aligned, breathing layouts per the design brief. */
-h1, h2, h3, h4, h5 {
+/* Display type — a confident grotesque with tight tracking and balanced
+   wrapping, so headings read as considered command-console labels, not raw
+   strings. Sizes stay owned by per-page utilities; this sets the character. */
+h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display), system-ui, sans-serif;
-  letter-spacing: -0.02em;
   font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────── */
@@ -202,10 +211,12 @@ h1, h2, h3, h4, h5 {
 ::-webkit-scrollbar-thumb {
   background: rgb(var(--border));
   border-radius: 999px;
-  border: 2px solid rgb(var(--bg));
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--muted) / 0.5);
+  background: rgb(var(--muted) / 0.55);
+  background-clip: padding-box;
 }
 
 /* ── Reusable component classes ────────────────────────────── */
@@ -213,13 +224,21 @@ h1, h2, h3, h4, h5 {
   /* Premium dark glass — semi-transparent surface + blur + soft shadow +
      a hairline top highlight so cards read as floating panes, not rectangles. */
   .card {
-    @apply relative rounded-xl border shadow-card;
+    @apply relative rounded-xl border;
     background: rgb(var(--surface) / 0.72);
     backdrop-filter: blur(14px) saturate(1.1);
     -webkit-backdrop-filter: blur(14px) saturate(1.1);
     border-color: rgb(var(--border) / 0.7);
-    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.5);
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    /* Layered elevation: a hairline top highlight, a crisp contact edge, and a
+       deep soft ambient so panes read as floating glass, not flat rectangles. */
+    box-shadow:
+      0 1px 0 0 rgb(255 255 255 / 0.05) inset,
+      0 1px 2px -1px rgb(0 0 0 / 0.3),
+      0 16px 40px -22px rgb(0 0 0 / 0.6);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover {
+    border-color: rgb(var(--border));
   }
   .card-elevated {
     @apply rounded-xl border;
@@ -237,35 +256,39 @@ h1, h2, h3, h4, h5 {
     @apply p-5;
   }
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-elevated px-2.5 py-1 text-xs font-medium text-subtle;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-elevated/60 px-2.5 py-1 text-xs font-medium text-subtle;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium tracking-[-0.01em] transition duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-accent {
-    @apply btn bg-accent text-accent-fg hover:opacity-90;
+    @apply btn bg-accent text-accent-fg hover:opacity-95;
+    /* Top sheen + accent-tinted lift so the primary action feels raised. */
+    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.16) inset, 0 6px 16px -8px rgb(var(--accent) / 0.55);
   }
   .btn-ghost {
-    @apply btn border border-border bg-transparent text-subtle hover:bg-elevated hover:text-fg;
+    @apply btn border border-border bg-surface/40 text-subtle hover:border-border hover:bg-elevated hover:text-fg;
   }
   .input {
-    @apply w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-muted outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20 transition;
+    @apply w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-fg outline-none transition placeholder:text-muted focus:border-accent/70 focus:ring-2 focus:ring-accent/25;
+    box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.08);
   }
   .stat-label {
-    @apply text-xs font-medium uppercase tracking-wider text-muted;
+    @apply text-[11px] font-semibold uppercase tracking-[0.09em] text-muted;
   }
   .kbd {
-    @apply rounded border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-muted;
+    @apply inline-flex items-center rounded border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted;
+    box-shadow: 0 1px 0 0 rgb(0 0 0 / 0.2);
   }
   /* Faded navigation — inactive rows recede into the background; only the
      active row is legible, marked by a soft teal left-accent (no filled pill). */
   .link-row {
-    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted/60 transition-colors hover:text-fg;
+    @apply relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted/70 transition-colors hover:bg-elevated/50 hover:text-fg;
   }
   .link-row-active {
     @apply text-fg;
     box-shadow: inset 2px 0 0 0 rgb(var(--accent));
-    background: linear-gradient(90deg, rgb(var(--accent) / 0.08), transparent 60%);
+    background: linear-gradient(90deg, rgb(var(--accent) / 0.1), transparent 62%);
   }
   /* Skeleton shimmer for loading states */
   .skeleton {
@@ -318,8 +341,16 @@ h1, h2, h3, h4, h5 {
 
 /* Selection */
 ::selection {
-  background: rgb(var(--accent) / 0.25);
+  background: rgb(var(--accent) / 0.28);
   color: rgb(var(--fg));
+}
+
+/* Consistent keyboard-focus ring on every interactive control. :where() keeps
+   zero specificity so page-level utilities always win, and it only shows for
+   keyboard users (:focus-visible), never on mouse click. */
+:where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--accent) / 0.7);
+  outline-offset: 2px;
 }
 
 /* ── Print (PDF export of reports) ─────────────────────────── */

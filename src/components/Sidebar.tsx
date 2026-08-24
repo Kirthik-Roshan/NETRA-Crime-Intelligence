@@ -56,13 +56,13 @@ export function Sidebar({ user }: { user: SessionUser }) {
         collapsed ? "w-[76px]" : "w-[264px]"
       )}
     >
-      <div className={cn("flex items-center gap-3 px-4 py-4", collapsed && "flex-col gap-2 px-2")}>
+      <div className={cn("flex items-center gap-3 border-b border-border/60 px-4 py-4", collapsed && "flex-col gap-2 px-2")}>
         <Link href="/dashboard" className="shrink-0" title="Crime Intelligence">
           <Emblem size={38} />
         </Link>
         {!collapsed && (
           <div className="min-w-0">
-            <div className="font-display text-sm font-bold leading-tight">{t("brand.name")}</div>
+            <div className="truncate font-display text-sm font-bold leading-tight tracking-tight">{t("brand.name")}</div>
             <div className="truncate text-[11px] text-muted">{t("brand.tagline")}</div>
           </div>
         )}
@@ -89,7 +89,7 @@ export function Sidebar({ user }: { user: SessionUser }) {
               className={cn("link-row", active && "link-row-active", collapsed && "justify-center px-0")}
               title={collapsed ? t(item.key) : undefined}
             >
-              <item.icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-accent" : "text-muted/50")} />
+              <item.icon className={cn("h-[18px] w-[18px] shrink-0 transition-colors", active ? "text-accent" : "text-muted/60")} />
               {!collapsed && <span className="truncate">{t(item.key)}</span>}
               {!collapsed && active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-accent" />}
             </Link>
@@ -122,7 +122,7 @@ export function Sidebar({ user }: { user: SessionUser }) {
 
       <div className="border-t border-border p-3">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-elevated font-mono text-xs font-semibold text-accent">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-elevated font-mono text-xs font-semibold text-accent ring-1 ring-inset ring-border/70">
             {initials(user.full_name)}
           </div>
           {!collapsed && (

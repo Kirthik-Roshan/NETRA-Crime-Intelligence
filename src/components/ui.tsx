@@ -22,13 +22,17 @@ export function StatCard({
     success: "text-success",
   };
   return (
-    <div className="card panel-pad">
-      <div className="flex items-start justify-between">
+    <div className="card panel-pad group">
+      <div className="flex items-start justify-between gap-3">
         <span className="stat-label">{label}</span>
-        {Icon && <Icon className={cn("h-4 w-4", toneMap[tone])} />}
+        {Icon && (
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border/60 bg-elevated/60 transition-colors group-hover:border-border">
+            <Icon className={cn("h-3.5 w-3.5", toneMap[tone])} />
+          </span>
+        )}
       </div>
-      <div className={cn("mt-3 font-display text-3xl font-bold tracking-tight", toneMap[tone])}>{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
+      <div className={cn("mt-3 font-display text-3xl font-bold leading-none tracking-tight tabular-nums", toneMap[tone])}>{value}</div>
+      {sub && <div className="mt-1.5 text-xs text-muted">{sub}</div>}
     </div>
   );
 }
@@ -49,7 +53,7 @@ export function Badge({
     info: "border-info/30 text-info bg-info/10",
   };
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium capitalize", map[tone])}>
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium capitalize", map[tone])}>
       {children}
     </span>
   );
@@ -63,20 +67,26 @@ export function StatusBadge({ status }: { status: string }) {
     : s.includes("solved") || s.includes("closed") || s.includes("convicted") || s.includes("charge") ? "success"
     : s.includes("open") || s.includes("registered") ? "info"
     : "muted";
-  return <Badge tone={tone as never}>{status.replace(/_/g, " ")}</Badge>;
+  return (
+    <Badge tone={tone as never}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+      {status.replace(/_/g, " ")}
+    </Badge>
+  );
 }
 
 export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   const hue = hueFromString(name);
   return (
     <div
-      className="grid shrink-0 place-items-center rounded-full font-mono font-semibold"
+      className="grid shrink-0 select-none place-items-center rounded-full font-mono font-semibold"
       style={{
         width: size,
         height: size,
         fontSize: size * 0.36,
-        background: `hsl(${hue} 45% 22%)`,
-        color: `hsl(${hue} 70% 72%)`,
+        background: `linear-gradient(140deg, hsl(${hue} 46% 26%), hsl(${hue} 48% 17%))`,
+        color: `hsl(${hue} 78% 76%)`,
+        boxShadow: `inset 0 0 0 1px hsl(${hue} 55% 45% / 0.35)`,
       }}
     >
       {initials(name)}
@@ -86,18 +96,20 @@ export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
 
 export function RiskMeter({ score }: { score: number }) {
   const band = riskBand(score);
+  const fill = score >= 80 ? "var(--danger)" : score >= 60 ? "var(--warning)" : "var(--info)";
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-elevated">
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border/60">
         <div
-          className="h-full rounded-full"
+          className="h-full rounded-full transition-[width] duration-500 ease-out"
           style={{
             width: `${score}%`,
-            background: score >= 80 ? "rgb(var(--danger))" : score >= 60 ? "rgb(var(--warning))" : "rgb(var(--info))",
+            background: `rgb(${fill})`,
+            boxShadow: `0 0 8px rgb(${fill} / 0.6)`,
           }}
         />
       </div>
-      <span className={cn("font-mono text-xs font-semibold", band.color)}>{score}</span>
+      <span className={cn("font-mono text-xs font-semibold tabular-nums", band.color)}>{score}</span>
     </div>
   );
 }
@@ -113,8 +125,8 @@ export function SectionHeader({
 }) {
   return (
     <div className="mb-4 flex items-end justify-between gap-4">
-      <div>
-        <h2 className="font-display text-lg font-semibold">{title}</h2>
+      <div className="min-w-0">
+        <h2 className="font-display text-lg font-semibold tracking-tight">{title}</h2>
         {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
       </div>
       {action}
@@ -124,11 +136,11 @@ export function SectionHeader({
 
 export function EmptyState({ icon: Icon, title, hint }: { icon: LucideIcon; title: string; hint?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-14 text-center">
-      <div className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-elevated">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-surface/30 py-14 text-center">
+      <div className="mb-3 grid h-12 w-12 place-items-center rounded-full border border-border/60 bg-elevated/70">
         <Icon className="h-6 w-6 text-muted" />
       </div>
-      <div className="font-medium text-subtle">{title}</div>
+      <div className="font-display font-semibold text-subtle">{title}</div>
       {hint && <div className="mt-1 max-w-sm text-sm text-muted">{hint}</div>}
     </div>
   );
@@ -137,9 +149,12 @@ export function EmptyState({ icon: Icon, title, hint }: { icon: LucideIcon; titl
 export function PageHeader({ title, subtitle, children }: { title: React.ReactNode; subtitle?: string; children?: React.ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+      <div className="flex min-w-0 items-start gap-3">
+        <span aria-hidden className="mt-1 h-7 w-1 shrink-0 rounded-full bg-accent/80" />
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
+          {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+        </div>
       </div>
       {children}
     </div>

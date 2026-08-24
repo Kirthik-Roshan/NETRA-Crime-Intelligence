@@ -38,7 +38,7 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur-md sm:px-6">
       <form onSubmit={goSearch} className="relative hidden max-w-md flex-1 sm:block">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
@@ -52,7 +52,7 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
       <div className="ml-auto flex items-center gap-2">
         {/* AI status */}
         <div
-          className="hidden items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-subtle sm:flex"
+          className="hidden h-9 items-center gap-1.5 rounded-lg border border-border bg-surface/40 px-2.5 text-xs font-medium text-subtle sm:flex"
           title={aiOnline ? "Zoho Catalyst QuickML connected" : "Using built-in reasoning engine"}
         >
           <Cpu className="h-3.5 w-3.5 text-accent" />
