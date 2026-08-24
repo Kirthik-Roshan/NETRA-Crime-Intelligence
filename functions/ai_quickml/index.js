@@ -324,10 +324,16 @@ module.exports = async (req, res) => {
 
     if (mode === "transcribe") {
       if (!payload.audio) { reply(400, { error: "audio required" }); return; }
-      const up = await zia("audio/transcribe", { audio: payload.audio, language: payload.language || "en-IN" }, token);
+      // Zia Audio-to-Text model. Exact path/fields TBC from the console — set
+      // ZIA_TRANSCRIBE_PATH once confirmed (default matches the tts/translate
+      // naming). Response field read defensively across likely names.
+      const up = await zia(process.env.ZIA_TRANSCRIBE_PATH || "transcribe", {
+        audio: payload.audio,
+        language: String(payload.language || "en").split("-")[0],
+      }, token);
       if (!up.ok) { reply(502, { error: "Zia transcribe error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
-      reply(200, { text: d.text ?? d.transcript ?? null });
+      reply(200, { text: d.transcribed_text ?? d.text ?? d.transcript ?? d.output ?? null });
       return;
     }
 
