@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, GeoJSON, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import karnatakaGeo from "@/data/karnataka-districts.json";
@@ -71,10 +71,14 @@ export default function KarnatakaGeoMap({
           center={[14.9, 75.9]}
           style={{ height: "100%", width: "100%", background: "transparent" }}
           zoomControl
-          attributionControl={false}
           scrollWheelZoom
         >
-          {/* Tile-free: the district choropleth IS the base map (no external tiles). */}
+          {/* OpenStreetMap base tiles (ODbL); the district choropleth overlays on top. */}
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
           <FitToData data={geo} />
           <GeoJSON
             key={selectedGeo ?? "none"}

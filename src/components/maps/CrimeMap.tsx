@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, GeoJSON, CircleMarker, Popup, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, CircleMarker, Popup, Tooltip, useMap } from "react-leaflet";
 import L, { LatLngBounds } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
@@ -173,7 +173,13 @@ export default function CrimeMap({
           style={{ height: "100%", width: "100%", background: "rgb(var(--surface))" }}
           scrollWheelZoom
         >
-          {/* Tile-free base map — self-hosted district outlines (no external tiles). */}
+          {/* OpenStreetMap base tiles (ODbL — attribution shown). District
+              outlines overlay on top for the Karnataka reference. */}
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
           <DistrictBaseLayer />
 
           {view === "heatmap" && <HeatLayer points={filteredPoints} />}

@@ -115,10 +115,22 @@ type SpeechRecognitionLike = {
   continuous: boolean;
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e?: { error?: string }) => void) | null;
   start: () => void;
   stop: () => void;
 };
+
+const SPEECH_ERR: Record<string, string> = {
+  "not-allowed": "Microphone permission denied — allow mic access in the browser.",
+  "service-not-allowed": "Microphone permission denied — allow mic access in the browser.",
+  "no-speech": "No speech detected — try again and speak clearly.",
+  "audio-capture": "No microphone found.",
+  "language-not-supported": "This browser can't recognise the selected language. Switch to English or use Chrome.",
+  "network": "Network error reaching the speech service.",
+};
+function speechErr(code?: string): string {
+  return SPEECH_ERR[code || ""] || "Voice input failed — try Chrome, or deploy the Catalyst Zia path.";
+}
 
 function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
   if (typeof window === "undefined") return null;
@@ -144,6 +156,7 @@ export function AssistantClient() {
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -222,9 +235,10 @@ export function AssistantClient() {
       }
     };
     rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onerror = (e) => { setListening(false); setVoiceMsg(speechErr(e?.error)); };
     recRef.current = rec;
     setListening(true);
+    setVoiceMsg(null);
     rec.start();
   }, [lang, ask]);
 
@@ -247,17 +261,22 @@ export function AssistantClient() {
         mr.onstop = async () => {
           stream.getTracks().forEach((tk) => tk.stop());
           setListening(false);
+          setVoiceMsg("Transcribing…");
           try {
             const b64 = await blobToBase64(new Blob(chunks, { type: mr.mimeType || "audio/webm" }));
             // Catalyst Zia transcription via the Function (token stays server-side).
             const text = await transcribeAudio(b64, lang === "kn" ? "kn-IN" : "en-IN");
-            if (text) { setInput(text); ask(text, true); return; }
+            if (text) { setVoiceMsg(null); setInput(text); ask(text, true); return; }
           } catch { /* fall through to browser dictation */ }
+          setVoiceMsg(null);
           startWebSpeech();
         };
         mediaRecRef.current = mr;
         setListening(true);
+        setVoiceMsg(null);
         mr.start();
+        // Safety auto-stop so a forgotten recording doesn't run forever.
+        setTimeout(() => { if (mr.state !== "inactive") mr.stop(); }, 15000);
         return;
       } catch {
         // mic permission denied or unavailable → browser dictation
@@ -391,6 +410,12 @@ export function AssistantClient() {
           </button>
         ))}
       </div>
+
+      {(listening || voiceMsg) && (
+        <p className={cn("mb-1 text-xs", voiceMsg ? "text-warning" : "text-accent")}>
+          {voiceMsg || "🎙 Listening… speak now, then tap the mic again to stop."}
+        </p>
+      )}
 
       {/* Composer */}
       <form
