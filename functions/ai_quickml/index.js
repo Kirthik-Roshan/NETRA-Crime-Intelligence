@@ -309,10 +309,16 @@ module.exports = async (req, res) => {
 
     if (mode === "translate") {
       if (!payload.text) { reply(400, { error: "text required" }); return; }
-      const up = await zia("translate", { text: payload.text, target_language: payload.target || "kn", source_language: payload.source || "en" }, token);
+      // Zia translate model body: { text, src_lang, tgt_lang } (short codes);
+      // response: { translated_text }.
+      const up = await zia("translate", {
+        text: payload.text,
+        src_lang: String(payload.source || "en").split("-")[0],
+        tgt_lang: String(payload.target || "kn").split("-")[0],
+      }, token);
       if (!up.ok) { reply(502, { error: "Zia translate error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
-      reply(200, { translation: d.translation ?? d.text ?? d.output ?? null });
+      reply(200, { translation: d.translated_text ?? d.translation ?? d.text ?? null });
       return;
     }
 
