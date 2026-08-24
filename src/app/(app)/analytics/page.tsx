@@ -12,6 +12,8 @@ import { fetchDashboard, type DashboardData } from "@/lib/cloudscale";
 import { fetchCriminals } from "@/lib/cloudscale";
 import { fetchCases } from "@/lib/cloudscale";
 import { listOcr } from "@/lib/ai-client";
+import { ReadAloud } from "@/components/ReadAloud";
+import { Translated } from "@/components/Translated";
 import type { CrimRow } from "@/components/criminals/CriminalsList";
 import type { CaseRow } from "@/components/cases/CasesList";
 
@@ -106,10 +108,18 @@ export default function AnalyticsPage() {
       {/* AI summary + hotspots + threats */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card panel-pad">
-          <div className="mb-3 flex items-center gap-2"><Radar className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">AI Intelligence Summary</h2></div>
+          <div className="mb-3 flex items-center gap-2">
+            <Radar className="h-4 w-4 text-accent" />
+            <h2 className="font-display text-base font-semibold">AI Intelligence Summary</h2>
+            {summary.length > 0 && (
+              <span className="ml-auto">
+                <ReadAloud label="Read Intelligence Brief" text={summary.join(". ")} />
+              </span>
+            )}
+          </div>
           <div className="space-y-2.5">
             {summary.length === 0 && <p className="text-sm text-muted">No Cloud Scale records yet.</p>}
-            {summary.map((s, i) => <div key={i} className="flex gap-2 text-sm text-subtle"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />{s}</div>)}
+            {summary.map((s, i) => <div key={i} className="flex gap-2 text-sm text-subtle"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" /><Translated text={s} /></div>)}
           </div>
         </div>
 

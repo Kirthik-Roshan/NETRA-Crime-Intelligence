@@ -8,6 +8,8 @@ import { get, all } from "@/lib/db";
 import { similarFirs } from "@/lib/embeddings";
 import { PageHeader, Badge, StatusBadge, Avatar } from "@/components/ui";
 import { CaseIntelligence } from "@/components/ai/CaseIntelligence";
+import { ReadAloud } from "@/components/ReadAloud";
+import { Translated } from "@/components/Translated";
 import { formatDate } from "@/lib/utils";
 
 // Prerender every case page at build (static export — no runtime server).
@@ -125,9 +127,12 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
               <Sparkles className="h-4 w-4 text-accent" />
               <h3 className="text-sm font-semibold">AI Case Summary</h3>
               <Badge tone="accent">generated</Badge>
+              <span className="ml-auto">
+                <ReadAloud label="Read Summary" text={[c.summary, fir?.description].filter(Boolean).join(" ")} />
+              </span>
             </div>
-            <p className="text-sm leading-relaxed text-subtle">{c.summary}</p>
-            {fir && <p className="mt-2 text-sm leading-relaxed text-muted">{fir.description}</p>}
+            <Translated as="p" className="text-sm leading-relaxed text-subtle" text={c.summary} />
+            {fir && <Translated as="p" className="mt-2 text-sm leading-relaxed text-muted" text={fir.description} />}
           </div>
 
           <CaseIntelligence text={[c.summary, fir?.description].filter(Boolean).join("\n\n")} />

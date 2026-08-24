@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
 import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, transcribeAudio, extractText, type RagSource } from "@/lib/ai-client";
+import { Translated } from "@/components/Translated";
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -536,7 +537,11 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
   return (
     <div className="card panel-pad animate-fade-in space-y-4">
       <div className="flex items-start gap-2">
-        <p className="flex-1 text-[15px] leading-relaxed text-fg">{spoken}</p>
+        <p className="flex-1 text-[15px] leading-relaxed text-fg">
+          {/* Manual per-answer translate takes precedence; otherwise the global
+              EN|ಕನ್ನಡ toggle drives translate-on-display via <Translated>. */}
+          {kannada ?? <Translated text={insight.answer} />}
+        </p>
         <button
           onClick={translate}
           disabled={translating}
