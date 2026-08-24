@@ -505,7 +505,7 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
     setSpeaking(true);
     const b64 = await synthesizeSpeech(spoken, kannada ? "kn-IN" : lang === "kn" ? "kn-IN" : "en-IN");
     if (b64) {
-      const audio = new Audio(b64.startsWith("data:") ? b64 : `data:audio/mp3;base64,${b64}`);
+      const audio = new Audio(b64.startsWith("data:") ? b64 : `data:audio/wav;base64,${b64}`);
       audioRef.current = audio;
       audio.onended = () => setSpeaking(false);
       audio.onerror = () => setSpeaking(false);

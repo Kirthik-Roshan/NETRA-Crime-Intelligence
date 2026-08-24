@@ -118,13 +118,21 @@ async function quickml(path, body, token) {
 }
 
 // Zia model endpoints (TTS / translate / transcribe) — same token + org.
+// TTS returns a binary audio stream (audio/wav); translate/transcribe return
+// JSON. Read as bytes and branch on content-type so binary audio survives.
 async function zia(path, body, token) {
   const r = await tfetch(`${DC_BASE}/quickml/api/v1/models/zia/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `${SCHEME} ${token}`, "CATALYST-ORG": ORG },
     body: JSON.stringify(body),
   }, 18000, `zia:${path}`);
-  const text = await r.text();
+  const ct = (r.headers && r.headers.get && r.headers.get("content-type")) || "";
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (ct.includes("audio") || (!ct.includes("json") && !ct.includes("text"))) {
+    // Binary (e.g. TTS wav) — hand back base64 for the browser to play.
+    return { ok: r.ok, status: r.status, json: null, text: buf.toString("utf8").slice(0, 300), audio_b64: buf.toString("base64") };
+  }
+  const text = buf.toString("utf8");
   let json = null; try { json = JSON.parse(text); } catch { /* non-JSON */ }
   return { ok: r.ok, status: r.status, json, text };
 }
@@ -284,9 +292,18 @@ module.exports = async (req, res) => {
 
     if (mode === "tts") {
       if (!payload.text) { reply(400, { error: "text required" }); return; }
-      const up = await zia("tts/synthesize", { text: payload.text, language: payload.language || "en-IN" }, token);
+      // Zia TTS model body: text + short language code + speaker/prosody.
+      // Returns binary wav (zia() base64-encodes it as audio_b64).
+      const up = await zia("tts/synthesize", {
+        text: payload.text,
+        language: String(payload.language || "en").split("-")[0],
+        speaker: payload.speaker || "Mary",
+        pitch: payload.pitch || "moderate",
+        speed: payload.speed || "moderate",
+        emotion: payload.emotion || "neutral",
+      }, token);
       if (!up.ok) { reply(502, { error: "Zia TTS error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
-      reply(200, { audio: (up.json || {}).audio ?? null });
+      reply(200, { audio: up.audio_b64 || null, mime: "audio/wav" });
       return;
     }
 
