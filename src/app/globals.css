@@ -194,9 +194,9 @@ body {
    strings. Sizes stay owned by per-page utilities; this sets the character. */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display), system-ui, sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
   text-wrap: balance;
 }
 
@@ -274,7 +274,11 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.08);
   }
   .stat-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.09em] text-muted;
+    @apply text-[11px] font-semibold uppercase tracking-[0.11em] text-muted;
+  }
+  /* Command-console eyebrow — the signature label treatment. */
+  .eyebrow {
+    @apply font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-accent;
   }
   .kbd {
     @apply inline-flex items-center rounded border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted;
@@ -286,9 +290,9 @@ h1, h2, h3, h4, h5, h6 {
     @apply relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted/70 transition-colors hover:bg-elevated/50 hover:text-fg;
   }
   .link-row-active {
-    @apply text-fg;
-    box-shadow: inset 2px 0 0 0 rgb(var(--accent));
-    background: linear-gradient(90deg, rgb(var(--accent) / 0.1), transparent 62%);
+    @apply font-semibold text-fg;
+    box-shadow: inset 3px 0 0 0 rgb(var(--accent));
+    background: linear-gradient(90deg, rgb(var(--accent) / 0.18), transparent 66%);
   }
   /* Skeleton shimmer for loading states */
   .skeleton {

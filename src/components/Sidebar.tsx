@@ -62,8 +62,8 @@ export function Sidebar({ user }: { user: SessionUser }) {
         </Link>
         {!collapsed && (
           <div className="min-w-0">
-            <div className="truncate font-display text-sm font-bold leading-tight tracking-tight">{t("brand.name")}</div>
-            <div className="truncate text-[11px] text-muted">{t("brand.tagline")}</div>
+            <div className="truncate font-display text-[15px] font-black uppercase leading-tight tracking-[-0.01em]">{t("brand.name")}</div>
+            <div className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted">{t("brand.tagline")}</div>
           </div>
         )}
         <button

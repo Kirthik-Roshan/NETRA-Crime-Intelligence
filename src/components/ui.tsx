@@ -21,17 +21,21 @@ export function StatCard({
     warning: "text-warning",
     success: "text-success",
   };
+  const bar = {
+    default: "bg-border", accent: "bg-accent", danger: "bg-danger", warning: "bg-warning", success: "bg-success",
+  };
   return (
-    <div className="card panel-pad group">
+    <div className="card panel-pad group relative overflow-hidden">
+      <span aria-hidden className={cn("absolute inset-x-0 top-0 h-0.5 opacity-70", bar[tone])} />
       <div className="flex items-start justify-between gap-3">
         <span className="stat-label">{label}</span>
         {Icon && (
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border/60 bg-elevated/60 transition-colors group-hover:border-border">
-            <Icon className={cn("h-3.5 w-3.5", toneMap[tone])} />
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border/60 bg-elevated/60 transition-colors group-hover:border-border">
+            <Icon className={cn("h-4 w-4", toneMap[tone])} />
           </span>
         )}
       </div>
-      <div className={cn("mt-3 font-display text-3xl font-bold leading-none tracking-tight tabular-nums", toneMap[tone])}>{value}</div>
+      <div className={cn("mt-3 font-display text-[2.15rem] font-black leading-none tracking-[-0.04em] tabular-nums md:text-[2.5rem]", toneMap[tone])}>{value}</div>
       {sub && <div className="mt-1.5 text-xs text-muted">{sub}</div>}
     </div>
   );
@@ -126,7 +130,7 @@ export function SectionHeader({
   return (
     <div className="mb-4 flex items-end justify-between gap-4">
       <div className="min-w-0">
-        <h2 className="font-display text-lg font-semibold tracking-tight">{title}</h2>
+        <h2 className="font-display text-xl font-bold tracking-[-0.025em]">{title}</h2>
         {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
       </div>
       {action}
@@ -148,15 +152,17 @@ export function EmptyState({ icon: Icon, title, hint }: { icon: LucideIcon; titl
 
 export function PageHeader({ title, subtitle, children }: { title: React.ReactNode; subtitle?: string; children?: React.ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <span aria-hidden className="mt-1 h-7 w-1 shrink-0 rounded-full bg-accent/80" />
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+    <div className="mb-7 border-b border-border/50 pb-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex min-w-0 items-stretch gap-3.5">
+          <span aria-hidden className="w-1.5 shrink-0 rounded-full bg-accent" />
+          <div className="min-w-0">
+            <h1 className="font-display text-[1.75rem] font-black leading-[1.04] tracking-[-0.035em] md:text-[2.15rem]">{title}</h1>
+            {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
+          </div>
         </div>
+        {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
       </div>
-      {children}
     </div>
   );
 }
