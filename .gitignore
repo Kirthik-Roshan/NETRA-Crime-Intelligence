@@ -24,3 +24,7 @@ functions/ai_quickml/catalyst-config.json
 
 # generated KB text (regenerate from source; not source of truth)
 /data/kb_txt_gen/
+
+# Catalyst CLI local project binding (per-developer, not for the repo)
+.catalystrc
+functions/*/package-lock.json
