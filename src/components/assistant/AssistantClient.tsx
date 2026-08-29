@@ -229,12 +229,11 @@ export function AssistantClient() {
     rec.onresult = (e) => {
       const results = Array.from(e.results as ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>);
       const transcript = results.map((r) => r[0]?.transcript ?? "").join(" ").trim();
+      // Drop the transcript into the composer so the officer can review or edit
+      // before hitting send — do NOT auto-submit.
       setInput(transcript);
       const last = results[results.length - 1];
-      if (last?.isFinal && transcript) {
-        setListening(false);
-        ask(transcript, true);
-      }
+      if (last?.isFinal) setListening(false);
     };
     rec.onend = () => setListening(false);
     rec.onerror = (e) => { setListening(false); setVoiceMsg(speechErr(e?.error)); };
@@ -268,7 +267,9 @@ export function AssistantClient() {
             const b64 = await blobToBase64(new Blob(chunks, { type: mr.mimeType || "audio/webm" }));
             // Catalyst Zia transcription via the Function (token stays server-side).
             const text = await transcribeAudio(b64, lang === "kn" ? "kn-IN" : "en-IN");
-            if (text) { setVoiceMsg(null); setInput(text); ask(text, true); return; }
+            // Populate the composer so the officer can review or edit before
+            // sending. Do NOT auto-submit (matches the OCR scan behaviour).
+            if (text) { setVoiceMsg(null); setInput(text); return; }
           } catch { /* fall through to browser dictation */ }
           setVoiceMsg(null);
           startWebSpeech();
