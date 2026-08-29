@@ -24,13 +24,13 @@ const str = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) r
 const num = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) { const n = Number(r[x]); if (!Number.isNaN(n)) return n; } return 0; };
 
 export async function fetchCases(): Promise<CaseRow[]> {
-  const rows = await listRecords("Cases", 200);
+  const rows = await listRecords("Cases", 1000);
   return rows.map((r, i) => ({
     id: num(r, "ROWID", "id") || i + 1,
     case_number: str(r, "case_number", "CaseNo", "CrimeNo"),
     title: str(r, "title", "Title", "BriefFacts"),
     status: str(r, "status", "CaseStatus") || "registered",
-    priority: str(r, "priority", "Priority") || "medium",
+    priority: str(r, "case_priority", "priority", "Priority") || "medium",
     district: str(r, "district", "District"),
     updated_at: str(r, "updated_at", "CREATEDTIME", "MODIFIEDTIME"),
     crime_type: str(r, "crime_type", "CrimeType", "CrimeHeadName"),
@@ -39,7 +39,7 @@ export async function fetchCases(): Promise<CaseRow[]> {
 }
 
 export async function fetchCriminals(): Promise<CrimRow[]> {
-  const rows = await listRecords("Criminals", 200);
+  const rows = await listRecords("Criminals", 1000);
   return rows.map((r, i) => ({
     id: num(r, "ROWID", "id") || i + 1,
     name: str(r, "name", "Name", "AccusedName"),
@@ -56,7 +56,7 @@ export async function fetchCriminals(): Promise<CrimRow[]> {
 }
 
 export async function fetchFirs(): Promise<Row[]> {
-  return listRecords("Firs", 200);
+  return listRecords("Firs", 1000);
 }
 
 export function toGeoPoints(firs: Row[]): FirPoint[] {

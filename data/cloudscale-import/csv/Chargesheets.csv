@@ -1,0 +1,192 @@
+id,fir_id,csdate,cstype,final_report,police_person_id,court
+1,4,2025-06-08 00:00:00,A,Chargesheet,53,Shivamogga District & Sessions Court
+2,6,2026-05-30 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+3,7,2026-02-19 00:00:00,A,Chargesheet,65,Udupi District & Sessions Court
+4,10,2025-07-18 00:00:00,A,Chargesheet,7,Mysuru District & Sessions Court
+5,11,2025-12-09 00:00:00,B,False Case,44,Vijayapura District & Sessions Court
+6,14,2026-06-11 00:00:00,A,Chargesheet,35,Kalaburagi District & Sessions Court
+7,15,2026-06-06 00:00:00,A,Chargesheet,45,Vijayapura District & Sessions Court
+8,16,2025-04-26 00:00:00,A,Chargesheet,29,Belagavi District & Sessions Court
+9,18,2026-04-02 00:00:00,A,Chargesheet,27,Belagavi District & Sessions Court
+10,20,2025-06-13 00:00:00,A,Chargesheet,9,Mysuru District & Sessions Court
+11,24,2026-07-15 00:00:00,A,Chargesheet,5,Bengaluru Urban District & Sessions Court
+12,28,2026-07-15 00:00:00,A,Chargesheet,23,Hubballi-Dharwad District & Sessions Court
+13,29,2025-09-05 00:00:00,A,Chargesheet,42,Ballari District & Sessions Court
+14,30,2025-08-30 00:00:00,A,Chargesheet,26,Belagavi District & Sessions Court
+15,31,2026-06-10 00:00:00,A,Chargesheet,16,Dakshina Kannada District & Sessions Court
+16,33,2026-04-12 00:00:00,A,Chargesheet,51,Shivamogga District & Sessions Court
+17,34,2026-05-15 00:00:00,A,Chargesheet,29,Belagavi District & Sessions Court
+18,37,2025-03-20 00:00:00,A,Chargesheet,50,Shivamogga District & Sessions Court
+19,38,2026-06-12 00:00:00,A,Chargesheet,13,Dakshina Kannada District & Sessions Court
+20,40,2025-11-09 00:00:00,A,Chargesheet,43,Vijayapura District & Sessions Court
+21,41,2026-02-14 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+22,44,2026-06-01 00:00:00,A,Chargesheet,20,Hubballi-Dharwad District & Sessions Court
+23,49,2026-07-15 00:00:00,A,Chargesheet,21,Hubballi-Dharwad District & Sessions Court
+24,51,2025-07-29 00:00:00,A,Chargesheet,67,Mandya District & Sessions Court
+25,52,2026-03-12 00:00:00,A,Chargesheet,33,Kalaburagi District & Sessions Court
+26,53,2026-05-28 00:00:00,A,Chargesheet,43,Vijayapura District & Sessions Court
+27,61,2026-05-20 00:00:00,C,Undetected,45,Vijayapura District & Sessions Court
+28,62,2026-05-26 00:00:00,A,Chargesheet,21,Hubballi-Dharwad District & Sessions Court
+29,67,2025-04-20 00:00:00,A,Chargesheet,61,Udupi District & Sessions Court
+30,68,2026-07-15 00:00:00,A,Chargesheet,51,Shivamogga District & Sessions Court
+31,69,2025-05-27 00:00:00,A,Chargesheet,7,Mysuru District & Sessions Court
+32,71,2026-03-15 00:00:00,A,Chargesheet,52,Shivamogga District & Sessions Court
+33,72,2026-06-30 00:00:00,A,Chargesheet,61,Udupi District & Sessions Court
+34,73,2026-07-06 00:00:00,A,Chargesheet,9,Mysuru District & Sessions Court
+35,74,2026-07-15 00:00:00,B,False Case,15,Dakshina Kannada District & Sessions Court
+36,75,2026-05-09 00:00:00,A,Chargesheet,2,Bengaluru Urban District & Sessions Court
+37,77,2026-01-29 00:00:00,A,Chargesheet,14,Dakshina Kannada District & Sessions Court
+38,78,2026-03-20 00:00:00,A,Chargesheet,4,Bengaluru Urban District & Sessions Court
+39,79,2025-08-31 00:00:00,A,Chargesheet,26,Belagavi District & Sessions Court
+40,80,2025-09-18 00:00:00,A,Chargesheet,1,Bengaluru Urban District & Sessions Court
+41,87,2025-12-12 00:00:00,A,Chargesheet,46,Vijayapura District & Sessions Court
+42,90,2026-07-08 00:00:00,A,Chargesheet,41,Ballari District & Sessions Court
+43,99,2025-12-28 00:00:00,A,Chargesheet,18,Dakshina Kannada District & Sessions Court
+44,100,2026-03-08 00:00:00,A,Chargesheet,59,Tumakuru District & Sessions Court
+45,102,2026-07-15 00:00:00,A,Chargesheet,33,Kalaburagi District & Sessions Court
+46,104,2026-04-18 00:00:00,A,Chargesheet,13,Dakshina Kannada District & Sessions Court
+47,105,2025-06-06 00:00:00,B,False Case,16,Dakshina Kannada District & Sessions Court
+48,107,2026-02-11 00:00:00,A,Chargesheet,43,Vijayapura District & Sessions Court
+49,109,2025-09-10 00:00:00,A,Chargesheet,30,Belagavi District & Sessions Court
+50,110,2025-08-16 00:00:00,A,Chargesheet,21,Hubballi-Dharwad District & Sessions Court
+51,115,2026-07-15 00:00:00,B,False Case,1,Bengaluru Urban District & Sessions Court
+52,116,2026-05-23 00:00:00,C,Undetected,26,Belagavi District & Sessions Court
+53,117,2026-05-04 00:00:00,A,Chargesheet,16,Dakshina Kannada District & Sessions Court
+54,118,2026-05-02 00:00:00,A,Chargesheet,68,Mandya District & Sessions Court
+55,121,2026-05-06 00:00:00,A,Chargesheet,13,Dakshina Kannada District & Sessions Court
+56,124,2026-04-11 00:00:00,A,Chargesheet,49,Shivamogga District & Sessions Court
+57,125,2025-06-30 00:00:00,A,Chargesheet,68,Mandya District & Sessions Court
+58,132,2026-07-15 00:00:00,A,Chargesheet,34,Kalaburagi District & Sessions Court
+59,133,2025-09-04 00:00:00,A,Chargesheet,32,Kalaburagi District & Sessions Court
+60,135,2026-06-11 00:00:00,A,Chargesheet,48,Vijayapura District & Sessions Court
+61,138,2026-07-15 00:00:00,A,Chargesheet,15,Dakshina Kannada District & Sessions Court
+62,140,2026-04-26 00:00:00,A,Chargesheet,47,Vijayapura District & Sessions Court
+63,146,2025-12-30 00:00:00,A,Chargesheet,24,Hubballi-Dharwad District & Sessions Court
+64,149,2026-04-17 00:00:00,A,Chargesheet,58,Tumakuru District & Sessions Court
+65,151,2026-03-28 00:00:00,A,Chargesheet,71,Mandya District & Sessions Court
+66,154,2025-02-27 00:00:00,A,Chargesheet,49,Shivamogga District & Sessions Court
+67,156,2026-07-13 00:00:00,A,Chargesheet,49,Shivamogga District & Sessions Court
+68,159,2026-06-29 00:00:00,A,Chargesheet,24,Hubballi-Dharwad District & Sessions Court
+69,172,2026-01-13 00:00:00,A,Chargesheet,64,Udupi District & Sessions Court
+70,177,2026-04-21 00:00:00,A,Chargesheet,17,Dakshina Kannada District & Sessions Court
+71,178,2026-07-15 00:00:00,A,Chargesheet,36,Kalaburagi District & Sessions Court
+72,179,2025-09-01 00:00:00,A,Chargesheet,13,Dakshina Kannada District & Sessions Court
+73,181,2025-05-06 00:00:00,A,Chargesheet,59,Tumakuru District & Sessions Court
+74,182,2026-05-28 00:00:00,B,False Case,35,Kalaburagi District & Sessions Court
+75,184,2026-07-15 00:00:00,A,Chargesheet,56,Tumakuru District & Sessions Court
+76,189,2026-07-15 00:00:00,A,Chargesheet,44,Vijayapura District & Sessions Court
+77,191,2026-07-15 00:00:00,B,False Case,70,Mandya District & Sessions Court
+78,192,2026-07-14 00:00:00,A,Chargesheet,70,Mandya District & Sessions Court
+79,193,2026-07-15 00:00:00,A,Chargesheet,16,Dakshina Kannada District & Sessions Court
+80,197,2025-08-16 00:00:00,A,Chargesheet,48,Vijayapura District & Sessions Court
+81,199,2025-05-21 00:00:00,A,Chargesheet,60,Tumakuru District & Sessions Court
+82,201,2026-07-15 00:00:00,A,Chargesheet,63,Udupi District & Sessions Court
+83,202,2026-01-15 00:00:00,A,Chargesheet,60,Tumakuru District & Sessions Court
+84,207,2026-07-02 00:00:00,B,False Case,20,Hubballi-Dharwad District & Sessions Court
+85,208,2025-11-22 00:00:00,A,Chargesheet,1,Bengaluru Urban District & Sessions Court
+86,209,2026-07-15 00:00:00,A,Chargesheet,5,Bengaluru Urban District & Sessions Court
+87,210,2026-05-29 00:00:00,C,Undetected,15,Dakshina Kannada District & Sessions Court
+88,213,2025-05-22 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+89,219,2026-04-11 00:00:00,A,Chargesheet,42,Ballari District & Sessions Court
+90,222,2025-08-10 00:00:00,A,Chargesheet,2,Bengaluru Urban District & Sessions Court
+91,223,2025-10-20 00:00:00,A,Chargesheet,36,Kalaburagi District & Sessions Court
+92,224,2025-07-29 00:00:00,A,Chargesheet,30,Belagavi District & Sessions Court
+93,236,2026-06-27 00:00:00,A,Chargesheet,33,Kalaburagi District & Sessions Court
+94,242,2026-04-22 00:00:00,A,Chargesheet,47,Vijayapura District & Sessions Court
+95,244,2026-07-15 00:00:00,A,Chargesheet,60,Tumakuru District & Sessions Court
+96,246,2026-07-15 00:00:00,A,Chargesheet,2,Bengaluru Urban District & Sessions Court
+97,248,2026-07-15 00:00:00,A,Chargesheet,20,Hubballi-Dharwad District & Sessions Court
+98,251,2025-11-05 00:00:00,A,Chargesheet,18,Dakshina Kannada District & Sessions Court
+99,254,2026-04-20 00:00:00,A,Chargesheet,65,Udupi District & Sessions Court
+100,255,2025-10-13 00:00:00,A,Chargesheet,29,Belagavi District & Sessions Court
+101,257,2026-07-15 00:00:00,A,Chargesheet,44,Vijayapura District & Sessions Court
+102,263,2026-05-31 00:00:00,C,Undetected,61,Udupi District & Sessions Court
+103,264,2026-05-27 00:00:00,A,Chargesheet,21,Hubballi-Dharwad District & Sessions Court
+104,265,2026-07-15 00:00:00,A,Chargesheet,24,Hubballi-Dharwad District & Sessions Court
+105,268,2026-07-15 00:00:00,A,Chargesheet,64,Udupi District & Sessions Court
+106,272,2026-02-28 00:00:00,A,Chargesheet,70,Mandya District & Sessions Court
+107,274,2026-04-24 00:00:00,A,Chargesheet,43,Vijayapura District & Sessions Court
+108,275,2025-10-24 00:00:00,A,Chargesheet,64,Udupi District & Sessions Court
+109,276,2026-02-28 00:00:00,A,Chargesheet,66,Udupi District & Sessions Court
+110,277,2025-08-18 00:00:00,C,Undetected,13,Dakshina Kannada District & Sessions Court
+111,278,2026-03-10 00:00:00,A,Chargesheet,50,Shivamogga District & Sessions Court
+112,280,2026-01-02 00:00:00,A,Chargesheet,68,Mandya District & Sessions Court
+113,282,2026-07-03 00:00:00,A,Chargesheet,47,Vijayapura District & Sessions Court
+114,286,2025-07-24 00:00:00,A,Chargesheet,66,Udupi District & Sessions Court
+115,292,2026-05-31 00:00:00,A,Chargesheet,1,Bengaluru Urban District & Sessions Court
+116,297,2025-08-11 00:00:00,A,Chargesheet,35,Kalaburagi District & Sessions Court
+117,300,2026-01-03 00:00:00,A,Chargesheet,40,Ballari District & Sessions Court
+118,305,2026-07-15 00:00:00,A,Chargesheet,30,Belagavi District & Sessions Court
+119,311,2025-07-12 00:00:00,B,False Case,20,Hubballi-Dharwad District & Sessions Court
+120,312,2025-05-30 00:00:00,A,Chargesheet,24,Hubballi-Dharwad District & Sessions Court
+121,313,2025-08-13 00:00:00,A,Chargesheet,2,Bengaluru Urban District & Sessions Court
+122,315,2026-04-13 00:00:00,A,Chargesheet,2,Bengaluru Urban District & Sessions Court
+123,318,2026-04-01 00:00:00,B,False Case,68,Mandya District & Sessions Court
+124,319,2025-10-13 00:00:00,A,Chargesheet,1,Bengaluru Urban District & Sessions Court
+125,322,2026-04-01 00:00:00,A,Chargesheet,15,Dakshina Kannada District & Sessions Court
+126,323,2025-11-16 00:00:00,A,Chargesheet,68,Mandya District & Sessions Court
+127,327,2026-07-15 00:00:00,A,Chargesheet,36,Kalaburagi District & Sessions Court
+128,328,2026-06-23 00:00:00,A,Chargesheet,7,Mysuru District & Sessions Court
+129,331,2026-04-18 00:00:00,A,Chargesheet,40,Ballari District & Sessions Court
+130,332,2026-07-15 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+131,334,2026-06-13 00:00:00,A,Chargesheet,59,Tumakuru District & Sessions Court
+132,337,2026-06-10 00:00:00,A,Chargesheet,45,Vijayapura District & Sessions Court
+133,338,2026-02-04 00:00:00,A,Chargesheet,68,Mandya District & Sessions Court
+134,341,2026-06-08 00:00:00,A,Chargesheet,44,Vijayapura District & Sessions Court
+135,342,2025-11-19 00:00:00,A,Chargesheet,15,Dakshina Kannada District & Sessions Court
+136,344,2026-06-08 00:00:00,A,Chargesheet,33,Kalaburagi District & Sessions Court
+137,347,2025-05-09 00:00:00,B,False Case,64,Udupi District & Sessions Court
+138,351,2026-04-27 00:00:00,A,Chargesheet,24,Hubballi-Dharwad District & Sessions Court
+139,352,2026-06-29 00:00:00,A,Chargesheet,54,Shivamogga District & Sessions Court
+140,353,2025-06-26 00:00:00,C,Undetected,45,Vijayapura District & Sessions Court
+141,354,2026-02-18 00:00:00,A,Chargesheet,1,Bengaluru Urban District & Sessions Court
+142,358,2025-10-23 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+143,364,2026-07-15 00:00:00,A,Chargesheet,68,Mandya District & Sessions Court
+144,367,2025-08-29 00:00:00,A,Chargesheet,15,Dakshina Kannada District & Sessions Court
+145,368,2026-01-23 00:00:00,A,Chargesheet,38,Ballari District & Sessions Court
+146,370,2026-06-07 00:00:00,A,Chargesheet,63,Udupi District & Sessions Court
+147,371,2025-03-20 00:00:00,A,Chargesheet,17,Dakshina Kannada District & Sessions Court
+148,373,2026-05-11 00:00:00,A,Chargesheet,62,Udupi District & Sessions Court
+149,376,2025-12-03 00:00:00,A,Chargesheet,57,Tumakuru District & Sessions Court
+150,383,2026-07-15 00:00:00,A,Chargesheet,45,Vijayapura District & Sessions Court
+151,388,2026-07-15 00:00:00,A,Chargesheet,3,Bengaluru Urban District & Sessions Court
+152,390,2026-07-04 00:00:00,C,Undetected,10,Mysuru District & Sessions Court
+153,392,2026-03-05 00:00:00,A,Chargesheet,31,Kalaburagi District & Sessions Court
+154,394,2025-11-03 00:00:00,B,False Case,35,Kalaburagi District & Sessions Court
+155,396,2026-07-15 00:00:00,A,Chargesheet,10,Mysuru District & Sessions Court
+156,401,2026-07-15 00:00:00,A,Chargesheet,4,Bengaluru Urban District & Sessions Court
+157,402,2025-12-16 00:00:00,A,Chargesheet,4,Bengaluru Urban District & Sessions Court
+158,403,2026-07-15 00:00:00,A,Chargesheet,63,Udupi District & Sessions Court
+159,410,2025-06-27 00:00:00,A,Chargesheet,7,Mysuru District & Sessions Court
+160,415,2026-07-15 00:00:00,A,Chargesheet,58,Tumakuru District & Sessions Court
+161,417,2026-04-05 00:00:00,A,Chargesheet,36,Kalaburagi District & Sessions Court
+162,418,2025-09-22 00:00:00,A,Chargesheet,37,Ballari District & Sessions Court
+163,420,2026-02-24 00:00:00,C,Undetected,46,Vijayapura District & Sessions Court
+164,421,2025-05-17 00:00:00,A,Chargesheet,49,Shivamogga District & Sessions Court
+165,423,2026-06-22 00:00:00,A,Chargesheet,68,Mandya District & Sessions Court
+166,426,2025-10-29 00:00:00,A,Chargesheet,25,Belagavi District & Sessions Court
+167,429,2025-10-12 00:00:00,A,Chargesheet,70,Mandya District & Sessions Court
+168,430,2026-05-13 00:00:00,A,Chargesheet,20,Hubballi-Dharwad District & Sessions Court
+169,437,2025-10-06 00:00:00,A,Chargesheet,64,Udupi District & Sessions Court
+170,439,2025-05-19 00:00:00,A,Chargesheet,60,Tumakuru District & Sessions Court
+171,441,2026-07-15 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+172,442,2026-07-15 00:00:00,A,Chargesheet,66,Udupi District & Sessions Court
+173,445,2026-04-21 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+174,450,2026-04-20 00:00:00,A,Chargesheet,1,Bengaluru Urban District & Sessions Court
+175,451,2025-07-03 00:00:00,A,Chargesheet,54,Shivamogga District & Sessions Court
+176,453,2026-07-15 00:00:00,A,Chargesheet,3,Bengaluru Urban District & Sessions Court
+177,456,2025-08-21 00:00:00,A,Chargesheet,19,Hubballi-Dharwad District & Sessions Court
+178,459,2025-11-09 00:00:00,A,Chargesheet,8,Mysuru District & Sessions Court
+179,464,2026-07-15 00:00:00,A,Chargesheet,45,Vijayapura District & Sessions Court
+180,470,2026-03-24 00:00:00,A,Chargesheet,39,Ballari District & Sessions Court
+181,474,2026-07-15 00:00:00,A,Chargesheet,28,Belagavi District & Sessions Court
+182,477,2026-05-12 00:00:00,A,Chargesheet,41,Ballari District & Sessions Court
+183,479,2026-07-15 00:00:00,A,Chargesheet,25,Belagavi District & Sessions Court
+184,483,2026-05-26 00:00:00,A,Chargesheet,42,Ballari District & Sessions Court
+185,485,2026-05-07 00:00:00,A,Chargesheet,70,Mandya District & Sessions Court
+186,492,2026-03-07 00:00:00,A,Chargesheet,71,Mandya District & Sessions Court
+187,493,2026-04-24 00:00:00,A,Chargesheet,60,Tumakuru District & Sessions Court
+188,495,2025-06-13 00:00:00,A,Chargesheet,70,Mandya District & Sessions Court
+189,497,2025-11-19 00:00:00,A,Chargesheet,46,Vijayapura District & Sessions Court
+190,498,2026-01-02 00:00:00,A,Chargesheet,26,Belagavi District & Sessions Court
+191,500,2026-06-07 00:00:00,A,Chargesheet,42,Ballari District & Sessions Court

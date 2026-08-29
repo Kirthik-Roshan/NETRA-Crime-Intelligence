@@ -1,0 +1,663 @@
+id,fir_id,name,age,gender,occupation,religion
+1,1,Roopa Nayak,21,F,Student,Christian
+2,2,Anil Poojary,28,M,Daily Wage Worker,Sikh
+3,3,Pooja Shastri,41,F,Private Employee,Others
+4,3,Geetha Patil,50,F,Driver,Others
+5,4,Bhavya Naik,58,F,Retired,Muslim
+6,6,Praveen Gowda,44,M,Student,Muslim
+7,6,Kavya Desai,30,F,Retired,Muslim
+8,9,Pooja Achar,58,F,Business,Others
+9,9,Kumar Poojary,66,M,Farmer,Jain
+10,10,Geetha Reddy,44,F,Retired,Sikh
+11,10,Lokesh Nayak,69,M,Unemployed,Hindu
+12,11,Kavya Kumar,52,F,Business,Hindu
+13,13,Santosh Reddy,69,M,Daily Wage Worker,Others
+14,13,Anil Rao,53,M,Retired,Sikh
+15,14,Riyaz Bhat,38,M,Daily Wage Worker,Hindu
+16,14,Meena Kumar,58,F,Daily Wage Worker,Others
+17,15,Darshan Hebbar,26,M,Business,Jain
+18,15,Mahesh Shastri,56,M,Homemaker,Others
+19,16,Asha Shetty,32,F,Private Employee,Sikh
+20,16,Rekha Kumar,43,F,Unemployed,Muslim
+21,18,Kavya Achar,43,F,Retired,Sikh
+22,18,Harish Rai,63,M,Retired,Others
+23,19,Shruthi Achar,61,F,Student,Christian
+24,19,Sunil Murthy,25,M,Unemployed,Sikh
+25,20,Vinay Achar,40,M,Homemaker,Hindu
+26,20,Meena Shetty,57,F,Driver,Hindu
+27,21,Asha Poojary,19,F,Daily Wage Worker,Christian
+28,22,Roopa Hebbar,49,F,Driver,Jain
+29,23,Divya Poojary,36,F,Driver,Hindu
+30,23,Shruthi Murthy,56,F,Private Employee,Muslim
+31,24,Pooja Hebbar,32,F,Daily Wage Worker,Others
+32,24,Shruthi Shastri,66,F,Government Employee,Christian
+33,26,Sunil Shetty,37,M,Daily Wage Worker,Jain
+34,27,Umesh Poojary,63,M,Business,Christian
+35,27,Faizal Hebbar,41,M,Daily Wage Worker,Jain
+36,29,Imran Patil,69,M,Government Employee,Others
+37,29,Faizal Nayak,23,M,Student,Others
+38,30,Shruthi Achar,23,F,Driver,Hindu
+39,30,Imran Shetty,52,M,Retired,Muslim
+40,33,Rekha Rao,44,F,Business,Others
+41,35,Meena Desai,30,F,Private Employee,Hindu
+42,35,Abdul Naik,48,M,Student,Muslim
+43,36,Umesh Hegde,34,M,Driver,Hindu
+44,37,Ravi Reddy,69,M,Student,Christian
+45,37,Harish Achar,54,M,Student,Christian
+46,38,Vinay Kumar,33,M,Business,Hindu
+47,38,Faizal Desai,64,M,Business,Muslim
+48,39,Abdul Hebbar,67,M,Private Employee,Others
+49,39,Shruthi Desai,22,F,Retired,Muslim
+50,40,Kavya Achar,33,F,Private Employee,Jain
+51,41,Geetha Naik,60,F,Daily Wage Worker,Christian
+52,42,Santosh Desai,36,M,Student,Others
+53,43,Riyaz Hebbar,61,M,Student,Sikh
+54,43,Vidya Hegde,35,F,Daily Wage Worker,Sikh
+55,44,Shruthi Shetty,49,F,Business,Christian
+56,44,Shruthi Murthy,33,F,Driver,Others
+57,45,Darshan Desai,52,M,Private Employee,Others
+58,45,Yashwanth Nayak,63,M,Private Employee,Christian
+59,46,Vidya Patil,62,F,Private Employee,Others
+60,47,Deepak Shetty,47,M,Government Employee,Sikh
+61,48,Umesh Hebbar,49,M,Private Employee,Christian
+62,48,Shruthi Rao,38,F,Farmer,Jain
+63,49,Basavaraj Hebbar,26,M,Daily Wage Worker,Jain
+64,49,Rekha Bhat,50,F,Daily Wage Worker,Others
+65,50,Basavaraj Desai,42,M,Homemaker,Muslim
+66,50,Umesh Bhat,65,M,Homemaker,Hindu
+67,51,Suresh Patil,34,M,Daily Wage Worker,Jain
+68,52,Deepak Shetty,48,M,Unemployed,Sikh
+69,53,Kavya Poojary,67,F,Driver,Others
+70,53,Sunil Shastri,48,M,Government Employee,Hindu
+71,55,Abdul Murthy,69,M,Government Employee,Others
+72,56,Sunil Bhat,53,M,Driver,Muslim
+73,56,Faizal Murthy,34,M,Retired,Christian
+74,57,Suresh Gowda,60,M,Daily Wage Worker,Hindu
+75,57,Faizal Kulkarni,21,M,Homemaker,Christian
+76,59,Meena Reddy,41,F,Student,Others
+77,59,Riyaz Poojary,50,M,Homemaker,Jain
+78,60,Basavaraj Rai,41,M,Government Employee,Muslim
+79,60,Ananya Hegde,40,F,Government Employee,Sikh
+80,61,Kiran Rao,18,M,Farmer,Jain
+81,62,Ramesh Desai,68,M,Daily Wage Worker,Sikh
+82,63,Riyaz Gowda,29,M,Daily Wage Worker,Jain
+83,63,Nisha Poojary,64,F,Government Employee,Sikh
+84,64,Rekha Rao,58,F,Driver,Others
+85,64,Geetha Shastri,23,F,Farmer,Muslim
+86,65,Roopa Naik,24,F,Farmer,Jain
+87,66,Praveen Kumar,55,M,Homemaker,Muslim
+88,66,Harish Bhat,59,M,Daily Wage Worker,Christian
+89,67,Geetha Nayak,70,F,Business,Jain
+90,68,Rekha Achar,47,F,Unemployed,Others
+91,68,Pooja Achar,49,F,Homemaker,Muslim
+92,69,Anil Rao,47,M,Private Employee,Sikh
+93,70,Lakshmi Poojary,34,F,Student,Muslim
+94,70,Pooja Shastri,30,F,Retired,Jain
+95,71,Umesh Shetty,39,M,Business,Others
+96,71,Sunil Poojary,63,M,Retired,Others
+97,72,Lakshmi Bhat,66,F,Homemaker,Christian
+98,73,Manjunath Shastri,70,M,Retired,Jain
+99,75,Riyaz Desai,42,M,Private Employee,Jain
+100,76,Shruthi Reddy,60,F,Retired,Muslim
+101,76,Suresh Hegde,54,M,Business,Muslim
+102,78,Shruthi Patil,54,F,Homemaker,Others
+103,78,Sunil Shastri,48,M,Unemployed,Muslim
+104,79,Darshan Shetty,43,M,Daily Wage Worker,Jain
+105,79,Naveen Rai,49,M,Unemployed,Muslim
+106,80,Shivaraj Achar,34,M,Business,Muslim
+107,80,Divya Reddy,67,F,Homemaker,Jain
+108,81,Bhavya Patil,28,F,Private Employee,Hindu
+109,81,Ganesh Rai,56,M,Homemaker,Sikh
+110,82,Divya Rai,39,F,Government Employee,Jain
+111,82,Riyaz Rai,54,M,Farmer,Others
+112,83,Ravi Murthy,19,M,Business,Muslim
+113,83,Meena Reddy,65,F,Business,Others
+114,84,Divya Gowda,58,F,Student,Jain
+115,84,Harish Nayak,49,M,Daily Wage Worker,Others
+116,85,Deepak Poojary,49,M,Driver,Muslim
+117,85,Sowmya Murthy,50,F,Government Employee,Hindu
+118,87,Ananya Kulkarni,20,F,Government Employee,Hindu
+119,87,Suresh Nayak,64,M,Homemaker,Sikh
+120,89,Kavya Bhat,53,F,Retired,Christian
+121,89,Divya Patil,53,F,Private Employee,Hindu
+122,90,Lakshmi Achar,40,F,Retired,Muslim
+123,91,Ganesh Achar,25,M,Student,Sikh
+124,92,Ananya Hebbar,18,F,Business,Muslim
+125,93,Shivaraj Shetty,31,M,Homemaker,Others
+126,93,Ganesh Kumar,54,M,Retired,Christian
+127,94,Ganesh Poojary,67,M,Farmer,Others
+128,94,Prakash Reddy,63,M,Business,Others
+129,95,Basavaraj Shastri,35,M,Unemployed,Others
+130,95,Shruthi Kumar,62,F,Student,Christian
+131,96,Naveen Desai,63,M,Driver,Christian
+132,97,Meena Hegde,69,F,Driver,Sikh
+133,97,Abdul Naik,41,M,Daily Wage Worker,Muslim
+134,99,Mahesh Kumar,70,M,Farmer,Christian
+135,99,Ananya Murthy,33,F,Business,Christian
+136,100,Prakash Rao,32,M,Retired,Christian
+137,100,Asha Rai,27,F,Student,Christian
+138,101,Kavya Achar,52,F,Student,Others
+139,101,Shivaraj Shetty,50,M,Homemaker,Others
+140,102,Prakash Kulkarni,61,M,Private Employee,Hindu
+141,102,Suresh Nayak,24,M,Retired,Sikh
+142,103,Manjunath Kulkarni,63,M,Government Employee,Others
+143,103,Naveen Patil,28,M,Daily Wage Worker,Hindu
+144,104,Faizal Kulkarni,67,M,Private Employee,Others
+145,105,Suresh Poojary,50,M,Student,Others
+146,108,Nagaraj Kumar,47,M,Student,Muslim
+147,108,Kiran Desai,28,M,Homemaker,Muslim
+148,109,Nagaraj Gowda,20,M,Business,Muslim
+149,109,Umesh Gowda,34,M,Private Employee,Jain
+150,110,Ananya Gowda,45,F,Driver,Muslim
+151,111,Ananya Reddy,22,F,Retired,Hindu
+152,111,Ananya Hegde,35,F,Private Employee,Muslim
+153,112,Geetha Kumar,29,F,Homemaker,Muslim
+154,112,Manjunath Nayak,45,M,Driver,Hindu
+155,113,Meena Murthy,47,F,Private Employee,Hindu
+156,113,Girish Gowda,68,M,Unemployed,Jain
+157,115,Ananya Shastri,23,F,Government Employee,Christian
+158,115,Vidya Kumar,40,F,Driver,Hindu
+159,116,Faizal Rao,52,M,Government Employee,Hindu
+160,116,Naveen Murthy,23,M,Unemployed,Sikh
+161,117,Lakshmi Kulkarni,31,F,Student,Christian
+162,117,Imran Kulkarni,30,M,Retired,Sikh
+163,118,Basavaraj Gowda,42,M,Daily Wage Worker,Christian
+164,119,Abdul Bhat,43,M,Driver,Christian
+165,121,Darshan Bhat,46,M,Retired,Sikh
+166,122,Vidya Hebbar,35,F,Private Employee,Christian
+167,123,Imran Reddy,18,M,Retired,Sikh
+168,124,Umesh Gowda,28,M,Driver,Jain
+169,124,Basavaraj Bhat,62,M,Homemaker,Hindu
+170,125,Kumar Rao,61,M,Business,Sikh
+171,125,Lokesh Shastri,53,M,Homemaker,Sikh
+172,126,Harish Rai,39,M,Driver,Hindu
+173,127,Roopa Kumar,53,F,Student,Christian
+174,128,Meena Kumar,54,F,Farmer,Others
+175,129,Roopa Shastri,66,F,Driver,Others
+176,129,Riyaz Murthy,36,M,Driver,Muslim
+177,130,Kumar Kumar,66,M,Retired,Jain
+178,131,Ananya Patil,23,F,Student,Jain
+179,132,Yashwanth Shastri,53,M,Homemaker,Christian
+180,133,Vinay Rao,34,M,Retired,Hindu
+181,134,Roopa Reddy,20,F,Homemaker,Christian
+182,135,Santosh Rai,59,M,Daily Wage Worker,Sikh
+183,135,Divya Kumar,48,F,Business,Christian
+184,136,Kiran Nayak,46,M,Business,Christian
+185,136,Harish Desai,26,M,Daily Wage Worker,Sikh
+186,137,Divya Reddy,46,F,Retired,Others
+187,137,Praveen Reddy,45,M,Farmer,Others
+188,138,Deepak Rao,54,M,Driver,Sikh
+189,140,Pooja Kumar,21,F,Business,Jain
+190,140,Shruthi Hegde,49,F,Driver,Christian
+191,141,Roopa Rai,49,F,Retired,Muslim
+192,142,Divya Kumar,61,F,Homemaker,Muslim
+193,142,Asha Bhat,39,F,Driver,Others
+194,143,Geetha Gowda,23,F,Daily Wage Worker,Others
+195,143,Harish Kumar,61,M,Private Employee,Muslim
+196,144,Yashwanth Bhat,31,M,Unemployed,Hindu
+197,146,Ramesh Rao,52,M,Government Employee,Jain
+198,146,Basavaraj Hegde,48,M,Driver,Others
+199,147,Santosh Reddy,52,M,Private Employee,Jain
+200,147,Mahesh Kumar,22,M,Driver,Muslim
+201,148,Prakash Rai,51,M,Private Employee,Christian
+202,148,Vinay Bhat,61,M,Private Employee,Muslim
+203,149,Santosh Desai,56,M,Student,Muslim
+204,150,Faizal Naik,40,M,Homemaker,Others
+205,151,Naveen Bhat,40,M,Farmer,Hindu
+206,151,Geetha Naik,58,F,Driver,Sikh
+207,152,Bhavya Hegde,28,F,Private Employee,Muslim
+208,153,Santosh Nayak,55,M,Homemaker,Muslim
+209,154,Sowmya Naik,18,F,Unemployed,Christian
+210,155,Vinay Achar,46,M,Retired,Sikh
+211,156,Meena Rao,64,F,Private Employee,Hindu
+212,156,Shruthi Hegde,67,F,Homemaker,Muslim
+213,157,Mahesh Poojary,34,M,Private Employee,Hindu
+214,160,Yashwanth Bhat,32,M,Driver,Sikh
+215,161,Kiran Poojary,45,M,Unemployed,Hindu
+216,161,Rekha Naik,48,F,Daily Wage Worker,Hindu
+217,162,Geetha Nayak,22,F,Business,Others
+218,162,Manjunath Murthy,40,M,Farmer,Hindu
+219,163,Anil Desai,28,M,Student,Hindu
+220,164,Faizal Desai,21,M,Driver,Sikh
+221,165,Chetan Gowda,55,M,Daily Wage Worker,Muslim
+222,167,Kiran Hegde,47,M,Homemaker,Hindu
+223,168,Asha Patil,36,F,Private Employee,Others
+224,169,Santosh Kumar,49,M,Student,Jain
+225,169,Meena Hegde,19,F,Farmer,Muslim
+226,170,Manjunath Achar,56,M,Farmer,Hindu
+227,170,Abdul Kumar,28,M,Business,Jain
+228,172,Rekha Naik,67,F,Daily Wage Worker,Hindu
+229,173,Vidya Kulkarni,26,F,Unemployed,Hindu
+230,175,Shruthi Desai,35,F,Unemployed,Sikh
+231,175,Kumar Rao,27,M,Daily Wage Worker,Christian
+232,176,Praveen Patil,30,M,Unemployed,Others
+233,177,Sunil Hegde,68,M,Business,Jain
+234,177,Santosh Murthy,69,M,Daily Wage Worker,Muslim
+235,178,Basavaraj Shetty,30,M,Student,Hindu
+236,178,Mahesh Patil,35,M,Retired,Hindu
+237,181,Rekha Rai,63,F,Driver,Hindu
+238,181,Abdul Shetty,55,M,Private Employee,Sikh
+239,182,Girish Patil,23,M,Farmer,Hindu
+240,182,Roopa Achar,66,F,Student,Muslim
+241,185,Deepak Kulkarni,18,M,Daily Wage Worker,Hindu
+242,185,Asha Nayak,68,F,Driver,Sikh
+243,186,Umesh Hegde,70,M,Daily Wage Worker,Jain
+244,187,Sunil Kulkarni,35,M,Retired,Christian
+245,188,Girish Naik,46,M,Government Employee,Christian
+246,189,Santosh Naik,56,M,Unemployed,Jain
+247,190,Darshan Kumar,23,M,Student,Sikh
+248,191,Rekha Nayak,60,F,Homemaker,Sikh
+249,191,Geetha Achar,64,F,Private Employee,Muslim
+250,192,Yashwanth Rao,43,M,Farmer,Others
+251,193,Nisha Kulkarni,23,F,Unemployed,Jain
+252,193,Vinay Kulkarni,30,M,Government Employee,Christian
+253,194,Kiran Rao,58,M,Homemaker,Christian
+254,195,Manjunath Naik,43,M,Daily Wage Worker,Hindu
+255,195,Naveen Kulkarni,22,M,Student,Muslim
+256,196,Vinay Bhat,35,M,Private Employee,Others
+257,196,Santosh Poojary,19,M,Government Employee,Muslim
+258,198,Yashwanth Achar,23,M,Student,Hindu
+259,200,Sunil Kumar,61,M,Government Employee,Others
+260,201,Basavaraj Nayak,51,M,Farmer,Others
+261,202,Faizal Shastri,68,M,Farmer,Others
+262,202,Umesh Poojary,54,M,Daily Wage Worker,Muslim
+263,203,Mahesh Kumar,25,M,Unemployed,Jain
+264,204,Ananya Naik,37,F,Homemaker,Hindu
+265,204,Naveen Rai,29,M,Homemaker,Sikh
+266,205,Girish Rai,25,M,Government Employee,Sikh
+267,206,Geetha Poojary,54,F,Business,Christian
+268,207,Deepak Rai,59,M,Business,Sikh
+269,207,Lakshmi Achar,66,F,Unemployed,Others
+270,208,Ganesh Kumar,62,M,Daily Wage Worker,Others
+271,208,Meena Kumar,37,F,Government Employee,Christian
+272,209,Sowmya Desai,54,F,Student,Hindu
+273,210,Asha Rao,36,F,Student,Christian
+274,211,Pooja Shastri,61,F,Retired,Christian
+275,212,Abdul Gowda,46,M,Driver,Christian
+276,213,Sowmya Patil,48,F,Daily Wage Worker,Christian
+277,214,Yashwanth Murthy,40,M,Daily Wage Worker,Sikh
+278,214,Nisha Poojary,20,F,Unemployed,Others
+279,215,Faizal Murthy,32,M,Daily Wage Worker,Jain
+280,217,Prakash Shetty,53,M,Daily Wage Worker,Sikh
+281,217,Basavaraj Gowda,20,M,Student,Hindu
+282,218,Geetha Bhat,60,F,Business,Muslim
+283,218,Imran Rai,66,M,Farmer,Hindu
+284,219,Sowmya Reddy,25,F,Student,Hindu
+285,219,Divya Murthy,23,F,Unemployed,Muslim
+286,220,Darshan Naik,53,M,Government Employee,Hindu
+287,221,Vinay Gowda,65,M,Driver,Hindu
+288,221,Suresh Reddy,26,M,Student,Jain
+289,222,Mahesh Rai,53,M,Government Employee,Others
+290,223,Shivaraj Naik,54,M,Business,Jain
+291,223,Rekha Shetty,55,F,Farmer,Hindu
+292,224,Asha Rao,65,F,Unemployed,Hindu
+293,225,Girish Shastri,43,M,Homemaker,Others
+294,225,Kiran Desai,54,M,Government Employee,Muslim
+295,227,Kavya Hegde,47,F,Private Employee,Jain
+296,227,Sowmya Gowda,50,F,Retired,Hindu
+297,228,Bhavya Shetty,38,F,Homemaker,Others
+298,228,Riyaz Achar,37,M,Farmer,Jain
+299,229,Umesh Poojary,40,M,Private Employee,Others
+300,229,Sowmya Kumar,22,F,Private Employee,Hindu
+301,230,Pooja Patil,27,F,Farmer,Jain
+302,230,Kumar Desai,36,M,Private Employee,Jain
+303,232,Kiran Achar,60,M,Private Employee,Others
+304,233,Manjunath Nayak,46,M,Homemaker,Sikh
+305,233,Chetan Achar,28,M,Business,Sikh
+306,234,Ravi Naik,54,M,Farmer,Others
+307,235,Umesh Shetty,70,M,Business,Hindu
+308,236,Abdul Reddy,69,M,Farmer,Sikh
+309,236,Pooja Hegde,37,F,Unemployed,Others
+310,237,Vidya Rao,48,F,Homemaker,Hindu
+311,239,Shivaraj Hebbar,62,M,Daily Wage Worker,Christian
+312,239,Anil Poojary,38,M,Business,Hindu
+313,240,Umesh Kulkarni,22,M,Government Employee,Jain
+314,240,Nisha Naik,29,F,Driver,Others
+315,241,Imran Kumar,66,M,Driver,Jain
+316,241,Prakash Rao,30,M,Private Employee,Sikh
+317,242,Basavaraj Achar,28,M,Unemployed,Hindu
+318,242,Meena Poojary,54,F,Farmer,Sikh
+319,243,Girish Kulkarni,22,M,Daily Wage Worker,Sikh
+320,244,Prakash Hegde,47,M,Private Employee,Hindu
+321,245,Ganesh Kulkarni,41,M,Government Employee,Hindu
+322,247,Riyaz Reddy,64,M,Driver,Muslim
+323,248,Naveen Nayak,64,M,Farmer,Muslim
+324,248,Anil Bhat,29,M,Retired,Sikh
+325,250,Imran Shetty,44,M,Student,Muslim
+326,250,Suresh Shastri,47,M,Student,Hindu
+327,251,Divya Achar,31,F,Retired,Muslim
+328,251,Kumar Bhat,67,M,Driver,Sikh
+329,253,Basavaraj Shastri,21,M,Student,Others
+330,253,Lokesh Kulkarni,46,M,Business,Others
+331,254,Roopa Achar,29,F,Unemployed,Jain
+332,254,Suresh Reddy,65,M,Student,Muslim
+333,255,Naveen Poojary,44,M,Business,Jain
+334,255,Anil Naik,68,M,Business,Sikh
+335,256,Roopa Shetty,56,F,Government Employee,Christian
+336,257,Umesh Shastri,56,M,Retired,Christian
+337,258,Asha Nayak,45,F,Driver,Muslim
+338,258,Kavya Patil,54,F,Retired,Muslim
+339,259,Divya Murthy,43,F,Farmer,Muslim
+340,259,Sowmya Poojary,22,F,Private Employee,Jain
+341,260,Nisha Reddy,41,F,Student,Jain
+342,261,Ananya Kulkarni,27,F,Private Employee,Christian
+343,261,Naveen Achar,23,M,Retired,Jain
+344,262,Vidya Gowda,55,F,Driver,Others
+345,262,Harish Hebbar,42,M,Unemployed,Christian
+346,263,Vidya Patil,40,F,Homemaker,Christian
+347,263,Divya Hebbar,54,F,Government Employee,Others
+348,264,Imran Shastri,56,M,Farmer,Muslim
+349,264,Santosh Hegde,66,M,Driver,Hindu
+350,265,Yashwanth Hebbar,18,M,Government Employee,Hindu
+351,266,Divya Poojary,31,F,Student,Christian
+352,267,Anil Rai,58,M,Private Employee,Hindu
+353,268,Meena Kumar,34,F,Farmer,Others
+354,268,Suresh Murthy,57,M,Homemaker,Muslim
+355,269,Lokesh Kulkarni,31,M,Daily Wage Worker,Muslim
+356,270,Ananya Bhat,23,F,Farmer,Sikh
+357,271,Abdul Rao,47,M,Driver,Christian
+358,271,Basavaraj Rao,35,M,Homemaker,Others
+359,272,Asha Gowda,62,F,Farmer,Muslim
+360,273,Kumar Achar,44,M,Farmer,Christian
+361,274,Riyaz Patil,32,M,Homemaker,Hindu
+362,275,Kiran Reddy,55,M,Driver,Christian
+363,276,Asha Gowda,31,F,Retired,Hindu
+364,277,Bhavya Hebbar,56,F,Daily Wage Worker,Hindu
+365,277,Rekha Nayak,32,F,Government Employee,Sikh
+366,278,Basavaraj Desai,19,M,Unemployed,Jain
+367,278,Yashwanth Patil,65,M,Daily Wage Worker,Jain
+368,281,Meena Rao,32,F,Daily Wage Worker,Sikh
+369,282,Rekha Hebbar,58,F,Retired,Hindu
+370,282,Divya Kumar,20,F,Driver,Others
+371,283,Shivaraj Gowda,69,M,Private Employee,Sikh
+372,284,Nisha Rai,44,F,Unemployed,Muslim
+373,284,Sowmya Shetty,57,F,Retired,Jain
+374,285,Ramesh Murthy,42,M,Farmer,Christian
+375,286,Vinay Gowda,70,M,Unemployed,Christian
+376,286,Ramesh Shetty,67,M,Student,Hindu
+377,287,Geetha Shetty,43,F,Government Employee,Muslim
+378,287,Basavaraj Kulkarni,41,M,Unemployed,Others
+379,289,Umesh Bhat,34,M,Business,Hindu
+380,289,Sowmya Achar,36,F,Student,Muslim
+381,291,Rekha Rai,31,F,Unemployed,Others
+382,292,Ravi Desai,41,M,Farmer,Christian
+383,292,Deepak Patil,22,M,Government Employee,Others
+384,293,Abdul Rao,66,M,Business,Jain
+385,294,Darshan Shastri,18,M,Daily Wage Worker,Jain
+386,294,Anil Gowda,51,M,Driver,Sikh
+387,295,Shruthi Murthy,52,F,Farmer,Hindu
+388,295,Lokesh Shastri,33,M,Driver,Jain
+389,296,Nagaraj Murthy,58,M,Retired,Jain
+390,297,Chetan Rao,43,M,Farmer,Hindu
+391,297,Deepak Gowda,55,M,Unemployed,Jain
+392,298,Vidya Shastri,59,F,Retired,Others
+393,299,Kavya Shetty,45,F,Government Employee,Christian
+394,299,Asha Nayak,48,F,Homemaker,Hindu
+395,300,Basavaraj Rao,50,M,Daily Wage Worker,Jain
+396,300,Ananya Patil,60,F,Private Employee,Muslim
+397,303,Kiran Patil,35,M,Driver,Sikh
+398,303,Sowmya Achar,66,F,Driver,Others
+399,304,Manjunath Rai,42,M,Driver,Others
+400,304,Ganesh Naik,56,M,Retired,Hindu
+401,305,Nagaraj Rao,42,M,Farmer,Hindu
+402,305,Basavaraj Rao,30,M,Homemaker,Sikh
+403,306,Manjunath Achar,57,M,Student,Hindu
+404,306,Lakshmi Naik,21,F,Driver,Jain
+405,307,Kumar Hegde,65,M,Farmer,Jain
+406,308,Prakash Gowda,32,M,Government Employee,Hindu
+407,308,Deepak Rai,68,M,Homemaker,Hindu
+408,309,Roopa Desai,60,F,Daily Wage Worker,Hindu
+409,310,Naveen Reddy,22,M,Business,Others
+410,311,Darshan Naik,19,M,Private Employee,Hindu
+411,311,Harish Rai,56,M,Business,Hindu
+412,312,Shivaraj Rao,48,M,Government Employee,Muslim
+413,313,Santosh Reddy,54,M,Business,Muslim
+414,314,Nagaraj Shetty,62,M,Government Employee,Hindu
+415,316,Sowmya Patil,35,F,Unemployed,Jain
+416,316,Riyaz Kumar,64,M,Private Employee,Christian
+417,317,Prakash Achar,44,M,Homemaker,Others
+418,318,Asha Kumar,66,F,Daily Wage Worker,Muslim
+419,318,Pooja Kumar,42,F,Business,Christian
+420,320,Divya Patil,45,F,Driver,Hindu
+421,321,Divya Kumar,35,F,Homemaker,Jain
+422,322,Mahesh Poojary,28,M,Student,Sikh
+423,323,Geetha Bhat,30,F,Student,Others
+424,324,Manjunath Bhat,34,M,Business,Sikh
+425,325,Roopa Desai,20,F,Daily Wage Worker,Muslim
+426,326,Shruthi Shastri,40,F,Homemaker,Hindu
+427,326,Yashwanth Rao,46,M,Homemaker,Christian
+428,327,Praveen Nayak,35,M,Unemployed,Hindu
+429,327,Basavaraj Shastri,57,M,Driver,Hindu
+430,328,Lokesh Hebbar,27,M,Farmer,Jain
+431,329,Prakash Kumar,25,M,Retired,Christian
+432,329,Lokesh Shetty,36,M,Driver,Hindu
+433,330,Sowmya Murthy,69,F,Government Employee,Christian
+434,330,Meena Bhat,64,F,Unemployed,Sikh
+435,331,Shivaraj Hebbar,33,M,Business,Hindu
+436,332,Meena Murthy,62,F,Private Employee,Christian
+437,333,Sowmya Achar,68,F,Government Employee,Muslim
+438,333,Asha Nayak,24,F,Business,Hindu
+439,334,Divya Kulkarni,37,F,Daily Wage Worker,Hindu
+440,334,Suresh Gowda,23,M,Government Employee,Muslim
+441,335,Ramesh Shastri,41,M,Unemployed,Jain
+442,336,Rekha Gowda,54,F,Student,Christian
+443,336,Ganesh Nayak,37,M,Homemaker,Christian
+444,337,Harish Hegde,60,M,Student,Hindu
+445,337,Lokesh Murthy,58,M,Driver,Muslim
+446,339,Nagaraj Hebbar,24,M,Government Employee,Muslim
+447,340,Vinay Murthy,52,M,Driver,Christian
+448,341,Bhavya Desai,19,F,Business,Muslim
+449,341,Roopa Rai,43,F,Farmer,Others
+450,342,Riyaz Desai,64,M,Homemaker,Christian
+451,343,Suresh Achar,34,M,Driver,Others
+452,344,Abdul Shastri,53,M,Government Employee,Jain
+453,344,Kiran Bhat,56,M,Farmer,Christian
+454,345,Faizal Kumar,53,M,Farmer,Muslim
+455,345,Nagaraj Desai,66,M,Business,Hindu
+456,346,Shruthi Hebbar,47,F,Retired,Muslim
+457,347,Vinay Murthy,60,M,Retired,Others
+458,348,Deepak Hegde,46,M,Homemaker,Jain
+459,349,Pooja Kulkarni,53,F,Driver,Others
+460,350,Ganesh Shetty,31,M,Daily Wage Worker,Sikh
+461,351,Kumar Hegde,22,M,Retired,Jain
+462,351,Nisha Murthy,18,F,Driver,Christian
+463,353,Sowmya Reddy,55,F,Unemployed,Others
+464,354,Asha Hegde,23,F,Driver,Others
+465,354,Meena Gowda,35,F,Private Employee,Others
+466,355,Praveen Achar,28,M,Retired,Christian
+467,356,Kiran Rao,36,M,Homemaker,Jain
+468,356,Shruthi Shastri,48,F,Retired,Sikh
+469,357,Mahesh Kulkarni,38,M,Business,Others
+470,357,Mahesh Rai,51,M,Student,Hindu
+471,358,Kavya Kumar,39,F,Farmer,Jain
+472,358,Nagaraj Gowda,22,M,Private Employee,Christian
+473,359,Pooja Hebbar,45,F,Unemployed,Others
+474,360,Manjunath Patil,32,M,Student,Hindu
+475,360,Sunil Murthy,70,M,Private Employee,Hindu
+476,361,Geetha Shastri,48,F,Unemployed,Sikh
+477,362,Nisha Murthy,28,F,Private Employee,Jain
+478,362,Riyaz Shetty,54,M,Homemaker,Christian
+479,363,Girish Desai,56,M,Farmer,Christian
+480,364,Meena Shetty,62,F,Private Employee,Jain
+481,364,Vinay Murthy,32,M,Business,Others
+482,365,Imran Rao,67,M,Government Employee,Hindu
+483,366,Imran Kumar,46,M,Unemployed,Muslim
+484,367,Darshan Achar,43,M,Business,Christian
+485,367,Vidya Rai,36,F,Private Employee,Christian
+486,368,Asha Reddy,42,F,Daily Wage Worker,Hindu
+487,369,Abdul Naik,58,M,Homemaker,Hindu
+488,369,Abdul Shastri,65,M,Daily Wage Worker,Jain
+489,370,Nagaraj Shetty,66,M,Homemaker,Muslim
+490,370,Nagaraj Achar,43,M,Unemployed,Christian
+491,371,Harish Gowda,18,M,Daily Wage Worker,Jain
+492,372,Lakshmi Shastri,32,F,Student,Hindu
+493,373,Shivaraj Rao,56,M,Student,Others
+494,374,Girish Kumar,29,M,Private Employee,Jain
+495,375,Faizal Rao,55,M,Private Employee,Others
+496,375,Vinay Rai,23,M,Government Employee,Jain
+497,376,Ananya Naik,52,F,Government Employee,Others
+498,377,Mahesh Patil,30,M,Farmer,Jain
+499,378,Roopa Reddy,64,F,Driver,Muslim
+500,378,Darshan Gowda,40,M,Student,Hindu
+501,379,Roopa Poojary,68,F,Farmer,Christian
+502,379,Mahesh Hegde,63,M,Business,Christian
+503,380,Pooja Rai,48,F,Driver,Muslim
+504,381,Ganesh Hebbar,29,M,Homemaker,Jain
+505,381,Praveen Nayak,42,M,Driver,Others
+506,382,Girish Hegde,27,M,Private Employee,Sikh
+507,383,Kiran Kumar,52,M,Daily Wage Worker,Jain
+508,383,Chetan Kulkarni,45,M,Unemployed,Hindu
+509,384,Lakshmi Poojary,22,F,Homemaker,Hindu
+510,385,Bhavya Hegde,25,F,Student,Muslim
+511,386,Meena Gowda,39,F,Government Employee,Jain
+512,387,Shruthi Bhat,58,F,Homemaker,Jain
+513,387,Darshan Rao,19,M,Private Employee,Hindu
+514,388,Sunil Nayak,40,M,Unemployed,Others
+515,388,Divya Desai,68,F,Daily Wage Worker,Hindu
+516,389,Geetha Naik,36,F,Farmer,Hindu
+517,389,Lokesh Poojary,24,M,Daily Wage Worker,Muslim
+518,391,Abdul Shetty,55,M,Government Employee,Sikh
+519,392,Kiran Hegde,60,M,Daily Wage Worker,Others
+520,392,Naveen Patil,68,M,Unemployed,Muslim
+521,393,Chetan Murthy,40,M,Driver,Jain
+522,393,Kavya Reddy,46,F,Government Employee,Hindu
+523,394,Vinay Naik,28,M,Student,Christian
+524,394,Girish Reddy,49,M,Government Employee,Sikh
+525,397,Yashwanth Achar,39,M,Unemployed,Christian
+526,398,Ananya Naik,39,F,Farmer,Christian
+527,399,Faizal Naik,68,M,Government Employee,Muslim
+528,399,Vinay Shetty,50,M,Student,Jain
+529,400,Manjunath Naik,58,M,Student,Sikh
+530,400,Vidya Hebbar,62,F,Retired,Hindu
+531,401,Ravi Hegde,60,M,Daily Wage Worker,Christian
+532,402,Shruthi Achar,31,F,Daily Wage Worker,Sikh
+533,403,Roopa Hegde,29,F,Daily Wage Worker,Hindu
+534,404,Prakash Kulkarni,68,M,Business,Christian
+535,405,Kavya Shetty,58,F,Private Employee,Jain
+536,405,Asha Achar,35,F,Daily Wage Worker,Jain
+537,406,Suresh Reddy,36,M,Daily Wage Worker,Others
+538,407,Ravi Kulkarni,30,M,Retired,Sikh
+539,407,Nisha Nayak,62,F,Private Employee,Muslim
+540,408,Ganesh Bhat,56,M,Driver,Sikh
+541,408,Ganesh Patil,31,M,Student,Jain
+542,409,Kavya Murthy,64,F,Student,Sikh
+543,410,Vinay Kulkarni,23,M,Student,Muslim
+544,411,Asha Nayak,55,F,Private Employee,Christian
+545,413,Shruthi Bhat,58,F,Business,Jain
+546,414,Girish Achar,56,M,Government Employee,Muslim
+547,415,Abdul Naik,26,M,Student,Hindu
+548,416,Nisha Rao,51,F,Homemaker,Muslim
+549,417,Shruthi Rao,20,F,Student,Hindu
+550,417,Asha Naik,56,F,Unemployed,Hindu
+551,418,Abdul Kulkarni,63,M,Driver,Others
+552,418,Harish Shetty,44,M,Student,Hindu
+553,419,Suresh Shetty,28,M,Student,Jain
+554,420,Basavaraj Kulkarni,52,M,Farmer,Muslim
+555,420,Santosh Achar,56,M,Government Employee,Hindu
+556,421,Ramesh Rai,38,M,Private Employee,Hindu
+557,422,Roopa Hegde,62,F,Private Employee,Muslim
+558,423,Suresh Desai,28,M,Government Employee,Christian
+559,423,Ramesh Patil,52,M,Government Employee,Others
+560,424,Roopa Murthy,58,F,Unemployed,Jain
+561,424,Rekha Rai,56,F,Government Employee,Hindu
+562,425,Lakshmi Nayak,22,F,Government Employee,Sikh
+563,425,Nisha Rao,56,F,Business,Muslim
+564,426,Ravi Shetty,45,M,Business,Sikh
+565,427,Kavya Shastri,37,F,Farmer,Muslim
+566,427,Roopa Murthy,51,F,Government Employee,Muslim
+567,428,Lakshmi Gowda,31,F,Farmer,Sikh
+568,429,Bhavya Reddy,61,F,Farmer,Muslim
+569,430,Rekha Shastri,57,F,Student,Christian
+570,431,Faizal Shetty,27,M,Farmer,Others
+571,432,Imran Murthy,60,M,Private Employee,Hindu
+572,435,Ananya Shetty,48,F,Unemployed,Muslim
+573,436,Lakshmi Hebbar,37,F,Driver,Muslim
+574,436,Ganesh Murthy,47,M,Business,Hindu
+575,437,Geetha Murthy,27,F,Daily Wage Worker,Others
+576,437,Sowmya Rai,18,F,Student,Jain
+577,438,Sowmya Rao,61,F,Farmer,Sikh
+578,439,Harish Poojary,42,M,Business,Hindu
+579,439,Manjunath Naik,57,M,Student,Sikh
+580,440,Ananya Nayak,25,F,Private Employee,Muslim
+581,440,Kiran Shetty,65,M,Business,Muslim
+582,441,Suresh Shetty,43,M,Unemployed,Jain
+583,442,Bhavya Kumar,19,F,Private Employee,Hindu
+584,442,Geetha Rai,33,F,Driver,Christian
+585,443,Ravi Hegde,20,M,Farmer,Jain
+586,444,Vidya Desai,35,F,Government Employee,Jain
+587,444,Manjunath Kulkarni,60,M,Unemployed,Sikh
+588,445,Santosh Patil,56,M,Farmer,Others
+589,446,Kiran Shastri,18,M,Government Employee,Sikh
+590,447,Mahesh Rao,53,M,Business,Others
+591,448,Ramesh Kumar,26,M,Government Employee,Christian
+592,448,Faizal Hegde,40,M,Farmer,Sikh
+593,449,Nisha Kulkarni,30,F,Farmer,Hindu
+594,449,Divya Nayak,56,F,Government Employee,Jain
+595,450,Meena Murthy,68,F,Private Employee,Sikh
+596,451,Lokesh Rao,36,M,Homemaker,Jain
+597,451,Ananya Nayak,28,F,Farmer,Muslim
+598,454,Sunil Rao,70,M,Farmer,Sikh
+599,455,Prakash Hebbar,62,M,Business,Sikh
+600,456,Naveen Nayak,36,M,Farmer,Christian
+601,456,Santosh Rai,30,M,Farmer,Sikh
+602,457,Ganesh Desai,54,M,Private Employee,Sikh
+603,457,Meena Murthy,37,F,Business,Others
+604,458,Divya Poojary,22,F,Business,Others
+605,459,Vidya Poojary,29,F,Student,Hindu
+606,459,Kavya Hegde,39,F,Government Employee,Sikh
+607,460,Prakash Naik,58,M,Daily Wage Worker,Muslim
+608,461,Vinay Shetty,35,M,Private Employee,Sikh
+609,461,Vidya Shetty,28,F,Daily Wage Worker,Hindu
+610,462,Rekha Bhat,37,F,Business,Jain
+611,463,Imran Rao,63,M,Homemaker,Sikh
+612,464,Riyaz Poojary,66,M,Retired,Jain
+613,465,Roopa Nayak,40,F,Business,Sikh
+614,466,Basavaraj Achar,61,M,Student,Hindu
+615,466,Umesh Naik,29,M,Student,Sikh
+616,467,Umesh Rao,18,M,Homemaker,Christian
+617,467,Suresh Poojary,29,M,Government Employee,Others
+618,468,Ramesh Kumar,53,M,Private Employee,Jain
+619,468,Nisha Rao,20,F,Retired,Others
+620,469,Pooja Shetty,58,F,Student,Jain
+621,469,Basavaraj Murthy,26,M,Private Employee,Sikh
+622,470,Basavaraj Shastri,49,M,Unemployed,Muslim
+623,472,Praveen Desai,48,M,Daily Wage Worker,Christian
+624,472,Deepak Achar,48,M,Private Employee,Muslim
+625,473,Pooja Gowda,30,F,Homemaker,Others
+626,474,Meena Patil,34,F,Driver,Others
+627,474,Ananya Shetty,40,F,Government Employee,Sikh
+628,475,Imran Rao,58,M,Private Employee,Jain
+629,476,Praveen Reddy,21,M,Farmer,Muslim
+630,477,Abdul Hebbar,43,M,Student,Others
+631,477,Shivaraj Kulkarni,33,M,Private Employee,Christian
+632,478,Deepak Shetty,62,M,Daily Wage Worker,Sikh
+633,480,Vinay Hegde,52,M,Government Employee,Muslim
+634,480,Sowmya Bhat,25,F,Private Employee,Hindu
+635,481,Santosh Kulkarni,20,M,Retired,Sikh
+636,481,Geetha Poojary,62,F,Student,Others
+637,482,Sowmya Nayak,58,F,Driver,Christian
+638,482,Naveen Achar,44,M,Homemaker,Jain
+639,483,Divya Hebbar,20,F,Private Employee,Christian
+640,484,Bhavya Achar,62,F,Homemaker,Sikh
+641,485,Imran Nayak,29,M,Daily Wage Worker,Jain
+642,486,Asha Patil,27,F,Farmer,Muslim
+643,486,Nagaraj Rai,64,M,Private Employee,Muslim
+644,487,Pooja Shastri,49,F,Private Employee,Jain
+645,488,Vidya Rai,24,F,Unemployed,Christian
+646,488,Bhavya Shetty,47,F,Government Employee,Muslim
+647,490,Divya Gowda,21,F,Daily Wage Worker,Muslim
+648,491,Shruthi Achar,69,F,Homemaker,Christian
+649,492,Chetan Shetty,21,M,Farmer,Hindu
+650,492,Ravi Rai,33,M,Business,Christian
+651,493,Asha Kumar,59,F,Retired,Hindu
+652,493,Sowmya Kumar,49,F,Retired,Hindu
+653,494,Riyaz Bhat,34,M,Retired,Sikh
+654,495,Meena Patil,20,F,Business,Others
+655,496,Divya Poojary,70,F,Daily Wage Worker,Hindu
+656,496,Naveen Murthy,62,M,Retired,Muslim
+657,497,Shivaraj Shetty,65,M,Business,Hindu
+658,498,Mahesh Poojary,48,M,Farmer,Hindu
+659,499,Ramesh Rai,58,M,Government Employee,Christian
+660,499,Suresh Shetty,58,M,Business,Christian
+661,500,Rekha Naik,26,F,Government Employee,Muslim
+662,500,Suresh Shastri,26,M,Student,Jain

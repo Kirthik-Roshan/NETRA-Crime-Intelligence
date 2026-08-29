@@ -31,11 +31,12 @@ QuickML RAG knowledge base  ← your case PDFs live here
 3. **Deploy the Function** `functions/ai_quickml` and set its env vars
    (Catalyst console → the function → Configuration):
    ```
-   CATALYST_DC_BASE       = https://api.catalyst.zoho.in
-   CATALYST_ORG           = <your org id>
-   CATALYST_PROJECT_ID    = <your project id>
-   CATALYST_QUICKML_TOKEN = <your QuickML bearer token>
-   CATALYST_RAG_PATH      = rag/answer      # adjust if your endpoint differs
+   QML_CLIENT_ID          = <OAuth client ID>
+   QML_CLIENT_SECRET      = <OAuth client secret>
+   QML_REFRESH_TOKEN      = <OAuth refresh token>
+   QML_ORG                = <your org id>
+   QML_PROJECT_ID         = <your project id>
+   QML_LLM_PATH           = llm/chat
    CORS_ALLOW_ORIGIN      = https://netra-crime-intellig-tivoagho.onslate.in
    ```
    Copy the function's invoke URL (e.g.

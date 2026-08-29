@@ -1,0 +1,798 @@
+{
+  "generated_from": "data/netra.db",
+  "catalyst_supported_types": [
+    "Text",
+    "Var Char",
+    "Date",
+    "DateTime",
+    "Int",
+    "Double",
+    "Boolean",
+    "BigInt",
+    "Foreign Key",
+    "Encrypted Text"
+  ],
+  "note": "All fields use Catalyst-supported types. Logical id/link fields stay Int for CSV import.",
+  "tables": [
+    {
+      "name": "Firs",
+      "source": "firs",
+      "tier": "must_import",
+      "purpose": "Dashboard, maps, assistant search, predictions, FIR detail context.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "fir_number",
+          "type": "Var Char"
+        },
+        {
+          "name": "station_id",
+          "type": "Int"
+        },
+        {
+          "name": "crime_type",
+          "type": "Var Char"
+        },
+        {
+          "name": "ipc_sections",
+          "type": "Text"
+        },
+        {
+          "name": "district",
+          "type": "Var Char"
+        },
+        {
+          "name": "taluk",
+          "type": "Var Char"
+        },
+        {
+          "name": "lat",
+          "type": "Double"
+        },
+        {
+          "name": "lng",
+          "type": "Double"
+        },
+        {
+          "name": "occurred_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "reported_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "status",
+          "type": "Var Char"
+        },
+        {
+          "name": "severity",
+          "type": "Var Char"
+        },
+        {
+          "name": "modus",
+          "type": "Var Char"
+        },
+        {
+          "name": "description",
+          "type": "Text"
+        }
+      ],
+      "csv": "csv/Firs.csv",
+      "row_count": 500
+    },
+    {
+      "name": "Cases",
+      "source": "cases",
+      "tier": "must_import",
+      "purpose": "Cases list, analytics, reports, case workspaces.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "case_number",
+          "type": "Var Char"
+        },
+        {
+          "name": "title",
+          "type": "Text"
+        },
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "status",
+          "type": "Var Char"
+        },
+        {
+          "name": "case_priority",
+          "type": "Var Char"
+        },
+        {
+          "name": "assigned_officer",
+          "type": "Int"
+        },
+        {
+          "name": "officer",
+          "type": "Var Char"
+        },
+        {
+          "name": "district",
+          "type": "Var Char"
+        },
+        {
+          "name": "opened_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "updated_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "summary",
+          "type": "Text"
+        },
+        {
+          "name": "crime_type",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/Cases.csv",
+      "row_count": 500
+    },
+    {
+      "name": "Criminals",
+      "source": "criminals",
+      "tier": "must_import",
+      "purpose": "Criminal list, high-risk people, prediction and network seeds.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "name",
+          "type": "Var Char"
+        },
+        {
+          "name": "aliases",
+          "type": "Text"
+        },
+        {
+          "name": "gender",
+          "type": "Var Char"
+        },
+        {
+          "name": "age",
+          "type": "Int"
+        },
+        {
+          "name": "status",
+          "type": "Var Char"
+        },
+        {
+          "name": "risk_score",
+          "type": "Int"
+        },
+        {
+          "name": "crime_category",
+          "type": "Var Char"
+        },
+        {
+          "name": "known_locations",
+          "type": "Text"
+        },
+        {
+          "name": "home_district",
+          "type": "Var Char"
+        },
+        {
+          "name": "first_seen",
+          "type": "DateTime"
+        },
+        {
+          "name": "photo_seed",
+          "type": "Var Char"
+        },
+        {
+          "name": "notes",
+          "type": "Text"
+        },
+        {
+          "name": "fir_count",
+          "type": "Int"
+        },
+        {
+          "name": "arrest_count",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/Criminals.csv",
+      "row_count": 70
+    },
+    {
+      "name": "FirCriminals",
+      "source": "fir_criminals",
+      "tier": "must_import",
+      "purpose": "Links FIRs to resolved criminal profiles.",
+      "fields": [
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "criminal_id",
+          "type": "Int"
+        },
+        {
+          "name": "role",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/FirCriminals.csv",
+      "row_count": 703
+    },
+    {
+      "name": "Arrests",
+      "source": "arrests",
+      "tier": "important",
+      "purpose": "Arrest timelines, dashboard arrest counts, criminal profiles.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "criminal_id",
+          "type": "Int"
+        },
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "arrested_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "arresting_officer",
+          "type": "Var Char"
+        },
+        {
+          "name": "district",
+          "type": "Var Char"
+        },
+        {
+          "name": "arrest_type",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/Arrests.csv",
+      "row_count": 251
+    },
+    {
+      "name": "Victims",
+      "source": "victims",
+      "tier": "important",
+      "purpose": "Case detail and demographic analytics.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "name",
+          "type": "Var Char"
+        },
+        {
+          "name": "gender",
+          "type": "Var Char"
+        },
+        {
+          "name": "age",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/Victims.csv",
+      "row_count": 564
+    },
+    {
+      "name": "Complainants",
+      "source": "complainants",
+      "tier": "important",
+      "purpose": "Case detail and complainant occupation analytics.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "name",
+          "type": "Var Char"
+        },
+        {
+          "name": "age",
+          "type": "Int"
+        },
+        {
+          "name": "gender",
+          "type": "Var Char"
+        },
+        {
+          "name": "occupation",
+          "type": "Var Char"
+        },
+        {
+          "name": "religion",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/Complainants.csv",
+      "row_count": 662
+    },
+    {
+      "name": "Evidence",
+      "source": "evidence",
+      "tier": "important",
+      "purpose": "Case timeline, evidence list, OCR/storage references.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "type",
+          "type": "Var Char"
+        },
+        {
+          "name": "description",
+          "type": "Text"
+        },
+        {
+          "name": "collected_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "storage_ref",
+          "type": "Text"
+        }
+      ],
+      "csv": "csv/Evidence.csv",
+      "row_count": 605
+    },
+    {
+      "name": "Relationships",
+      "source": "relationships",
+      "tier": "network",
+      "purpose": "Knowledge graph edges for the network explorer.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "source_type",
+          "type": "Var Char"
+        },
+        {
+          "name": "source_id",
+          "type": "Int"
+        },
+        {
+          "name": "target_type",
+          "type": "Var Char"
+        },
+        {
+          "name": "target_id",
+          "type": "Int"
+        },
+        {
+          "name": "rel_type",
+          "type": "Var Char"
+        },
+        {
+          "name": "confidence",
+          "type": "Double"
+        },
+        {
+          "name": "frequency",
+          "type": "Int"
+        },
+        {
+          "name": "note",
+          "type": "Text"
+        }
+      ],
+      "csv": "csv/Relationships.csv",
+      "row_count": 1159
+    },
+    {
+      "name": "Phones",
+      "source": "phones",
+      "tier": "network",
+      "purpose": "Phone nodes and criminal profile contact data.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "number",
+          "type": "Var Char"
+        },
+        {
+          "name": "carrier",
+          "type": "Var Char"
+        },
+        {
+          "name": "owner_criminal_id",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/Phones.csv",
+      "row_count": 95
+    },
+    {
+      "name": "Vehicles",
+      "source": "vehicles",
+      "tier": "network",
+      "purpose": "Vehicle nodes and criminal profile vehicle data.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "plate",
+          "type": "Var Char"
+        },
+        {
+          "name": "make",
+          "type": "Var Char"
+        },
+        {
+          "name": "model",
+          "type": "Var Char"
+        },
+        {
+          "name": "color",
+          "type": "Var Char"
+        },
+        {
+          "name": "type",
+          "type": "Var Char"
+        },
+        {
+          "name": "owner_criminal_id",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/Vehicles.csv",
+      "row_count": 45
+    },
+    {
+      "name": "Addresses",
+      "source": "addresses",
+      "tier": "network",
+      "purpose": "Address nodes, map enrichment, criminal profile locations.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "criminal_id",
+          "type": "Int"
+        },
+        {
+          "name": "type",
+          "type": "Var Char"
+        },
+        {
+          "name": "line",
+          "type": "Text"
+        },
+        {
+          "name": "district",
+          "type": "Var Char"
+        },
+        {
+          "name": "lat",
+          "type": "Double"
+        },
+        {
+          "name": "lng",
+          "type": "Double"
+        }
+      ],
+      "csv": "csv/Addresses.csv",
+      "row_count": 103
+    },
+    {
+      "name": "Organizations",
+      "source": "organizations",
+      "tier": "network",
+      "purpose": "Gang/syndicate nodes.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "name",
+          "type": "Var Char"
+        },
+        {
+          "name": "type",
+          "type": "Var Char"
+        },
+        {
+          "name": "district",
+          "type": "Var Char"
+        },
+        {
+          "name": "notes",
+          "type": "Text"
+        }
+      ],
+      "csv": "csv/Organizations.csv",
+      "row_count": 6
+    },
+    {
+      "name": "OrgMembers",
+      "source": "org_members",
+      "tier": "network",
+      "purpose": "Links organizations to criminal profiles.",
+      "fields": [
+        {
+          "name": "org_id",
+          "type": "Int"
+        },
+        {
+          "name": "criminal_id",
+          "type": "Int"
+        },
+        {
+          "name": "role",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/OrgMembers.csv",
+      "row_count": 43
+    },
+    {
+      "name": "Weapons",
+      "source": "weapons",
+      "tier": "detail",
+      "purpose": "Criminal profile weapon associations.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "criminal_id",
+          "type": "Int"
+        },
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "type",
+          "type": "Var Char"
+        },
+        {
+          "name": "description",
+          "type": "Text"
+        }
+      ],
+      "csv": "csv/Weapons.csv",
+      "row_count": 5
+    },
+    {
+      "name": "Chargesheets",
+      "source": "ChargesheetDetails",
+      "tier": "detail",
+      "purpose": "Case detail final-report/court panel.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "fir_id",
+          "type": "Int"
+        },
+        {
+          "name": "csdate",
+          "type": "DateTime"
+        },
+        {
+          "name": "cstype",
+          "type": "Var Char"
+        },
+        {
+          "name": "final_report",
+          "type": "Var Char"
+        },
+        {
+          "name": "police_person_id",
+          "type": "Int"
+        },
+        {
+          "name": "court",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/Chargesheets.csv",
+      "row_count": 191
+    },
+    {
+      "name": "PoliceStations",
+      "source": "police_stations",
+      "tier": "support",
+      "purpose": "Station names/codes for filters and display.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "station_code",
+          "type": "Var Char"
+        },
+        {
+          "name": "name",
+          "type": "Var Char"
+        },
+        {
+          "name": "district",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/PoliceStations.csv",
+      "row_count": 24
+    },
+    {
+      "name": "AuditLogs",
+      "source": "audit_logs",
+      "tier": "optional",
+      "purpose": "Admin demo audit trail. Skip for public demo if you do not want seeded user activity.",
+      "fields": [
+        {
+          "name": "id",
+          "type": "Int"
+        },
+        {
+          "name": "ts",
+          "type": "DateTime"
+        },
+        {
+          "name": "user_id",
+          "type": "Int"
+        },
+        {
+          "name": "username",
+          "type": "Var Char"
+        },
+        {
+          "name": "role",
+          "type": "Var Char"
+        },
+        {
+          "name": "action",
+          "type": "Var Char"
+        },
+        {
+          "name": "entity",
+          "type": "Var Char"
+        },
+        {
+          "name": "entity_id",
+          "type": "Var Char"
+        },
+        {
+          "name": "request_id",
+          "type": "Var Char"
+        },
+        {
+          "name": "ai_model",
+          "type": "Var Char"
+        },
+        {
+          "name": "processing_ms",
+          "type": "Int"
+        },
+        {
+          "name": "detail",
+          "type": "Text"
+        }
+      ],
+      "csv": "csv/AuditLogs.csv",
+      "row_count": 64
+    },
+    {
+      "name": "Notifications",
+      "source": null,
+      "tier": "runtime",
+      "purpose": "Runtime notification read/archive state used by the bell menu.",
+      "fields": [
+        {
+          "name": "ts",
+          "type": "DateTime"
+        },
+        {
+          "name": "kind",
+          "type": "Var Char"
+        },
+        {
+          "name": "severity",
+          "type": "Var Char"
+        },
+        {
+          "name": "title",
+          "type": "Var Char"
+        },
+        {
+          "name": "detail",
+          "type": "Text"
+        },
+        {
+          "name": "entity",
+          "type": "Var Char"
+        },
+        {
+          "name": "entity_id",
+          "type": "Var Char"
+        },
+        {
+          "name": "status",
+          "type": "Var Char"
+        }
+      ]
+    },
+    {
+      "name": "OcrResult",
+      "source": null,
+      "tier": "runtime",
+      "purpose": "Runtime Zia OCR persistence table used by Scan document.",
+      "fields": [
+        {
+          "name": "ocr_text",
+          "type": "Text"
+        },
+        {
+          "name": "language",
+          "type": "Var Char"
+        },
+        {
+          "name": "source_key",
+          "type": "Text"
+        },
+        {
+          "name": "source_name",
+          "type": "Var Char"
+        }
+      ]
+    }
+  ]
+}

@@ -349,6 +349,18 @@ h1, h2, h3, h4, h5, h6 {
   color: rgb(var(--fg));
 }
 
+/* Make interaction affordances explicit across buttons, navigation, menus,
+   and compact icon controls. Disabled controls remain visibly unavailable. */
+:where(a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for], select) {
+  cursor: pointer;
+}
+:where(button:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+:where(input:not([type="button"]):not([type="submit"]):not([type="reset"]), textarea) {
+  cursor: text;
+}
+
 /* Consistent keyboard-focus ring on every interactive control. :where() keeps
    zero specificity so page-level utilities always win, and it only shows for
    keyboard users (:focus-visible), never on mouse click. */

@@ -1,0 +1,46 @@
+id,plate,make,model,color,type,owner_criminal_id
+1,KA-09-AB-6128,Hyundai,i20,Silver,car,3
+2,KA-03-NR-2899,Honda,Activa,Silver,scooter,4
+3,KA-09-CJ-7429,Bajaj,Pulsar,Red,motorcycle,6
+4,KA-20-MK-5561,Maruti,Swift,Blue,car,7
+5,KA-25-CJ-6806,Hyundai,i20,Blue,car,8
+6,KA-20-AB-8784,Honda,Activa,Silver,scooter,9
+7,KA-02-CJ-6674,Bajaj,Pulsar,Black,motorcycle,11
+8,KA-01-NR-8792,Hyundai,i20,Grey,car,12
+9,KA-09-CJ-2350,TVS,Apache,Blue,motorcycle,14
+10,KA-01-MK-5480,Tata,Ace,Grey,truck,16
+11,KA-09-MK-3763,Maruti,Swift,White,car,17
+12,KA-25-AB-8527,TVS,Apache,Black,motorcycle,18
+13,KA-03-NR-1060,Bajaj,RE Auto,Red,auto,19
+14,KA-20-HG-6879,Maruti,Swift,Black,car,22
+15,KA-01-AB-1200,Tata,Ace,Grey,truck,23
+16,KA-09-CJ-4969,Tata,Ace,White,truck,24
+17,KA-01-AB-1053,Hyundai,i20,Silver,car,26
+18,KA-03-MK-8451,Honda,Activa,Black,scooter,27
+19,KA-20-NR-2372,Tata,Ace,White,truck,28
+20,KA-02-AB-4912,Hero,Splendor,White,motorcycle,32
+21,KA-25-AB-4907,Bajaj,Pulsar,Blue,motorcycle,34
+22,KA-20-HG-9618,Honda,Activa,White,scooter,37
+23,KA-02-HG-8858,Bajaj,RE Auto,Red,auto,38
+24,KA-09-NR-1817,Hero,Splendor,Blue,motorcycle,39
+25,KA-20-HG-3230,Tata,Ace,Silver,truck,41
+26,KA-09-HG-2734,Bajaj,Pulsar,White,motorcycle,43
+27,KA-20-MK-6248,Hyundai,i20,Grey,car,45
+28,KA-25-CJ-9466,Tata,Ace,Silver,truck,46
+29,KA-02-AB-6542,Bajaj,RE Auto,Black,auto,51
+30,KA-25-CJ-1475,TVS,Apache,Black,motorcycle,52
+31,KA-25-HG-3725,Hero,Splendor,Silver,motorcycle,53
+32,KA-25-MK-6507,Honda,Activa,Grey,scooter,54
+33,KA-25-AB-5534,Honda,Activa,Red,scooter,55
+34,KA-01-MK-4791,Hero,Splendor,White,motorcycle,56
+35,KA-09-CJ-1083,Tata,Ace,Silver,truck,57
+36,KA-09-CJ-4303,Bajaj,RE Auto,Grey,auto,59
+37,KA-09-NR-2805,Maruti,Swift,Blue,car,61
+38,KA-03-CJ-8698,TVS,Apache,Grey,motorcycle,63
+39,KA-25-HG-4177,Bajaj,RE Auto,Red,auto,64
+40,KA-01-HG-9893,Tata,Ace,White,truck,65
+41,KA-03-AB-7161,Maruti,Swift,Red,car,66
+42,KA-09-NR-8982,Honda,Activa,Grey,scooter,67
+43,KA-01-MK-8734,Hyundai,i20,Grey,car,68
+44,KA-03-CJ-8105,Tata,Ace,Red,truck,69
+45,KA-09-AB-6988,Maruti,Swift,White,car,70

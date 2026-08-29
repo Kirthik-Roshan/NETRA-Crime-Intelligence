@@ -1,0 +1,252 @@
+id,criminal_id,fir_id,arrested_at,arresting_officer,district,arrest_type
+1,1,83,2026-01-28 00:00:00,Darshan Kulkarni,Udupi,arrest
+2,1,100,2026-01-30 00:00:00,Manjunath Naik,Tumakuru,arrest
+3,1,144,2026-04-21 00:00:00,Imran Shetty,Udupi,arrest
+4,1,313,2025-06-23 00:00:00,Darshan Shastri,Bengaluru Urban,arrest
+5,1,357,2025-03-26 00:00:00,Riyaz Bhat,Shivamogga,arrest
+6,1,393,2025-08-16 00:00:00,Anil Naik,Shivamogga,arrest
+7,1,453,2026-07-15 00:00:00,Darshan Shastri,Bengaluru Urban,arrest
+8,2,205,2026-06-02 00:00:00,Girish Reddy,Belagavi,arrest
+9,2,279,2026-07-03 00:00:00,Nagaraj Nayak,Mysuru,arrest
+10,3,17,2026-03-29 00:00:00,Nisha Murthy,Ballari,arrest
+11,3,163,2025-08-15 00:00:00,Mahesh Shetty,Vijayapura,arrest
+12,3,317,2026-02-14 00:00:00,Suresh Murthy,Mysuru,arrest
+13,4,231,2026-02-24 00:00:00,Chetan Shastri,Udupi,arrest
+14,5,29,2025-08-18 00:00:00,Kiran Desai,Ballari,arrest
+15,5,55,2025-12-20 00:00:00,Chetan Shastri,Udupi,arrest
+16,5,76,2026-01-18 00:00:00,Chetan Achar,Tumakuru,arrest
+17,5,81,2025-09-06 00:00:00,Ramesh Kumar,Ballari,arrest
+18,5,83,2026-01-03 00:00:00,Imran Shetty,Udupi,arrest
+19,5,120,2026-04-19 00:00:00,Ramesh Kumar,Ballari,surrender
+20,5,220,2026-02-08 00:00:00,Abdul Shastri,Tumakuru,arrest
+21,6,39,2025-02-27 00:00:00,Ramesh Bhat,Belagavi,arrest
+22,6,60,2026-04-16 00:00:00,Ganesh Rai,Mandya,arrest
+23,6,316,2025-10-20 00:00:00,Darshan Naik,Udupi,arrest
+24,7,43,2026-02-10 00:00:00,Naveen Hebbar,Hubballi-Dharwad,arrest
+25,7,206,2025-09-28 00:00:00,Suresh Murthy,Mysuru,surrender
+26,9,77,2026-01-07 00:00:00,Rekha Rao,Dakshina Kannada,arrest
+27,9,104,2026-03-08 00:00:00,Santosh Patil,Dakshina Kannada,arrest
+28,9,177,2026-04-17 00:00:00,Praveen Murthy,Dakshina Kannada,arrest
+29,9,221,2026-07-15 00:00:00,Riyaz Bhat,Shivamogga,arrest
+30,9,269,2026-04-23 00:00:00,Anil Naik,Shivamogga,arrest
+31,9,300,2025-11-19 00:00:00,Riyaz Bhat,Ballari,arrest
+32,10,306,2025-08-16 00:00:00,Ganesh Kumar,Hubballi-Dharwad,surrender
+33,10,449,2026-05-07 00:00:00,Yashwanth Rao,Hubballi-Dharwad,arrest
+34,11,155,2026-03-09 00:00:00,Anil Kulkarni,Kalaburagi,arrest
+35,11,223,2025-09-18 00:00:00,Prakash Bhat,Kalaburagi,surrender
+36,11,236,2026-04-13 00:00:00,Chetan Murthy,Kalaburagi,arrest
+37,11,263,2026-05-17 00:00:00,Darshan Kulkarni,Udupi,arrest
+38,11,299,2026-05-07 00:00:00,Prakash Hebbar,Kalaburagi,arrest
+39,11,316,2025-09-23 00:00:00,Kavya Murthy,Udupi,arrest
+40,11,327,2026-07-15 00:00:00,Deepak Kumar,Kalaburagi,arrest
+41,11,447,2026-01-09 00:00:00,Pooja Patil,Kalaburagi,arrest
+42,12,461,2026-05-21 00:00:00,Ravi Hegde,Bengaluru Urban,arrest
+43,13,294,2026-03-31 00:00:00,Ganesh Kumar,Belagavi,arrest
+44,14,240,2025-07-11 00:00:00,Abdul Patil,Mysuru,arrest
+45,14,273,2026-04-27 00:00:00,Umesh Naik,Mysuru,arrest
+46,14,277,2025-08-31 00:00:00,Rekha Rao,Dakshina Kannada,surrender
+47,14,396,2026-07-15 00:00:00,Nagaraj Nayak,Mysuru,arrest
+48,16,94,2026-07-15 00:00:00,Suresh Murthy,Mysuru,arrest
+49,16,193,2026-05-24 00:00:00,Manjunath Shetty,Dakshina Kannada,arrest
+50,16,251,2025-09-05 00:00:00,Imran Murthy,Dakshina Kannada,arrest
+51,17,203,2026-05-06 00:00:00,Kiran Desai,Ballari,arrest
+52,18,25,2025-04-18 00:00:00,Mahesh Shetty,Vijayapura,arrest
+53,18,103,2026-05-22 00:00:00,Mahesh Shetty,Vijayapura,arrest
+54,18,119,2025-11-20 00:00:00,Kavya Murthy,Udupi,arrest
+55,18,140,2026-03-19 00:00:00,Mahesh Desai,Vijayapura,surrender
+56,18,171,2026-07-15 00:00:00,Harish Hegde,Mandya,arrest
+57,18,274,2026-03-02 00:00:00,Imran Kulkarni,Vijayapura,arrest
+58,18,283,2026-07-07 00:00:00,Kiran Bhat,Vijayapura,arrest
+59,18,359,2026-03-22 00:00:00,Darshan Naik,Udupi,surrender
+60,18,379,2026-03-31 00:00:00,Lakshmi Poojary,Mandya,arrest
+61,18,485,2026-04-30 00:00:00,Basavaraj Kulkarni,Mandya,arrest
+62,19,271,2026-06-14 00:00:00,Suresh Kumar,Vijayapura,arrest
+63,20,115,2026-06-29 00:00:00,Nagaraj Murthy,Bengaluru Urban,arrest
+64,20,148,2026-06-02 00:00:00,Chetan Kumar,Bengaluru Urban,arrest
+65,20,244,2026-06-17 00:00:00,Ramesh Murthy,Tumakuru,arrest
+66,20,295,2026-07-15 00:00:00,Chetan Achar,Tumakuru,arrest
+67,21,168,2025-12-17 00:00:00,Nagaraj Nayak,Mysuru,arrest
+68,21,358,2025-10-13 00:00:00,Suresh Murthy,Mysuru,arrest
+69,21,433,2025-07-22 00:00:00,Umesh Naik,Mysuru,arrest
+70,21,487,2025-07-18 00:00:00,Lokesh Naik,Belagavi,arrest
+71,22,31,2026-06-23 00:00:00,Imran Murthy,Dakshina Kannada,arrest
+72,22,87,2025-11-14 00:00:00,Mahesh Desai,Vijayapura,arrest
+73,22,250,2025-11-17 00:00:00,Nisha Murthy,Ballari,arrest
+74,23,95,2025-04-19 00:00:00,Darshan Shastri,Bengaluru Urban,arrest
+75,23,98,2025-11-21 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+76,23,245,2025-05-15 00:00:00,Chetan Kumar,Bengaluru Urban,arrest
+77,23,292,2026-05-29 00:00:00,Nagaraj Murthy,Bengaluru Urban,arrest
+78,23,366,2025-03-01 00:00:00,Ravi Hegde,Bengaluru Urban,surrender
+79,23,391,2026-07-15 00:00:00,Basavaraj Kulkarni,Mandya,arrest
+80,23,422,2025-07-05 00:00:00,Shivaraj Nayak,Mandya,arrest
+81,23,430,2026-05-08 00:00:00,Ganesh Kumar,Hubballi-Dharwad,arrest
+82,24,66,2025-12-25 00:00:00,Mahesh Shetty,Vijayapura,arrest
+83,24,163,2025-09-04 00:00:00,Mahesh Shetty,Vijayapura,arrest
+84,24,242,2026-03-28 00:00:00,Mahesh Desai,Vijayapura,arrest
+85,25,373,2026-03-20 00:00:00,Imran Shetty,Udupi,arrest
+86,25,437,2025-09-29 00:00:00,Darshan Naik,Udupi,arrest
+87,26,23,2026-07-01 00:00:00,Prakash Kumar,Mysuru,arrest
+88,26,44,2026-04-10 00:00:00,Ganesh Kumar,Hubballi-Dharwad,arrest
+89,26,133,2025-08-18 00:00:00,Pooja Patil,Kalaburagi,arrest
+90,26,174,2026-03-05 00:00:00,Imran Kulkarni,Vijayapura,arrest
+91,26,273,2026-05-16 00:00:00,Abdul Patil,Mysuru,arrest
+92,26,383,2026-06-17 00:00:00,Imran Kulkarni,Vijayapura,arrest
+93,26,394,2025-09-16 00:00:00,Deepak Kumar,Kalaburagi,arrest
+94,27,108,2026-01-20 00:00:00,Naveen Kulkarni,Hubballi-Dharwad,arrest
+95,27,238,2025-08-03 00:00:00,Mahesh Bhat,Mandya,arrest
+96,27,241,2026-01-18 00:00:00,Harish Hegde,Mandya,arrest
+97,28,193,2026-05-01 00:00:00,Praveen Murthy,Dakshina Kannada,arrest
+98,28,205,2026-06-06 00:00:00,Ganesh Kumar,Belagavi,arrest
+99,28,277,2025-08-04 00:00:00,Divya Reddy,Dakshina Kannada,arrest
+100,29,67,2025-04-26 00:00:00,Imran Shetty,Udupi,arrest
+101,29,303,2026-03-01 00:00:00,Ganesh Kumar,Belagavi,arrest
+102,29,372,2025-06-06 00:00:00,Anil Rao,Belagavi,arrest
+103,30,74,2026-06-07 00:00:00,Divya Reddy,Dakshina Kannada,arrest
+104,30,86,2026-02-27 00:00:00,Chetan Kumar,Bengaluru Urban,arrest
+105,30,120,2026-03-26 00:00:00,Ramesh Kumar,Ballari,arrest
+106,30,418,2025-09-16 00:00:00,Ramesh Kumar,Ballari,surrender
+107,31,357,2025-04-13 00:00:00,Riyaz Bhat,Shivamogga,arrest
+108,32,45,2025-02-12 00:00:00,Darshan Kulkarni,Udupi,arrest
+109,32,275,2025-10-31 00:00:00,Kavya Murthy,Udupi,arrest
+110,33,151,2026-02-09 00:00:00,Shivaraj Nayak,Mandya,arrest
+111,33,391,2026-07-15 00:00:00,Harish Hegde,Mandya,arrest
+112,33,464,2026-06-04 00:00:00,Kiran Bhat,Vijayapura,arrest
+113,34,74,2026-07-04 00:00:00,Rekha Rao,Dakshina Kannada,arrest
+114,34,80,2025-07-28 00:00:00,Darshan Shastri,Bengaluru Urban,arrest
+115,34,115,2026-07-02 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+116,35,13,2026-05-03 00:00:00,Pooja Patil,Kalaburagi,arrest
+117,35,133,2025-08-19 00:00:00,Pooja Patil,Kalaburagi,arrest
+118,35,159,2026-06-15 00:00:00,Darshan Shetty,Hubballi-Dharwad,arrest
+119,35,162,2026-05-15 00:00:00,Darshan Shetty,Hubballi-Dharwad,arrest
+120,35,270,2026-05-24 00:00:00,Riyaz Bhat,Shivamogga,arrest
+121,35,331,2026-05-09 00:00:00,Kiran Desai,Ballari,arrest
+122,35,343,2025-08-09 00:00:00,Anil Kulkarni,Kalaburagi,arrest
+123,35,393,2025-07-15 00:00:00,Divya Gowda,Shivamogga,arrest
+124,36,53,2026-04-29 00:00:00,Kiran Bhat,Vijayapura,arrest
+125,37,239,2026-04-27 00:00:00,Abdul Patil,Mysuru,surrender
+126,37,324,2026-04-09 00:00:00,Suresh Kumar,Vijayapura,arrest
+127,37,438,2026-06-06 00:00:00,Riyaz Reddy,Mysuru,arrest
+128,38,4,2025-05-16 00:00:00,Riyaz Bhat,Shivamogga,surrender
+129,38,156,2026-06-09 00:00:00,Abdul Bhat,Shivamogga,arrest
+130,38,206,2025-10-09 00:00:00,Suresh Murthy,Mysuru,arrest
+131,38,441,2026-07-12 00:00:00,Umesh Naik,Mysuru,arrest
+132,39,251,2025-09-01 00:00:00,Manjunath Shetty,Dakshina Kannada,arrest
+133,39,381,2026-03-18 00:00:00,Rekha Rao,Dakshina Kannada,arrest
+134,39,482,2026-05-13 00:00:00,Santosh Patil,Dakshina Kannada,arrest
+135,40,49,2026-06-26 00:00:00,Naveen Hebbar,Hubballi-Dharwad,arrest
+136,40,64,2026-07-10 00:00:00,Darshan Naik,Udupi,arrest
+137,40,97,2026-02-04 00:00:00,Naveen Hebbar,Hubballi-Dharwad,arrest
+138,40,175,2026-05-13 00:00:00,Santosh Patil,Dakshina Kannada,arrest
+139,41,162,2026-05-01 00:00:00,Darshan Shetty,Hubballi-Dharwad,arrest
+140,41,207,2026-07-05 00:00:00,Ganesh Kumar,Hubballi-Dharwad,arrest
+141,41,389,2026-06-23 00:00:00,Imran Kulkarni,Vijayapura,arrest
+142,43,32,2026-04-06 00:00:00,Anil Rao,Belagavi,arrest
+143,43,79,2025-07-22 00:00:00,Ramesh Bhat,Belagavi,arrest
+144,43,223,2025-10-04 00:00:00,Anil Kulkarni,Kalaburagi,arrest
+145,43,386,2026-02-17 00:00:00,Manjunath Shetty,Dakshina Kannada,surrender
+146,43,422,2025-06-05 00:00:00,Basavaraj Kulkarni,Mandya,surrender
+147,43,474,2026-07-15 00:00:00,Anil Rao,Belagavi,arrest
+148,44,61,2026-05-25 00:00:00,Kiran Bhat,Vijayapura,surrender
+149,44,149,2026-02-13 00:00:00,Manjunath Naik,Tumakuru,arrest
+150,44,203,2026-05-05 00:00:00,Kiran Desai,Ballari,arrest
+151,44,256,2025-06-15 00:00:00,Lakshmi Poojary,Mandya,surrender
+152,44,323,2025-09-24 00:00:00,Mahesh Bhat,Mandya,arrest
+153,44,436,2025-03-16 00:00:00,Ramesh Kumar,Ballari,arrest
+154,45,115,2026-06-25 00:00:00,Nagaraj Murthy,Bengaluru Urban,arrest
+155,45,293,2026-01-20 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+156,45,369,2026-03-03 00:00:00,Abdul Patil,Mysuru,surrender
+157,47,100,2026-02-20 00:00:00,Abdul Shastri,Tumakuru,arrest
+158,47,199,2025-04-15 00:00:00,Abdul Shastri,Tumakuru,arrest
+159,47,220,2026-02-13 00:00:00,Abdul Shastri,Tumakuru,arrest
+160,47,414,2026-03-12 00:00:00,Suresh Murthy,Tumakuru,surrender
+161,48,148,2026-06-25 00:00:00,Ravi Hegde,Bengaluru Urban,arrest
+162,48,166,2026-05-08 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+163,48,467,2026-02-06 00:00:00,Naveen Hebbar,Hubballi-Dharwad,arrest
+164,49,281,2026-01-31 00:00:00,Manjunath Naik,Tumakuru,arrest
+165,49,336,2026-07-06 00:00:00,Ramesh Murthy,Tumakuru,arrest
+166,50,33,2026-02-11 00:00:00,Divya Gowda,Shivamogga,arrest
+167,50,154,2025-02-07 00:00:00,Abdul Bhat,Shivamogga,surrender
+168,50,405,2026-07-10 00:00:00,Riyaz Bhat,Shivamogga,arrest
+169,50,421,2025-04-30 00:00:00,Anil Naik,Shivamogga,arrest
+170,50,464,2026-06-08 00:00:00,Kiran Bhat,Vijayapura,arrest
+171,51,124,2026-04-21 00:00:00,Abdul Bhat,Shivamogga,arrest
+172,51,154,2025-01-29 00:00:00,Anil Naik,Shivamogga,arrest
+173,51,209,2026-07-01 00:00:00,Ravi Hegde,Bengaluru Urban,surrender
+174,51,451,2025-05-01 00:00:00,Riyaz Bhat,Shivamogga,arrest
+175,51,495,2025-05-18 00:00:00,Basavaraj Kulkarni,Mandya,arrest
+176,52,209,2026-07-08 00:00:00,Ravi Hegde,Bengaluru Urban,arrest
+177,52,380,2025-08-12 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+178,52,473,2026-06-26 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+179,52,481,2026-06-23 00:00:00,Nagaraj Murthy,Bengaluru Urban,arrest
+180,53,188,2025-06-14 00:00:00,Praveen Reddy,Hubballi-Dharwad,arrest
+181,53,202,2025-12-04 00:00:00,Manjunath Naik,Tumakuru,arrest
+182,53,266,2025-04-24 00:00:00,Abdul Patil,Mysuru,arrest
+183,53,345,2025-08-07 00:00:00,Ramesh Murthy,Tumakuru,arrest
+184,53,414,2026-02-15 00:00:00,Chetan Achar,Tumakuru,arrest
+185,53,426,2025-08-26 00:00:00,Girish Reddy,Belagavi,arrest
+186,53,438,2026-07-06 00:00:00,Prakash Kumar,Mysuru,arrest
+187,54,255,2025-09-10 00:00:00,Sunil Gowda,Belagavi,arrest
+188,55,378,2025-07-17 00:00:00,Harish Hegde,Mandya,arrest
+189,55,425,2025-06-29 00:00:00,Lakshmi Poojary,Mandya,surrender
+190,55,465,2026-07-07 00:00:00,Ganesh Rai,Mandya,arrest
+191,56,67,2025-04-25 00:00:00,Darshan Kulkarni,Udupi,arrest
+192,56,126,2026-07-07 00:00:00,Kavya Shetty,Vijayapura,arrest
+193,56,193,2026-05-13 00:00:00,Praveen Murthy,Dakshina Kannada,arrest
+194,56,254,2026-05-03 00:00:00,Darshan Naik,Udupi,arrest
+195,56,370,2026-06-05 00:00:00,Abdul Naik,Udupi,arrest
+196,56,386,2026-02-28 00:00:00,Praveen Murthy,Dakshina Kannada,arrest
+197,56,442,2026-07-03 00:00:00,Kavya Murthy,Udupi,arrest
+198,57,83,2026-01-31 00:00:00,Abdul Naik,Udupi,arrest
+199,58,220,2026-02-13 00:00:00,Manjunath Naik,Tumakuru,arrest
+200,58,256,2025-05-24 00:00:00,Lakshmi Poojary,Mandya,arrest
+201,58,291,2026-02-26 00:00:00,Darshan Naik,Udupi,arrest
+202,58,309,2026-06-09 00:00:00,Chetan Achar,Tumakuru,arrest
+203,58,431,2026-06-20 00:00:00,Imran Shetty,Udupi,arrest
+204,59,453,2026-07-15 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+205,60,226,2026-07-02 00:00:00,Deepak Naik,Ballari,arrest
+206,60,351,2026-05-22 00:00:00,Naveen Kulkarni,Hubballi-Dharwad,arrest
+207,61,138,2026-06-19 00:00:00,Rekha Rao,Dakshina Kannada,arrest
+208,62,1,2026-03-08 00:00:00,Chetan Achar,Tumakuru,arrest
+209,62,244,2026-05-31 00:00:00,Ramesh Murthy,Tumakuru,arrest
+210,63,30,2025-06-20 00:00:00,Girish Reddy,Belagavi,arrest
+211,63,212,2026-07-15 00:00:00,Sunil Gowda,Belagavi,arrest
+212,63,245,2025-06-07 00:00:00,Deepak Hebbar,Bengaluru Urban,arrest
+213,63,322,2026-03-08 00:00:00,Rekha Rao,Dakshina Kannada,arrest
+214,63,487,2025-08-26 00:00:00,Lokesh Naik,Belagavi,arrest
+215,64,6,2026-06-10 00:00:00,Umesh Naik,Mysuru,surrender
+216,64,44,2026-03-28 00:00:00,Praveen Reddy,Hubballi-Dharwad,arrest
+217,64,142,2026-06-16 00:00:00,Darshan Shetty,Hubballi-Dharwad,surrender
+218,64,169,2025-08-22 00:00:00,Prakash Kumar,Mysuru,arrest
+219,64,194,2026-05-29 00:00:00,Naveen Kulkarni,Hubballi-Dharwad,arrest
+220,64,306,2025-07-25 00:00:00,Praveen Reddy,Hubballi-Dharwad,arrest
+221,64,317,2026-02-16 00:00:00,Abdul Patil,Mysuru,arrest
+222,64,496,2026-03-02 00:00:00,Abdul Naik,Udupi,arrest
+223,65,1,2026-03-27 00:00:00,Suresh Murthy,Tumakuru,arrest
+224,65,109,2025-07-26 00:00:00,Lokesh Naik,Belagavi,arrest
+225,65,155,2026-01-30 00:00:00,Prakash Bhat,Kalaburagi,arrest
+226,65,168,2025-11-22 00:00:00,Prakash Kumar,Mysuru,arrest
+227,65,187,2025-07-07 00:00:00,Prakash Hebbar,Kalaburagi,arrest
+228,65,195,2025-08-11 00:00:00,Deepak Kumar,Kalaburagi,arrest
+229,65,327,2026-07-10 00:00:00,Anil Kulkarni,Kalaburagi,surrender
+230,65,487,2025-07-21 00:00:00,Sunil Gowda,Belagavi,arrest
+231,66,48,2026-05-22 00:00:00,Chetan Murthy,Kalaburagi,arrest
+232,66,101,2026-01-07 00:00:00,Darshan Shastri,Bengaluru Urban,arrest
+233,66,172,2025-12-15 00:00:00,Darshan Naik,Udupi,arrest
+234,66,209,2026-07-03 00:00:00,Deepak Hebbar,Bengaluru Urban,arrest
+235,66,247,2026-04-04 00:00:00,Deepak Kumar,Kalaburagi,arrest
+236,66,292,2026-05-28 00:00:00,Nagaraj Murthy,Bengaluru Urban,arrest
+237,66,347,2025-04-20 00:00:00,Kavya Murthy,Udupi,arrest
+238,66,447,2025-12-30 00:00:00,Pooja Patil,Kalaburagi,arrest
+239,66,473,2026-07-14 00:00:00,Kumar Gowda,Bengaluru Urban,arrest
+240,66,486,2026-07-08 00:00:00,Chetan Murthy,Kalaburagi,surrender
+241,67,255,2025-08-26 00:00:00,Anil Rao,Belagavi,arrest
+242,68,40,2025-10-13 00:00:00,Imran Kulkarni,Vijayapura,arrest
+243,69,126,2026-06-04 00:00:00,Imran Kulkarni,Vijayapura,arrest
+244,69,205,2026-05-10 00:00:00,Ganesh Kumar,Belagavi,arrest
+245,69,242,2026-03-10 00:00:00,Mahesh Desai,Vijayapura,arrest
+246,69,311,2025-06-27 00:00:00,Naveen Hebbar,Hubballi-Dharwad,arrest
+247,69,476,2026-07-15 00:00:00,Ramesh Kumar,Ballari,surrender
+248,70,234,2026-04-29 00:00:00,Kiran Bhat,Vijayapura,arrest
+249,70,334,2026-05-06 00:00:00,Ramesh Murthy,Tumakuru,arrest
+250,70,365,2025-07-09 00:00:00,Suresh Kumar,Vijayapura,arrest
+251,70,464,2026-05-15 00:00:00,Kiran Bhat,Vijayapura,arrest

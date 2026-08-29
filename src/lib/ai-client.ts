@@ -10,16 +10,34 @@
  *   NEXT_PUBLIC_AI_FN_URL = https://<project>.catalystserverless.in/server/ai_quickml/
  *
  * When unset, AI features show a clean "not connected" state instead of failing.
- * Defaults to the deployed KspHacks ai_quickml Function (public endpoint,
- * CORS-restricted to the onslate.in origin; the QuickML credentials live only
- * inside the Function). Override with NEXT_PUBLIC_AI_FN_URL at build time.
+ * Development is the default because that Function currently owns the
+ * QuickML/Zia credentials and the first Cloud Scale import. A configured URL
+ * still wins, and Production remains available once its Function is promoted.
  */
-const FN_URL =
-  process.env.NEXT_PUBLIC_AI_FN_URL ||
-  "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/";
+const PROD_FN_URL = "https://ksphacks-60080085094.catalystserverless.in/server/ai_quickml/";
+const DEV_FN_URL = "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/";
+const FN_URLS = [...new Set([process.env.NEXT_PUBLIC_AI_FN_URL || DEV_FN_URL, DEV_FN_URL, PROD_FN_URL].filter(Boolean))];
+
+async function callFunction(body: Record<string, unknown>): Promise<Response | null> {
+  for (const url of FN_URLS) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        // text/plain keeps this a CORS "simple request". The Function parses
+        // the raw JSON body regardless of content-type.
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return res;
+    } catch {
+      // Try the next configured Catalyst environment.
+    }
+  }
+  return null;
+}
 
 export function aiConfigured(): boolean {
-  return FN_URL.length > 0;
+  return FN_URLS.length > 0;
 }
 
 /** Green dot when a Function endpoint is configured. */
@@ -42,17 +60,10 @@ export interface RagSource {
 export async function askRag(
   query: string,
 ): Promise<{ answer: string; sources: RagSource[] } | null> {
-  if (!FN_URL) return null;
+  if (!FN_URLS.length) return null;
   try {
-    const res = await fetch(FN_URL, {
-      method: "POST",
-      // text/plain keeps this a CORS "simple request" → no preflight. Catalyst
-      // intercepts OPTIONS without CORS headers, so a preflight would be blocked;
-      // the Function parses the raw JSON body regardless of content-type.
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ mode: "rag", query }),
-    });
-    if (!res.ok) return null;
+    const res = await callFunction({ mode: "rag", query });
+    if (!res) return null;
     const j = (await res.json()) as { answer?: string; response?: string; sources?: RagSource[] };
     const answer = (j.answer || j.response || "").trim();
     return answer ? { answer, sources: Array.isArray(j.sources) ? j.sources : [] } : null;
@@ -63,14 +74,10 @@ export async function askRag(
 
 /** Post a Zia job to the Function (token stays server-side). */
 async function ziaCall<T>(body: Record<string, unknown>): Promise<T | null> {
-  if (!FN_URL) return null;
+  if (!FN_URLS.length) return null;
   try {
-    const res = await fetch(FN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
+    const res = await callFunction(body);
+    if (!res) return null;
     return (await res.json()) as T;
   } catch {
     return null;
@@ -89,10 +96,29 @@ export async function synthesizeSpeech(text: string, language = "en-IN"): Promis
   return j?.audio || null;
 }
 
-/** Speech-to-text via Zia. audio = base64 (no data: prefix). */
-export async function transcribeAudio(audio: string, language = "en-IN"): Promise<string | null> {
-  const j = await ziaCall<{ text?: string }>({ mode: "transcribe", audio, language });
-  return (j?.text || "").trim() || null;
+/** Analyze a recognized voice command with Catalyst Zia Text Analytics. */
+export async function analyzeVoiceCommand(text: string): Promise<{ text: string; analytics?: unknown } | null> {
+  if (!text.trim()) return null;
+  const j = await ziaCall<{ text?: string; analytics?: unknown }>({ mode: "voice:nlp", text });
+  const command = (j?.text || "").trim();
+  return command ? { text: command, analytics: j?.analytics } : null;
+}
+
+/** Transcribe a WAV recording with Catalyst Zia's audio model. */
+export async function transcribeAudio(
+  audio: string,
+  language: "en" | "kn" = "en",
+): Promise<{ text: string; language?: string; processing_ms?: number | null } | null> {
+  if (!audio) return null;
+  const j = await ziaCall<{ text?: string; language?: string; processing_ms?: number | null }>({
+    mode: "transcribe",
+    audio,
+    language,
+    mime: "audio/wav",
+    name: "voice-command.wav",
+  });
+  const text = (j?.text || "").trim();
+  return text ? { text, language: j?.language, processing_ms: j?.processing_ms } : null;
 }
 
 export interface OcrResult { text: string; file_id?: string | null; record_id?: string | null }
@@ -170,17 +196,10 @@ export async function askAssistant(
   prompt: string,
   opts?: { system?: string; temperature?: number },
 ): Promise<string | null> {
-  if (!FN_URL) return null;
+  if (!FN_URLS.length) return null;
   try {
-    const res = await fetch(FN_URL, {
-      method: "POST",
-      // text/plain keeps this a CORS "simple request" → no preflight. Catalyst
-      // intercepts OPTIONS without CORS headers, so a preflight would be blocked;
-      // the Function parses the raw JSON body regardless of content-type.
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ prompt, system: opts?.system, temperature: opts?.temperature ?? 0.2 }),
-    });
-    if (!res.ok) return null;
+    const res = await callFunction({ prompt, system: opts?.system, temperature: opts?.temperature ?? 0.2 });
+    if (!res) return null;
     const j = (await res.json()) as { response?: string; answer?: string; text?: string };
     return (j.response || j.answer || j.text || "").trim() || null;
   } catch {

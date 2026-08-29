@@ -9,11 +9,6 @@
   "env": {
     "NODE_ENV": "production",
     "NETRA_SESSION_SECRET": "set-in-catalyst-console",
-    "CATALYST_DC_BASE": "https://api.catalyst.zoho.in",
-    "CATALYST_ORG": "set-in-catalyst-console",
-    "CATALYST_PROJECT_ID": "set-in-catalyst-console",
-    "CATALYST_QUICKML_TOKEN": "set-in-catalyst-console",
-    "CATALYST_LLM_MODEL": "VL-Qwen3.6-35B-A3B",
-    "CATALYST_LLM_PATH": "vlm/chat"
+    "NEXT_PUBLIC_AI_FN_URL": "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/"
   }
 }

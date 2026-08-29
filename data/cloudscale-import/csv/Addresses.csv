@@ -1,0 +1,104 @@
+id,criminal_id,type,line,district,lat,lng
+1,1,residence,"183, Layout Rd, Shivamogga",Shivamogga,13.862083824847453,75.6345205231052
+2,1,hideout,Suspected hideout near Shivamogga,Shivamogga,13.890073458242789,75.49096261815578
+3,2,residence,"79, Cross Rd, Belagavi",Belagavi,15.846457044135594,74.55795418178643
+4,3,residence,"152, Main Rd, Belagavi",Belagavi,15.91265677093789,74.58435675424505
+5,4,residence,"94, Cross Rd, Mysuru",Mysuru,12.376202452773414,76.66084246470648
+6,4,hideout,Suspected hideout near Shivamogga,Shivamogga,13.88466999139879,75.49738535610904
+7,5,residence,"92, Cross Rd, Tumakuru",Tumakuru,13.374876037998684,77.1919335603064
+8,6,residence,"199, Cross Rd, Shivamogga",Shivamogga,13.979752084717713,75.50455149251447
+9,6,hideout,Suspected hideout near Bengaluru Urban,Bengaluru Urban,12.971038303229399,77.56645691583437
+10,7,residence,"117, Layout Rd, Mysuru",Mysuru,12.264346075229533,76.67170688810813
+11,8,residence,"159, Cross Rd, Ballari",Ballari,15.099947379218042,76.96556567286011
+12,9,residence,"149, Main Rd, Ballari",Ballari,15.089558504769206,76.90193984847852
+13,10,residence,"51, Layout Rd, Tumakuru",Tumakuru,13.396499595776758,77.11876085864398
+14,11,residence,"30, Layout Rd, Mandya",Mandya,12.588727500662394,76.86373453761878
+15,12,residence,"51, Layout Rd, Bengaluru Urban",Bengaluru Urban,13.044258410170116,77.60846999764945
+16,12,hideout,Suspected hideout near Dakshina Kannada,Dakshina Kannada,12.830835039534978,74.76768221909087
+17,13,residence,"155, Cross Rd, Bengaluru Urban",Bengaluru Urban,13.000589553414285,77.52856713463589
+18,14,residence,"156, Layout Rd, Dakshina Kannada",Dakshina Kannada,12.991837943488173,74.89419495275617
+19,15,residence,"153, Layout Rd, Dakshina Kannada",Dakshina Kannada,12.860616728019341,74.82544938187021
+20,16,residence,"95, Layout Rd, Dakshina Kannada",Dakshina Kannada,12.907616289484686,74.89124018457625
+21,16,hideout,Suspected hideout near Belagavi,Belagavi,15.884439145752975,74.4403509161992
+22,17,residence,"79, Cross Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.294378515898995,75.12312156510632
+23,18,residence,"89, Cross Rd, Mysuru",Mysuru,12.31174452723395,76.61904221898466
+24,18,hideout,Suspected hideout near Vijayapura,Vijayapura,16.74704692830313,75.63893509146291
+25,19,residence,"7, Main Rd, Ballari",Ballari,15.216177389496565,76.90102901350576
+26,20,residence,"183, Main Rd, Tumakuru",Tumakuru,13.398202468338049,77.18468863321488
+27,20,hideout,Suspected hideout near Mysuru,Mysuru,12.348965602041408,76.6905634484306
+28,21,residence,"152, Layout Rd, Mysuru",Mysuru,12.292873349626735,76.59690853057485
+29,22,residence,"27, Cross Rd, Vijayapura",Vijayapura,16.75568090480734,75.63978653226978
+30,23,residence,"72, Layout Rd, Mandya",Mandya,12.481300986982136,76.84571466042156
+31,23,hideout,Suspected hideout near Shivamogga,Shivamogga,13.9732660457097,75.52843342975657
+32,24,residence,"102, Main Rd, Vijayapura",Vijayapura,16.860808606440948,75.69888961405027
+33,24,hideout,Suspected hideout near Tumakuru,Tumakuru,13.384834530930593,77.1821232032638
+34,25,residence,"4, Main Rd, Belagavi",Belagavi,15.823098714158684,74.56896876933034
+35,26,residence,"133, Layout Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.418681698416172,75.12993822996131
+36,27,residence,"80, Main Rd, Mandya",Mandya,12.465275579956545,76.93192946897317
+37,27,hideout,Suspected hideout near Vijayapura,Vijayapura,16.745367433917522,75.72641732000746
+38,28,residence,"36, Cross Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.453701234211026,75.21198879959154
+39,29,residence,"31, Cross Rd, Udupi",Udupi,13.388269896075688,74.76710505309086
+40,29,hideout,Suspected hideout near Belagavi,Belagavi,15.834210633619502,74.5737178894503
+41,30,residence,"46, Main Rd, Ballari",Ballari,15.0897709093621,76.8583022371946
+42,30,hideout,Suspected hideout near Shivamogga,Shivamogga,13.908435260092467,75.48898487252127
+43,31,residence,"17, Cross Rd, Shivamogga",Shivamogga,13.847715916710532,75.63887987697441
+44,32,residence,"136, Cross Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.447747252432443,75.05927012465988
+45,32,hideout,Suspected hideout near Udupi,Udupi,13.416373637725226,74.70211811031251
+46,33,residence,"140, Layout Rd, Vijayapura",Vijayapura,16.91232628067937,75.7568667260278
+47,33,hideout,Suspected hideout near Shivamogga,Shivamogga,14.01361837662533,75.51496646167189
+48,34,residence,"74, Main Rd, Udupi",Udupi,13.342812252670154,74.72055198781229
+49,34,hideout,Suspected hideout near Mandya,Mandya,12.5070296132287,76.94946033697072
+50,35,residence,"111, Cross Rd, Ballari",Ballari,15.133995468696208,76.98256357850843
+51,35,hideout,Suspected hideout near Mandya,Mandya,12.570143557172454,76.92610984336082
+52,36,residence,"184, Main Rd, Vijayapura",Vijayapura,16.870545439901576,75.6842554930644
+53,36,hideout,Suspected hideout near Mandya,Mandya,12.553099749707803,76.86314166310206
+54,37,residence,"143, Cross Rd, Vijayapura",Vijayapura,16.84159590269886,75.65854888138361
+55,38,residence,"79, Layout Rd, Mysuru",Mysuru,12.214624721546844,76.63525451068357
+56,38,hideout,Suspected hideout near Vijayapura,Vijayapura,16.755228193648907,75.76593039132653
+57,39,residence,"51, Main Rd, Dakshina Kannada",Dakshina Kannada,12.879442684672213,74.77739802156016
+58,39,hideout,Suspected hideout near Udupi,Udupi,13.291198314075917,74.79464996059927
+59,40,residence,"138, Layout Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.372568311610072,75.13926148439384
+60,40,hideout,Suspected hideout near Kalaburagi,Kalaburagi,17.276205512362345,76.76159010973126
+61,41,residence,"47, Cross Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.372393270691669,75.17880409165379
+62,42,residence,"1, Main Rd, Tumakuru",Tumakuru,13.372564317569696,77.17102325072996
+63,42,hideout,Suspected hideout near Shivamogga,Shivamogga,13.908874643941036,75.57186617010217
+64,43,residence,"197, Layout Rd, Dakshina Kannada",Dakshina Kannada,12.883737554883956,74.79793142871837
+65,43,hideout,Suspected hideout near Dakshina Kannada,Dakshina Kannada,12.960350952403061,74.83542840635776
+66,44,residence,"123, Layout Rd, Vijayapura",Vijayapura,16.817581230434403,75.69374798688105
+67,45,residence,"134, Layout Rd, Bengaluru Urban",Bengaluru Urban,13.003399184749835,77.50700384085569
+68,45,hideout,Suspected hideout near Kalaburagi,Kalaburagi,17.314192492456918,76.86427683666646
+69,46,residence,"52, Layout Rd, Dakshina Kannada",Dakshina Kannada,12.989194804409891,74.9214051566217
+70,46,hideout,Suspected hideout near Udupi,Udupi,13.362973591127991,74.81734149295407
+71,47,residence,"164, Cross Rd, Dakshina Kannada",Dakshina Kannada,12.921147039787284,74.89678060467728
+72,48,residence,"99, Layout Rd, Bengaluru Urban",Bengaluru Urban,12.982637320396863,77.60041405139528
+73,49,residence,"84, Cross Rd, Tumakuru",Tumakuru,13.384142441292852,77.14717702651416
+74,50,residence,"4, Layout Rd, Vijayapura",Vijayapura,16.867806792305597,75.6294525142759
+75,51,residence,"117, Cross Rd, Mandya",Mandya,12.433956096093356,76.84948501015975
+76,51,hideout,Suspected hideout near Mysuru,Mysuru,12.371513511952198,76.67474842005
+77,52,residence,"194, Layout Rd, Bengaluru Urban",Bengaluru Urban,12.966207714489103,77.60900802539233
+78,52,hideout,Suspected hideout near Mysuru,Mysuru,12.364192009260133,76.60341334550697
+79,53,residence,"171, Main Rd, Tumakuru",Tumakuru,13.419410204048827,77.14639347514156
+80,53,hideout,Suspected hideout near Mandya,Mandya,12.56654995784182,76.86058836545291
+81,54,residence,"161, Layout Rd, Belagavi",Belagavi,15.813642783586682,74.47574025041405
+82,55,residence,"171, Main Rd, Mandya",Mandya,12.51099423339609,76.94231865292377
+83,56,residence,"190, Main Rd, Vijayapura",Vijayapura,16.799629967538454,75.69598594828042
+84,56,hideout,Suspected hideout near Belagavi,Belagavi,15.823833954755962,74.51137080943192
+85,57,residence,"161, Main Rd, Belagavi",Belagavi,15.854521080896072,74.52456338795348
+86,58,residence,"179, Cross Rd, Mandya",Mandya,12.520300663421116,76.97657229374126
+87,58,hideout,Suspected hideout near Vijayapura,Vijayapura,16.777608023141326,75.71707148015965
+88,59,residence,"89, Layout Rd, Vijayapura",Vijayapura,16.89663265611958,75.69318654450122
+89,59,hideout,Suspected hideout near Hubballi-Dharwad,Hubballi-Dharwad,15.374752613364532,75.19674710893631
+90,60,residence,"69, Layout Rd, Ballari",Ballari,15.168920882759243,76.89716241223607
+91,60,hideout,Suspected hideout near Belagavi,Belagavi,15.800990585566312,74.4701604124436
+92,61,residence,"185, Cross Rd, Udupi",Udupi,13.2806748604184,74.7058495367974
+93,61,hideout,Suspected hideout near Belagavi,Belagavi,15.805018181905895,74.53358145586661
+94,62,residence,"60, Main Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.294650004233977,75.06792028112895
+95,63,residence,"55, Layout Rd, Belagavi",Belagavi,15.807075821159222,74.51270981699675
+96,64,residence,"56, Main Rd, Shivamogga",Shivamogga,13.857275273429789,75.60297262890208
+97,65,residence,"174, Main Rd, Mysuru",Mysuru,12.234515384965762,76.66778022098876
+98,66,residence,"17, Cross Rd, Udupi",Udupi,13.421130436758137,74.73104285690505
+99,67,residence,"169, Cross Rd, Belagavi",Belagavi,15.896590761135146,74.4936312505275
+100,68,residence,"38, Cross Rd, Mandya",Mandya,12.520825360752829,76.97224650021604
+101,69,residence,"79, Layout Rd, Hubballi-Dharwad",Hubballi-Dharwad,15.3505741164254,75.13457204602285
+102,70,residence,"193, Layout Rd, Vijayapura",Vijayapura,16.76625424767826,75.76150191810447
+103,70,hideout,Suspected hideout near Hubballi-Dharwad,Hubballi-Dharwad,15.389254123086854,75.19308702862449

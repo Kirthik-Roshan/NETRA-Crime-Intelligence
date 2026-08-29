@@ -11,7 +11,7 @@ import { TrendLine, BarSeries } from "@/components/charts";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
-import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, transcribeAudio, extractText, type RagSource } from "@/lib/ai-client";
+import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, analyzeVoiceCommand, transcribeAudio, extractText, type RagSource } from "@/lib/ai-client";
 import { Translated } from "@/components/Translated";
 import { Badge } from "@/components/ui";
 
@@ -140,6 +140,56 @@ function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
   return (w.SpeechRecognition || w.webkitSpeechRecognition) as (new () => SpeechRecognitionLike) | null;
 }
 
+function getAudioContext(): typeof AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const w = window as typeof window & { webkitAudioContext?: typeof AudioContext };
+  return window.AudioContext || w.webkitAudioContext || null;
+}
+
+function encodeMonoWav(samples: Float32Array, sampleRate: number): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  const write = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i));
+  };
+  write(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  write(8, "WAVE");
+  write(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+  let offset = 44;
+  for (let i = 0; i < samples.length; i += 1, offset += 2) {
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  return new Blob([view], { type: "audio/wav" });
+}
+
+async function recordingToWav(recording: Blob): Promise<Blob> {
+  const AudioContextCtor = getAudioContext();
+  if (!AudioContextCtor) throw new Error("Audio conversion is unavailable in this browser.");
+  const context = new AudioContextCtor();
+  try {
+    const decoded = await context.decodeAudioData(await recording.arrayBuffer());
+    const mono = new Float32Array(decoded.length);
+    for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
+      const data = decoded.getChannelData(channel);
+      for (let i = 0; i < data.length; i += 1) mono[i] += data[i] / decoded.numberOfChannels;
+    }
+    return encodeMonoWav(mono, decoded.sampleRate);
+  } finally {
+    await context.close().catch(() => undefined);
+  }
+}
+
 // Read a recorded audio Blob as a bare base64 string (no data: prefix).
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -158,26 +208,30 @@ export function AssistantClient() {
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
-  const mediaRecRef = useRef<MediaRecorder | null>(null);
-  const catalystOnRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const turnsRef = useRef<Turn[]>([]);
   turnsRef.current = turns;
   const idRef = useRef(0);
 
   useEffect(() => {
-    // Voice is available via the Catalyst Zia path (record mic → Function
-    // `transcribe`) OR the browser Web Speech API. Prefer Zia when the Function
-    // is configured and the browser can record — that's the only path that works
-    // outside Chrome and for Kannada; Web Speech stays as the offline fallback.
-    const browserStt = !!getSpeechRecognition();
-    const canRecord = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
-    catalystOnRef.current = aiConfigured() && canRecord;
-    setVoiceSupported(browserStt || (aiConfigured() && canRecord));
+    const canRecord = typeof navigator.mediaDevices?.getUserMedia === "function"
+      && typeof MediaRecorder !== "undefined"
+      && !!getAudioContext();
+    setVoiceSupported(canRecord || !!getSpeechRecognition());
+    return () => {
+      if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
+      mediaRecorderRef.current?.stop();
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recRef.current?.stop();
+    };
   }, []);
 
   const ask = useCallback(async (q: string, viaVoice = false) => {
@@ -218,7 +272,16 @@ export function AssistantClient() {
     }
   }, []);
 
-  // Browser dictation (Web Speech API) — the offline dev fallback.
+  const prepareVoiceTranscript = useCallback(async (transcript: string) => {
+    setVoiceMsg("Analyzing command with Catalyst Zia...");
+    const analyzed = await analyzeVoiceCommand(transcript);
+    const command = analyzed?.text || transcript;
+    setVoiceMsg(null);
+    setInput(command);
+  }, []);
+
+  // Speech recognition creates the transcript; Catalyst Zia Text Analytics
+  // processes it before the officer reviews and submits the command.
   const startWebSpeech = useCallback(() => {
     const SR = getSpeechRecognition();
     if (!SR) { setListening(false); return; }
@@ -233,7 +296,10 @@ export function AssistantClient() {
       // before hitting send — do NOT auto-submit.
       setInput(transcript);
       const last = results[results.length - 1];
-      if (last?.isFinal) setListening(false);
+      if (last?.isFinal && transcript) {
+        setListening(false);
+        void prepareVoiceTranscript(transcript);
+      }
     };
     rec.onend = () => setListening(false);
     rec.onerror = (e) => { setListening(false); setVoiceMsg(speechErr(e?.error)); };
@@ -241,52 +307,93 @@ export function AssistantClient() {
     setListening(true);
     setVoiceMsg(null);
     rec.start();
-  }, [lang, ask]);
+  }, [lang, prepareVoiceTranscript]);
 
-  // Voice input — Catalyst Zia Speech-to-Text in production (records mic audio
-  // and transcribes server-side via Zia); browser dictation as offline fallback.
-  const toggleMic = useCallback(async () => {
-    if (listening) {
-      if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
-      else recRef.current?.stop();
+  const startCloudRecording = useCallback(async () => {
+    if (typeof navigator.mediaDevices?.getUserMedia !== "function" || typeof MediaRecorder === "undefined" || !getAudioContext()) {
+      startWebSpeech();
       return;
     }
-    const canRecord = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
-    // Prefer Catalyst Zia when configured; press mic to start, press again to stop.
-    if (catalystOnRef.current && canRecord) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mr = new MediaRecorder(stream);
-        const chunks: Blob[] = [];
-        mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-        mr.onstop = async () => {
-          stream.getTracks().forEach((tk) => tk.stop());
-          setListening(false);
-          setVoiceMsg("Transcribing…");
-          try {
-            const b64 = await blobToBase64(new Blob(chunks, { type: mr.mimeType || "audio/webm" }));
-            // Catalyst Zia transcription via the Function (token stays server-side).
-            const text = await transcribeAudio(b64, lang === "kn" ? "kn-IN" : "en-IN");
-            // Populate the composer so the officer can review or edit before
-            // sending. Do NOT auto-submit (matches the OCR scan behaviour).
-            if (text) { setVoiceMsg(null); setInput(text); return; }
-          } catch { /* fall through to browser dictation */ }
-          setVoiceMsg(null);
-          startWebSpeech();
-        };
-        mediaRecRef.current = mr;
-        setListening(true);
-        setVoiceMsg(null);
-        mr.start();
-        // Safety auto-stop so a forgotten recording doesn't run forever.
-        setTimeout(() => { if (mr.state !== "inactive") mr.stop(); }, 15000);
-        return;
-      } catch {
-        // mic permission denied or unavailable → browser dictation
-      }
+    try {
+      setVoiceMsg("Allow microphone access, then speak your command.");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      mediaStreamRef.current = stream;
+      const preferred = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"]
+        .find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = preferred ? new MediaRecorder(stream, { mimeType: preferred }) : new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) chunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        setListening(false);
+        setVoiceBusy(false);
+        setVoiceMsg("Microphone recording failed. Check browser microphone permission and try again.");
+      };
+      recorder.onstop = async () => {
+        if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
+        recordTimerRef.current = null;
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        setListening(false);
+        if (!chunks.length) {
+          setVoiceMsg("No audio was captured. Check the selected microphone and try again.");
+          return;
+        }
+        setVoiceBusy(true);
+        setVoiceMsg("Transcribing with Catalyst Zia...");
+        try {
+          const recording = new Blob(chunks, { type: recorder.mimeType || preferred || "audio/webm" });
+          const wav = await recordingToWav(recording);
+          const audio = await blobToBase64(wav);
+          const result = await transcribeAudio(audio, lang === "kn" ? "kn" : "en");
+          if (!result?.text) {
+            setVoiceMsg("Catalyst could not recognise speech. Speak clearly and try again.");
+            return;
+          }
+          await prepareVoiceTranscript(result.text);
+        } catch {
+          setVoiceMsg("Voice processing failed. Check the Catalyst Function and try again.");
+        } finally {
+          setVoiceBusy(false);
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start(250);
+      setListening(true);
+      setVoiceMsg(null);
+      recordTimerRef.current = setTimeout(() => {
+        if (recorder.state === "recording") recorder.stop();
+      }, 12000);
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : "";
+      setListening(false);
+      setVoiceMsg(
+        name === "NotAllowedError"
+          ? "Microphone permission denied. Allow microphone access for this site, then try again."
+          : "No microphone is available. Check the browser input device and try again."
+      );
     }
-    startWebSpeech();
-  }, [listening, lang, ask, startWebSpeech]);
+  }, [lang, prepareVoiceTranscript, startWebSpeech]);
+
+  const toggleMic = useCallback(() => {
+    if (voiceBusy) return;
+    if (listening) {
+      if (mediaRecorderRef.current?.state === "recording") {
+        mediaRecorderRef.current.stop();
+        return;
+      }
+      recRef.current?.stop();
+      return;
+    }
+    if (!voiceSupported) {
+      setVoiceMsg("Voice input needs microphone access in a current Chrome, Edge, Firefox, or Safari browser.");
+      return;
+    }
+    void startCloudRecording();
+  }, [listening, startCloudRecording, voiceBusy, voiceSupported]);
 
   // Scan an FIR document — Catalyst Zia OCR via the Function. Extracted text
   // drops into the ask box (and the Function stores the scan + result).
@@ -426,7 +533,7 @@ export function AssistantClient() {
         ))}
       </div>
 
-      {(listening || voiceMsg) && (
+      {(listening || voiceBusy || voiceMsg) && (
         <p className={cn("mb-1 text-xs", voiceMsg ? "text-warning" : "text-accent")}>
           {voiceMsg || "🎙 Listening… speak now, then tap the mic again to stop."}
         </p>
@@ -471,22 +578,24 @@ export function AssistantClient() {
         <button
           type="button"
           onClick={toggleMic}
-          disabled={!voiceSupported}
           className={cn(
             "btn-ghost h-12 w-12 shrink-0 justify-center px-0",
             listening && "border-accent/60 text-accent",
-            !voiceSupported && "opacity-40"
+            voiceBusy && "border-accent/40 text-accent"
           )}
           title={
-            !voiceSupported
-              ? "Voice input needs Chrome or Edge (Web Speech API). Catalyst Zia Speech powers it in production."
-              : listening
+            listening
               ? "Stop listening"
-              : `Voice input (${lang === "kn" ? "ಕನ್ನಡ" : "English"})`
+              : `Voice command (${lang === "kn" ? "ಕನ್ನಡ" : "English"}) via Catalyst Zia speech and NLP`
           }
           aria-label="Voice input"
+          aria-pressed={listening}
         >
-          {listening ? <MicOff className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
+          {voiceBusy
+            ? <Loader2 className="h-4 w-4 animate-spin" />
+            : listening
+            ? <MicOff className="h-4 w-4 animate-pulse" />
+            : <Mic className="h-4 w-4" />}
         </button>
         <button className="btn-accent h-12 px-5" disabled={!input.trim()}>
           <Send className="h-4 w-4" />

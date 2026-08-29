@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "bake": "node scripts/bake-db.mjs",
+    "cloudscale:export": "node scripts/export-cloudscale-csv.mjs",
     "dossiers": "node scripts/gen-case-dossiers.mjs",
     "seed": "node scripts/seed.mjs",
     "db:reset": "node scripts/seed.mjs --reset",

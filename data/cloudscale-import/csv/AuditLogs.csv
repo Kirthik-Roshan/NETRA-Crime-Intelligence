@@ -1,0 +1,65 @@
+id,ts,user_id,username,role,action,entity,entity_id,request_id,ai_model,processing_ms,detail
+1,2026-06-16 00:00:00,2,,senior_officer,AI_QUERY,case,80,req_drybu8,VL-Qwen3.6-35B-A3B,2000,
+2,2026-06-26 00:00:00,2,,senior_officer,USER_LOGIN,criminal,278,req_6oz09y,,885,
+3,2026-06-26 00:00:00,4,,analyst,SQL_EXECUTED,criminal,219,req_fr06cs,,1509,
+4,2026-07-11 00:00:00,2,,senior_officer,USER_LOGIN,criminal,61,req_3j5rqj,,1249,
+5,2026-07-08 00:00:00,4,,analyst,CASE_VIEWED,criminal,239,req_1f69ta,,2596,
+6,2026-06-24 00:00:00,1,,administrator,AI_QUERY,criminal,138,req_g6g6tf,VL-Qwen3.6-35B-A3B,269,
+7,2026-07-11 00:00:00,4,,analyst,USER_LOGIN,case,11,req_camkco,,2561,
+8,2026-07-14 00:00:00,5,,readonly,AI_QUERY,fir,125,req_7kb91y,VL-Qwen3.6-35B-A3B,1007,
+9,2026-07-07 00:00:00,2,,senior_officer,CASE_VIEWED,query,231,req_c12mzb,,2667,
+10,2026-07-08 00:00:00,3,,investigation_officer,SQL_EXECUTED,query,32,req_c0mm90,,2512,
+11,2026-07-04 00:00:00,1,,administrator,AI_QUERY,case,85,req_2u1942,VL-Qwen3.6-35B-A3B,160,
+12,2026-07-13 00:00:00,4,,analyst,PREDICTION_GENERATED,query,110,req_enccu3,VL-Qwen3.6-35B-A3B,1403,
+13,2026-06-20 00:00:00,4,,analyst,USER_LOGIN,criminal,49,req_19y188,,1385,
+14,2026-07-14 00:00:00,2,,senior_officer,CASE_VIEWED,query,254,req_4lgmcv,,1773,
+15,2026-06-28 00:00:00,3,,investigation_officer,CASE_VIEWED,query,276,req_dc0yr7,,1232,
+16,2026-07-08 00:00:00,4,,analyst,EVIDENCE_UPLOADED,fir,263,req_91xiju,,1171,
+17,2026-06-19 00:00:00,4,,analyst,REPORT_EXPORTED,query,122,req_gb0w17,,2197,
+18,2026-06-24 00:00:00,5,,readonly,USER_LOGIN,query,221,req_3c4ysf,,2994,
+19,2026-07-03 00:00:00,3,,investigation_officer,PREDICTION_GENERATED,fir,168,req_bn9ob9,VL-Qwen3.6-35B-A3B,2749,
+20,2026-07-04 00:00:00,5,,readonly,AI_QUERY,criminal,153,req_7s365h,VL-Qwen3.6-35B-A3B,1602,
+21,2026-06-22 00:00:00,3,,investigation_officer,AI_QUERY,case,143,req_1c601f,VL-Qwen3.6-35B-A3B,1597,
+22,2026-06-15 00:00:00,2,,senior_officer,CASE_VIEWED,case,280,req_g5de4x,,1945,
+23,2026-06-28 00:00:00,1,,administrator,REPORT_EXPORTED,case,31,req_c5wbdk,,2640,
+24,2026-06-25 00:00:00,1,,administrator,REPORT_EXPORTED,fir,116,req_hfydi,,256,
+25,2026-06-19 00:00:00,3,,investigation_officer,CASE_VIEWED,query,172,req_55psjd,,1356,
+26,2026-07-03 00:00:00,5,,readonly,PREDICTION_GENERATED,case,60,req_1jnjkq,VL-Qwen3.6-35B-A3B,1699,
+27,2026-06-16 00:00:00,4,,analyst,CASE_VIEWED,case,163,req_61ejet,,2978,
+28,2026-07-14 00:00:00,1,,administrator,EVIDENCE_UPLOADED,query,8,req_gca9ct,,2138,
+29,2026-06-25 00:00:00,5,,readonly,CASE_VIEWED,criminal,208,req_2zqwqd,,294,
+30,2026-06-21 00:00:00,1,,administrator,AI_QUERY,criminal,55,req_8ibnc9,VL-Qwen3.6-35B-A3B,2483,
+31,2026-07-10 00:00:00,4,,analyst,USER_LOGIN,fir,195,req_1mkyrp,,1116,
+32,2026-06-29 00:00:00,1,,administrator,EVIDENCE_UPLOADED,case,25,req_3v28gr,,210,
+33,2026-07-03 00:00:00,2,,senior_officer,REPORT_EXPORTED,query,170,req_2tjwnm,,2475,
+34,2026-06-16 00:00:00,2,,senior_officer,USER_LOGIN,case,17,req_2wtual,,2949,
+35,2026-07-07 00:00:00,1,,administrator,CASE_VIEWED,query,245,req_ajpzjd,,139,
+36,2026-06-24 00:00:00,4,,analyst,USER_LOGIN,query,143,req_b5glv8,,2977,
+37,2026-07-07 00:00:00,5,,readonly,CASE_VIEWED,fir,177,req_6ty74m,,2687,
+38,2026-07-13 00:00:00,5,,readonly,REPORT_EXPORTED,fir,184,req_790r6a,,2280,
+39,2026-06-30 00:00:00,1,,administrator,CASE_VIEWED,query,16,req_foq1ru,,1436,
+40,2026-07-07 00:00:00,2,,senior_officer,SQL_EXECUTED,case,256,req_3t0kqx,,1408,
+41,2026-07-26 06:25:47,2,dcp.mysuru,senior_officer,USER_LOGIN,user,2,req_3dce23c0102b,,,
+42,2026-07-26 06:26:14,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_c447996bdc1b,fallback,10,Search FIR 104430006202600001
+43,2026-07-26 06:26:55,2,dcp.mysuru,senior_officer,DB_BROWSED,table,CaseMaster,req_f0cb5b60809a,,,
+44,2026-07-26 06:26:55,2,dcp.mysuru,senior_officer,DB_BROWSED,table,CaseMaster,req_4501b56bcad7,,,
+45,2026-07-26 06:27:04,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_27585d06f661,db-lookup,7,104100019202600001
+46,2026-07-26 06:27:16,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_7ae2e0141e69,fallback,5,Show this person's network graph
+47,2026-07-26 06:27:27,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_f025d9ced064,fallback,3,Search FIR 104430006202600001
+48,2026-07-26 06:27:37,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_98b265997111,fallback,2,Details of criminal Ravi Shetty
+49,2026-07-26 06:27:40,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_56c3ed415dcb,rule-engine,1,Which police stations register the most FIRs?
+50,2026-07-26 06:27:51,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_5fd49d06b021,rule-engine,2,Show burglary cases involving repeat offenders near Mysuru in the last six months
+51,2026-07-26 06:28:25,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_16677d4c0fbf,rule-engine,10,get me the crimes associated with anil shetty and his network
+52,2026-07-26 07:10:40,2,dcp.mysuru,senior_officer,USER_LOGIN,user,2,req_8d1ab251bac1,,,
+53,2026-07-26 07:15:45,2,dcp.mysuru,senior_officer,USER_LOGIN,user,2,req_9502f43a2adc,,,
+54,2026-07-26 07:16:07,2,dcp.mysuru,senior_officer,USER_LOGIN,user,2,req_17b3a7edb1fb,,,
+55,2026-07-26 07:16:22,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_a30954a02016,rule-engine,5,Show burglary cases involving repeat offenders near Mysuru in the last six months
+56,2026-07-26 07:16:37,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_229a55467db4,rule-engine,5,Which suspects appear across multiple districts?
+57,2026-07-26 07:26:51,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_cf06ac7c165c,fallback,643,hi
+58,2026-07-26 07:27:34,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_d0c57f39b2df,rule-engine,6,Explain the emerging relationship between vehicle theft and drug trafficking across Karnataka.
+59,2026-07-26 07:27:52,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_866138283005,rule-engine,5,Suggest investigative hypotheses for the increase in cybercrime complaints over the past year.
+60,2026-07-26 07:28:13,2,dcp.mysuru,senior_officer,AI_QUERY,query,,req_69672c8a34dd,rule-engine,4,Generate SQL to compare crime trends across districts using multiple factors.
+61,2026-07-26 07:50:25,2,dcp.mysuru,senior_officer,USER_LOGIN,user,2,req_191212c55729,,,
+62,2026-07-26 07:51:27,1,admin,administrator,USER_LOGIN,user,1,req_fa8bc0fc480d,,,
+63,2026-07-26 15:20:58,1,admin,administrator,USER_LOGIN,user,1,req_05f23ea9476f,,,
+64,2026-07-26 15:21:08,1,admin,administrator,PREDICTION_GENERATED,predictions,,req_df52ee49b97c,rule-engine,,

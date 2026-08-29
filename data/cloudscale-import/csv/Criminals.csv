@@ -1,0 +1,71 @@
+id,name,aliases,gender,age,status,risk_score,crime_category,known_locations,home_district,first_seen,photo_seed,notes,fir_count,arrest_count
+1,Imran Reddy,"[""Imran \""Dodda\""""]",M,51,at_large,73,Cyber Crime,"[""Tumakuru"",""Udupi"",""Bengaluru Urban"",""Shivamogga""]",Shivamogga,2025-04-21 00:00:00,c0-2594,,14,7
+2,Ganesh Naik,[],M,36,at_large,94,Property Crime,"[""Mysuru"",""Belagavi""]",Belagavi,2023-07-17 00:00:00,c1-82162,History of repeat offenses across districts. Profile auto-resolved from Accused records.,5,2
+3,Harish Kulkarni,"[""Harish \""Money\""""]",M,57,at_large,50,Organized Crime,"[""Ballari"",""Vijayapura"",""Mysuru"",""Belagavi""]",Belagavi,2024-05-30 00:00:00,c2-72126,History of repeat offenses across districts. Profile auto-resolved from Accused records.,8,3
+4,Darshan Hebbar,[],M,50,arrested,53,Narcotics,"[""Udupi"",""Mysuru""]",Mysuru,2025-08-26 00:00:00,c3-77359,,2,1
+5,Ravi Rai,"[""Ravi \""Chinna\""""]",M,29,arrested,94,Property Crime,"[""Ballari"",""Udupi"",""Tumakuru""]",Tumakuru,2023-07-19 00:00:00,c4-2689,History of repeat offenses across districts. Profile auto-resolved from Accused records.,13,7
+6,Deepak Kumar,"[""Deepak \""Silent\""""]",M,56,on_bail,82,Financial Crime,"[""Mandya"",""Udupi"",""Belagavi"",""Shivamogga""]",Shivamogga,2023-11-15 00:00:00,c5-393,,14,3
+7,Praveen Desai,"[""Praveen \""Money\""""]",M,55,at_large,44,Violent Crime,"[""Udupi"",""Hubballi-Dharwad"",""Mandya"",""Mysuru""]",Mysuru,2025-03-30 00:00:00,c6-83544,,6,2
+8,Sowmya Achar,[],F,54,on_bail,26,Financial Crime,"[""Dakshina Kannada"",""Ballari""]",Ballari,2023-06-10 00:00:00,c7-73421,History of repeat offenses across districts. Profile auto-resolved from Accused records.,1,0
+9,Basavaraj Kumar,[],M,49,arrested,62,Financial Crime,"[""Dakshina Kannada"",""Shivamogga"",""Ballari""]",Ballari,2024-09-28 00:00:00,c8-25508,History of repeat offenses across districts. Profile auto-resolved from Accused records.,12,6
+10,Divya Kumar,"[""Divya \""Tiger\""""]",F,39,convicted,93,Cyber Crime,"[""Kalaburagi"",""Tumakuru"",""Hubballi-Dharwad""]",Tumakuru,2024-10-05 00:00:00,c9-25253,,9,2
+11,Ganesh Reddy,"[""Ganesh \""Anna\""""]",M,31,on_bail,21,Narcotics,"[""Vijayapura"",""Kalaburagi"",""Udupi"",""Mandya""]",Mandya,2024-01-23 00:00:00,c10-9933,History of repeat offenses across districts. Profile auto-resolved from Accused records.,17,8
+12,Rekha Naik,"[""Rekha \""Chaku\""""]",F,23,at_large,31,Property Crime,"[""Mysuru"",""Bengaluru Urban""]",Bengaluru Urban,2025-02-14 00:00:00,c11-34223,History of repeat offenses across districts. Profile auto-resolved from Accused records.,5,1
+13,Meena Gowda,[],F,20,at_large,29,Property Crime,"[""Belagavi"",""Bengaluru Urban""]",Bengaluru Urban,2025-03-31 00:00:00,c12-76899,History of repeat offenses across districts. Profile auto-resolved from Accused records.,4,1
+14,Riyaz Shetty,[],M,20,at_large,92,Narcotics,"[""Bengaluru Urban"",""Mysuru"",""Dakshina Kannada""]",Dakshina Kannada,2025-09-10 00:00:00,c13-80085,History of repeat offenses across districts. Profile auto-resolved from Accused records.,9,4
+15,Ganesh Hegde,[],M,37,on_bail,28,Violent Crime,"[""Mandya"",""Bengaluru Urban"",""Ballari"",""Dakshina Kannada""]",Dakshina Kannada,2024-09-21 00:00:00,c14-37270,,12,0
+16,Faizal Reddy,"[""Faizal \""Anna\""""]",M,21,at_large,73,Financial Crime,"[""Dakshina Kannada"",""Mysuru"",""Udupi""]",Dakshina Kannada,2023-08-20 00:00:00,c15-49579,,7,3
+17,Chetan Desai,[],M,41,arrested,33,Financial Crime,"[""Ballari"",""Shivamogga"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2024-12-05 00:00:00,c16-22812,History of repeat offenses across districts. Profile auto-resolved from Accused records.,8,1
+18,Faizal Kumar,"[""Faizal \""Chinna\""""]",M,46,at_large,37,Property Crime,"[""Udupi"",""Mandya"",""Vijayapura"",""Mysuru""]",Mysuru,2025-08-02 00:00:00,c17-27872,History of repeat offenses across districts. Profile auto-resolved from Accused records.,15,10
+19,Riyaz Kumar,[],M,46,on_bail,51,Narcotics,"[""Vijayapura"",""Ballari""]",Ballari,2024-09-30 00:00:00,c18-98296,,4,1
+20,Sunil Shetty,"[""Sunil \""Circuit\""""]",M,36,convicted,87,Narcotics,"[""Bengaluru Urban"",""Tumakuru""]",Tumakuru,2024-06-18 00:00:00,c19-28595,History of repeat offenses across districts. Profile auto-resolved from Accused records.,8,4
+21,Girish Kulkarni,"[""Girish \""Chinna\""""]",M,25,on_bail,48,Financial Crime,"[""Belagavi"",""Mysuru""]",Mysuru,2025-08-30 00:00:00,c20-81678,,8,4
+22,Vinay Bhat,[],M,34,on_bail,65,Narcotics,"[""Dakshina Kannada"",""Ballari"",""Vijayapura""]",Vijayapura,2025-12-09 00:00:00,c21-75639,,9,3
+23,Mahesh Rai,[],M,56,at_large,55,Financial Crime,"[""Bengaluru Urban"",""Mysuru"",""Hubballi-Dharwad"",""Mandya""]",Mandya,2025-04-10 00:00:00,c22-32009,History of repeat offenses across districts. Profile auto-resolved from Accused records.,18,8
+24,Kavya Rai,[],F,39,arrested,82,Violent Crime,"[""Mandya"",""Tumakuru"",""Hubballi-Dharwad"",""Vijayapura""]",Vijayapura,2025-11-30 00:00:00,c23-89864,,14,3
+25,Nisha Desai,[],F,39,convicted,75,Property Crime,"[""Udupi"",""Belagavi""]",Belagavi,2025-04-01 00:00:00,c24-53947,History of repeat offenses across districts. Profile auto-resolved from Accused records.,7,2
+26,Anil Rai,[],M,40,at_large,29,Property Crime,"[""Kalaburagi"",""Vijayapura"",""Mysuru"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2024-09-25 00:00:00,c25-26773,,18,7
+27,Girish Achar,"[""Girish \""Money\""""]",M,48,arrested,67,Violent Crime,"[""Udupi"",""Hubballi-Dharwad"",""Dakshina Kannada"",""Mandya""]",Mandya,2025-07-15 00:00:00,c26-71994,,13,3
+28,Anil Murthy,"[""Anil \""Tiger\""""]",M,42,on_bail,31,Narcotics,"[""Tumakuru"",""Dakshina Kannada"",""Belagavi"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2025-08-11 00:00:00,c27-59952,History of repeat offenses across districts. Profile auto-resolved from Accused records.,12,3
+29,Kiran Hegde,"[""Kiran \""Bombat\""""]",M,54,arrested,36,Cyber Crime,"[""Belagavi"",""Mandya"",""Ballari"",""Udupi""]",Udupi,2024-01-06 00:00:00,c28-591,,12,3
+30,Sunil Hegde,"[""Sunil \""Bullet\""""]",M,38,convicted,30,Cyber Crime,"[""Dakshina Kannada"",""Bengaluru Urban"",""Ballari""]",Ballari,2023-05-18 00:00:00,c29-13983,,14,4
+31,Prakash Bhat,[],M,22,at_large,71,Cyber Crime,"[""Dakshina Kannada"",""Shivamogga""]",Shivamogga,2025-07-28 00:00:00,c30-51708,History of repeat offenses across districts. Profile auto-resolved from Accused records.,4,1
+32,Vinay Naik,"[""Vinay \""Tiger\""""]",M,23,at_large,50,Property Crime,"[""Udupi"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2024-04-16 00:00:00,c31-80788,History of repeat offenses across districts. Profile auto-resolved from Accused records.,6,2
+33,Mahesh Murthy,"[""Mahesh \""Circuit\""""]",M,58,on_bail,88,Narcotics,"[""Vijayapura"",""Mandya""]",Vijayapura,2025-11-09 00:00:00,c32-38218,,10,3
+34,Pooja Nayak,[],F,36,convicted,64,Cyber Crime,"[""Bengaluru Urban"",""Ballari"",""Dakshina Kannada"",""Udupi""]",Udupi,2023-08-09 00:00:00,c33-58350,,15,3
+35,Chetan Shetty,"[""Chetan \""Rowdy\""""]",M,48,at_large,66,Cyber Crime,"[""Hubballi-Dharwad"",""Shivamogga"",""Kalaburagi"",""Ballari""]",Ballari,2025-03-30 00:00:00,c34-19248,,22,8
+36,Basavaraj Reddy,[],M,58,on_bail,53,Violent Crime,"[""Tumakuru"",""Vijayapura""]",Vijayapura,2024-04-29 00:00:00,c35-45728,,5,1
+37,Abdul Shetty,[],M,58,on_bail,32,Violent Crime,"[""Udupi"",""Mysuru"",""Vijayapura""]",Vijayapura,2024-03-04 00:00:00,c36-52541,History of repeat offenses across districts. Profile auto-resolved from Accused records.,9,3
+38,Anil Shetty,[],M,51,convicted,29,Organized Crime,"[""Shivamogga"",""Dakshina Kannada"",""Mysuru""]",Mysuru,2024-07-27 00:00:00,c37-18929,,13,4
+39,Harish Murthy,"[""Harish \""Anna\""""]",M,19,on_bail,93,Narcotics,"[""Belagavi"",""Dakshina Kannada""]",Dakshina Kannada,2025-07-30 00:00:00,c38-69122,,9,3
+40,Umesh Shastri,[],M,42,on_bail,78,Financial Crime,"[""Mysuru"",""Udupi"",""Dakshina Kannada"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2025-12-15 00:00:00,c39-76965,,10,4
+41,Shivaraj Hebbar,[],M,48,at_large,28,Violent Crime,"[""Vijayapura"",""Mysuru"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2023-09-29 00:00:00,c40-11482,,10,3
+42,Anil Rai,"[""Anil \""Bombat\""""]",M,36,convicted,21,Narcotics,"[""Bengaluru Urban"",""Mysuru"",""Vijayapura"",""Tumakuru""]",Tumakuru,2025-04-02 00:00:00,c41-1409,,8,0
+43,Harish Shastri,"[""Harish \""Bombat\""""]",M,33,on_bail,43,Property Crime,"[""Mandya"",""Kalaburagi"",""Belagavi"",""Dakshina Kannada""]",Dakshina Kannada,2023-04-23 00:00:00,c42-98001,,15,6
+44,Santosh Rai,[],M,24,convicted,80,Financial Crime,"[""Mandya"",""Ballari"",""Tumakuru"",""Vijayapura""]",Vijayapura,2024-07-17 00:00:00,c43-47518,,13,6
+45,Lakshmi Kumar,[],F,26,at_large,62,Violent Crime,"[""Mysuru"",""Bengaluru Urban""]",Bengaluru Urban,2025-08-26 00:00:00,c44-22839,History of repeat offenses across districts. Profile auto-resolved from Accused records.,11,3
+46,Mahesh Patil,[],M,25,at_large,45,Financial Crime,"[""Tumakuru"",""Mysuru"",""Dakshina Kannada""]",Dakshina Kannada,2025-09-16 00:00:00,c45-86513,History of repeat offenses across districts. Profile auto-resolved from Accused records.,4,0
+47,Yashwanth Rao,[],M,53,convicted,48,Cyber Crime,"[""Tumakuru"",""Dakshina Kannada""]",Dakshina Kannada,2024-08-23 00:00:00,c46-26847,,7,4
+48,Mahesh Hegde,[],M,58,arrested,95,Organized Crime,"[""Hubballi-Dharwad"",""Bengaluru Urban""]",Bengaluru Urban,2024-11-16 00:00:00,c47-16746,,9,3
+49,Santosh Bhat,"[""Santosh \""Bombat\""""]",M,30,arrested,78,Narcotics,"[""Mysuru"",""Tumakuru""]",Tumakuru,2023-11-09 00:00:00,c48-79207,,9,2
+50,Roopa Rao,"[""Roopa \""Anna\""""]",F,33,at_large,67,Narcotics,"[""Shivamogga"",""Vijayapura""]",Vijayapura,2025-03-26 00:00:00,c49-95225,,12,5
+51,Ramesh Patil,[],M,40,convicted,49,Narcotics,"[""Bengaluru Urban"",""Mysuru"",""Shivamogga"",""Mandya""]",Mandya,2025-08-12 00:00:00,c50-43864,History of repeat offenses across districts. Profile auto-resolved from Accused records.,9,5
+52,Divya Kumar,[],F,58,at_large,90,Cyber Crime,"[""Dakshina Kannada"",""Bengaluru Urban""]",Bengaluru Urban,2025-03-13 00:00:00,c51-31900,,4,4
+53,Lokesh Reddy,"[""Lokesh \""Chinna\""""]",M,54,arrested,40,Narcotics,"[""Mysuru"",""Hubballi-Dharwad"",""Belagavi"",""Tumakuru""]",Tumakuru,2024-04-11 00:00:00,c52-29359,,16,7
+54,Meena Kumar,"[""Meena \""Bullet\""""]",F,21,convicted,97,Violent Crime,"[""Vijayapura"",""Belagavi""]",Belagavi,2025-12-12 00:00:00,c53-15809,,3,1
+55,Darshan Achar,[],M,43,on_bail,63,Organized Crime,"[""Udupi"",""Bengaluru Urban"",""Mandya""]",Mandya,2023-09-01 00:00:00,c54-80495,,13,3
+56,Shruthi Kumar,[],F,44,arrested,44,Cyber Crime,"[""Dakshina Kannada"",""Udupi"",""Vijayapura""]",Vijayapura,2024-10-23 00:00:00,c55-9830,,13,7
+57,Meena Shastri,"[""Meena \""Silent\""""]",F,24,at_large,68,Cyber Crime,"[""Udupi"",""Belagavi""]",Belagavi,2024-01-06 00:00:00,c56-3306,,3,1
+58,Abdul Desai,"[""Abdul \""Chaku\""""]",M,23,convicted,24,Financial Crime,"[""Udupi"",""Tumakuru"",""Mandya""]",Mandya,2024-02-15 00:00:00,c57-44662,History of repeat offenses across districts. Profile auto-resolved from Accused records.,12,5
+59,Riyaz Nayak,"[""Riyaz \""Chaku\""""]",M,39,convicted,61,Property Crime,"[""Bengaluru Urban"",""Vijayapura""]",Vijayapura,2024-06-13 00:00:00,c58-70339,,4,1
+60,Prakash Hebbar,[],M,23,on_bail,76,Property Crime,"[""Hubballi-Dharwad"",""Ballari""]",Ballari,2025-08-05 00:00:00,c59-78793,History of repeat offenses across districts. Profile auto-resolved from Accused records.,8,2
+61,Shruthi Gowda,[],F,23,on_bail,44,Narcotics,"[""Tumakuru"",""Ballari"",""Dakshina Kannada"",""Udupi""]",Udupi,2025-04-29 00:00:00,c60-9546,History of repeat offenses across districts. Profile auto-resolved from Accused records.,11,1
+62,Riyaz Hebbar,"[""Riyaz \""Rowdy\""""]",M,27,at_large,60,Violent Crime,"[""Tumakuru"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2025-09-24 00:00:00,c61-41616,,10,2
+63,Ravi Reddy,"[""Ravi \""Bullet\""""]",M,55,convicted,86,Property Crime,"[""Bengaluru Urban"",""Dakshina Kannada"",""Belagavi""]",Belagavi,2023-04-13 00:00:00,c62-10370,,9,5
+64,Sunil Shastri,[],M,44,on_bail,21,Organized Crime,"[""Mysuru"",""Hubballi-Dharwad"",""Udupi"",""Shivamogga""]",Shivamogga,2024-08-06 00:00:00,c63-2385,,19,8
+65,Nagaraj Patil,"[""Nagaraj \""Bullet\""""]",M,29,arrested,35,Narcotics,"[""Tumakuru"",""Belagavi"",""Kalaburagi"",""Mysuru""]",Mysuru,2023-08-08 00:00:00,c64-49115,,19,8
+66,Ganesh Nayak,"[""Ganesh \""Anna\""""]",M,46,at_large,32,Organized Crime,"[""Kalaburagi"",""Bengaluru Urban"",""Hubballi-Dharwad"",""Udupi""]",Udupi,2023-08-11 00:00:00,c65-39293,History of repeat offenses across districts. Profile auto-resolved from Accused records.,21,10
+67,Shivaraj Achar,[],M,52,arrested,38,Violent Crime,"[""Mandya"",""Belagavi""]",Belagavi,2025-03-09 00:00:00,c66-26710,,4,1
+68,Darshan Rai,[],M,47,convicted,96,Narcotics,"[""Vijayapura"",""Mandya""]",Mandya,2025-05-12 00:00:00,c67-83029,,4,1
+69,Ramesh Shastri,"[""Ramesh \""Anna\""""]",M,57,at_large,49,Narcotics,"[""Belagavi"",""Vijayapura"",""Ballari"",""Hubballi-Dharwad""]",Hubballi-Dharwad,2024-12-07 00:00:00,c68-22881,History of repeat offenses across districts. Profile auto-resolved from Accused records.,14,5
+70,Ramesh Murthy,[],M,57,at_large,26,Violent Crime,"[""Tumakuru"",""Belagavi"",""Vijayapura""]",Vijayapura,2024-08-02 00:00:00,c69-62046,,8,4

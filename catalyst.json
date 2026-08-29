@@ -11,6 +11,12 @@
       "dir": "functions"
     }
   },
+  "functions": {
+    "source": "functions",
+    "targets": [
+      "ai_quickml"
+    ]
+  },
   "services": {
     "data_store": "Primary relational store (mirrors the SQLite schema in src/lib/schema.sql)",
     "stratus": "Object storage for evidence files / exported PDFs",
@@ -19,5 +25,11 @@
     "quickml": "LLM serving (VL-Qwen3.6-35B-A3B) + RAG + embeddings — the only AI backend",
     "zia": "OCR / Speech-to-Text / Translation (Kannada) via Zia Services",
     "api_gateway": "Routing, throttling and auth in front of Functions"
-  }
+  },
+  "slate": [
+    {
+      "name": "netra-crime-intelligence",
+      "source": "out"
+    }
+  ]
 }

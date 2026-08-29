@@ -11,7 +11,7 @@
  * mints a fresh access token on demand, cached until just before expiry — so
  * nothing expires. Env (function Configuration), non-reserved QML_ prefix:
  *   QML_CLIENT_ID, QML_CLIENT_SECRET, QML_REFRESH_TOKEN, QML_ORG, QML_PROJECT_ID
- *   Optional: QML_ACCOUNTS_BASE, QML_DC_BASE, QML_LLM_PATH (vlm/chat),
+ *   Optional: QML_ACCOUNTS_BASE, QML_DC_BASE, QML_LLM_PATH (llm/chat),
  *             QML_RAG_PATH (rag/answer), QML_AUTH_SCHEME (Zoho-oauthtoken),
  *             CORS_ALLOW_ORIGIN.
  *
@@ -22,6 +22,7 @@ const catalyst = require("zcatalyst-sdk-node");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { Blob } = require("buffer");
 
 const OCR_TABLE = process.env.OCR_TABLE || "OcrResult";
 // File Store folder ID (numeric) for scanned evidence — create the folder in
@@ -51,14 +52,24 @@ const DC_BASE = process.env.QML_DC_BASE || "https://api.catalyst.zoho.in";
 const ORG = process.env.QML_ORG;
 const PROJECT = process.env.QML_PROJECT_ID;
 const SCHEME = process.env.QML_AUTH_SCHEME || "Zoho-oauthtoken";
-const LLM_PATH = process.env.QML_LLM_PATH || "vlm/chat";
+// NETRA's assistant sends text prompts. `vlm/chat` expects an image stream,
+// while `llm/chat` accepts the text-only request bodies used below. Older
+// deployments set `vlm/chat`; normalize that stale setting during rollout.
+const configuredLlmPath = process.env.QML_LLM_PATH || "llm/chat";
+const LLM_PATH = configuredLlmPath === "vlm/chat" ? "llm/chat" : configuredLlmPath;
 
-// Allow any *.onslate.in origin (the app may live on different Slate URLs), or a
-// specific CORS_ALLOW_ORIGIN, else "*". Reflecting the request origin keeps the
-// AI working whichever onslate deployment calls it.
+// Allow the NETRA browser environments and keep unrelated sites blocked.
+// `Vary: Origin` prevents a CDN from reusing another origin's CORS response.
 function allowedOrigin(origin) {
-  if (origin && /\.onslate\.in$/i.test(origin)) return origin;
-  return process.env.CORS_ALLOW_ORIGIN || "*";
+  if (origin) {
+    try {
+      const { protocol, hostname } = new URL(origin);
+      const local = (hostname === "localhost" || hostname === "127.0.0.1") && (protocol === "http:" || protocol === "https:");
+      const catalyst = protocol === "https:" && (hostname.endsWith(".onslate.in") || hostname.endsWith(".catalystserverless.in"));
+      if (local || catalyst) return origin;
+    } catch { /* invalid Origin; use the configured fallback */ }
+  }
+  return process.env.CORS_ALLOW_ORIGIN || "https://netra-crime-intellig-tivoagho.onslate.in";
 }
 
 function send(res, code, obj, origin) {
@@ -69,6 +80,7 @@ function send(res, code, obj, origin) {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
     "Content-Length": bytes.length,
   });
   res.end(bytes);
@@ -137,6 +149,23 @@ async function zia(path, body, token) {
   return { ok: r.ok, status: r.status, json, text };
 }
 
+// Zia speech-to-text accepts multipart/form-data, with the recording in the
+// `file` field and a two-letter language code. JSON/base64 requests reach the
+// model but are rejected before inference.
+async function ziaTranscribe(audio, mime, filename, language, token) {
+  const form = new FormData();
+  form.append("file", new Blob([audio], { type: mime || "audio/wav" }), filename || "voice.wav");
+  form.append("language", language);
+  const r = await tfetch(`${DC_BASE}/quickml/api/v1/models/zia/${process.env.ZIA_TRANSCRIBE_PATH || "audio/transcribe"}`, {
+    method: "POST",
+    headers: { Authorization: `${SCHEME} ${token}`, "CATALYST-ORG": ORG },
+    body: form,
+  }, 30000, "zia:audio/transcribe");
+  const text = await r.text();
+  let json = null; try { json = JSON.parse(text); } catch { /* non-JSON */ }
+  return { ok: r.ok, status: r.status, json, text };
+}
+
 function readBody(req) {
   return new Promise((resolve) => {
     let b = "";
@@ -172,6 +201,65 @@ module.exports = async (req, res) => {
         org: !!ORG, project: !!PROJECT,
         client: !!process.env.QML_CLIENT_ID, secret: !!process.env.QML_CLIENT_SECRET, refresh: !!process.env.QML_REFRESH_TOKEN,
       }});
+      return;
+    }
+
+    // Cloud Scale reads use Catalyst's server-side SDK credentials, not
+    // QuickML. Keep these available even while QuickML is being configured.
+    if (mode === "records" || mode === "records:list") {
+      const app = catalyst.initialize(req, { scope: "admin" });
+      const allow = (process.env.DATASTORE_TABLES || `${OCR_TABLE},Cases,Criminals,Firs`).split(",").map((s) => s.trim()).filter(Boolean);
+      const table = mode === "records:list" ? OCR_TABLE : (payload.table || OCR_TABLE);
+      if (!allow.includes(table)) { reply(403, { error: "table not allowed", allowed: allow }); return; }
+      try {
+        const requested = Math.min(1000, Math.max(1, Number(payload.max) || 50));
+        const dsTable = app.datastore().table(table);
+        const rows = [];
+        let nextToken;
+        do {
+          const page = await dsTable.getPagedRows({ nextToken, maxRows: Math.min(200, requested - rows.length) });
+          rows.push(...((page && page.data) || []));
+          nextToken = page && page.next_token;
+        } while (nextToken && rows.length < requested);
+        reply(200, { rows });
+      } catch (e) { reply(200, { rows: [] }); }
+      return;
+    }
+
+    if (mode === "notif:list" || mode === "notif:update") {
+      const app = catalyst.initialize(req, { scope: "admin" });
+      const ds = app.datastore().table(process.env.NOTIF_TABLE || "Notifications");
+      if (mode === "notif:list") {
+        try {
+          const page = await ds.getPagedRows({ maxRows: Math.min(100, Number(payload.max) || 50) });
+          reply(200, { rows: (page && page.data) || [] });
+        } catch (e) { reply(200, { rows: [] }); }
+        return;
+      }
+      const rowid = payload.rowid || payload.id;
+      const status = payload.status;
+      const allowed = ["unread", "read", "archived", "action_required"];
+      if (!rowid || !allowed.includes(status)) { reply(400, { error: "rowid and valid status required", allowed }); return; }
+      try {
+        await ds.updateRow({ ROWID: rowid, status });
+        reply(200, { ok: true, rowid, status });
+      } catch (e) { reply(200, { ok: false, error: String((e && e.message) || e) }); }
+      return;
+    }
+
+    // Catalyst Zia speech-to-text produces the command; this second Zia model
+    // extracts its language, entities, key phrases, and intent metadata before
+    // QuickML/RAG answers it.
+    if (mode === "voice:nlp") {
+      const text = String(payload.text || "").trim().slice(0, 1500);
+      if (!text) { reply(400, { error: "text required" }); return; }
+      try {
+        const app = catalyst.initialize(req, { scope: "admin" });
+        const analytics = await app.zia().getTextAnalytics([text]);
+        reply(200, { text, analytics });
+      } catch (e) {
+        reply(502, { error: "Zia Text Analytics error", detail: String((e && e.message) || e).slice(0, 300) });
+      }
       return;
     }
 
@@ -251,45 +339,6 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // Generic Cloud Scale Data Store READ — allowlisted tables only, read-only,
-    // row-capped. Anonymous callers can list records but not run arbitrary ZCQL.
-    // Set DATASTORE_TABLES="OcrResult,Cases,Firs" to expose more tables.
-    if (mode === "records" || mode === "records:list") {
-      const app = catalyst.initialize(req, { scope: "admin" });
-      const allow = (process.env.DATASTORE_TABLES || `${OCR_TABLE},Cases,Criminals,Firs`).split(",").map((s) => s.trim()).filter(Boolean);
-      const table = mode === "records:list" ? OCR_TABLE : (payload.table || OCR_TABLE);
-      if (!allow.includes(table)) { reply(403, { error: "table not allowed", allowed: allow }); return; }
-      try {
-        const page = await app.datastore().table(table).getPagedRows({ maxRows: Math.min(200, Number(payload.max) || 50) });
-        reply(200, { rows: (page && page.data) || [] });
-      } catch (e) { reply(200, { rows: [] }); }
-      return;
-    }
-
-    // Notifications — durable read/unread/archived state in a Data Store table
-    // (NOTIF_TABLE, default "Notifications"). Read + status update only.
-    // Empty-safe: an unprovisioned table lists nothing rather than erroring.
-    if (mode === "notif:list" || mode === "notif:update") {
-      const app = catalyst.initialize(req, { scope: "admin" });
-      const ds = app.datastore().table(process.env.NOTIF_TABLE || "Notifications");
-      if (mode === "notif:list") {
-        try {
-          const page = await ds.getPagedRows({ maxRows: Math.min(100, Number(payload.max) || 50) });
-          reply(200, { rows: (page && page.data) || [] });
-        } catch (e) { reply(200, { rows: [] }); }
-        return;
-      }
-      const rowid = payload.rowid || payload.id;
-      const status = payload.status;
-      const allowed = ["unread", "read", "archived", "action_required"];
-      if (!rowid || !allowed.includes(status)) { reply(400, { error: "rowid and valid status required", allowed }); return; }
-      try {
-        await ds.updateRow({ ROWID: rowid, status });
-        reply(200, { ok: true, rowid, status });
-      } catch (e) { reply(200, { ok: false, error: String((e && e.message) || e) }); }
-      return;
-    }
-
     if (mode === "tts") {
       if (!payload.text) { reply(400, { error: "text required" }); return; }
       // Zia TTS model body: text + short language code + speaker/prosody.
@@ -324,61 +373,38 @@ module.exports = async (req, res) => {
 
     if (mode === "transcribe") {
       if (!payload.audio) { reply(400, { error: "audio required" }); return; }
-      // Zia Audio-to-Text model — confirmed path (see scripts/catalyst-check.mjs
-      // and src/lib/catalyst.ts's ziaTranscribe, which hit this same endpoint
-      // directly). Response field read defensively across likely names.
-      const up = await zia(process.env.ZIA_TRANSCRIBE_PATH || "audio/transcribe", {
-        audio: payload.audio,
-        language: String(payload.language || "en").split("-")[0],
-      }, token);
+      const clean = String(payload.audio).replace(/^data:[^;]+;base64,/, "");
+      const audio = Buffer.from(clean, "base64");
+      if (!audio.length) { reply(400, { error: "valid base64 audio required" }); return; }
+      if (audio.length > 6 * 1024 * 1024) { reply(413, { error: "audio must be 6 MB or smaller" }); return; }
+      const language = String(payload.language || "en").split("-")[0].slice(0, 2).toLowerCase();
+      const filename = path.basename(String(payload.name || "voice.wav")).replace(/[^a-zA-Z0-9._-]/g, "-");
+      const up = await ziaTranscribe(audio, payload.mime || "audio/wav", filename, language, token);
       if (!up.ok) { reply(502, { error: "Zia transcribe error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
-      reply(200, { text: d.transcribed_text ?? d.text ?? d.transcript ?? d.output ?? null });
+      reply(200, {
+        text: d.transcribed_text ?? d.text ?? d.transcript ?? d.output ?? null,
+        language: d.language ?? language,
+        processing_ms: d.processing_time_ms ?? null,
+      });
       return;
     }
 
-    // RAG, Cloud Scale edition: retrieval comes from Cloud Scale Search over the
-    // Data Store (the ONLY data source); QuickML LLM only phrases the answer from
-    // the retrieved rows. Which tables/columns to search is env-driven so the
-    // schema stays owned by the app, not hardcoded here:
-    //   SEARCH_TABLE_COLUMNS = {"Firs":["BriefFacts","CrimeNo"],"Cases":["title"]}
-    //   SEARCH_SELECT_COLUMNS (optional) = same shape — columns to return
+    // RAG endpoint uses the QuickML Knowledge Base containing the case dossiers.
+    // Its input schema is exactly `{ query }`; adding inference-only keys such
+    // as `top_k` makes the endpoint reject the request.
     if (mode === "rag") {
       const query = payload.query || payload.prompt;
       if (!query) { reply(400, { error: "query required" }); return; }
-      const app = catalyst.initialize(req, { scope: "admin" });
-
-      // 1. Retrieve from Cloud Scale Search.
-      const hits = [];
-      try {
-        const cfg = JSON.parse(process.env.SEARCH_TABLE_COLUMNS || "{}");
-        if (Object.keys(cfg).length) {
-          const s = app.search();
-          const exec = (s.executeSearch || s.searchDocuments).bind(s);
-          const req2 = { search_string: query, search_table_columns: cfg };
-          if (process.env.SEARCH_SELECT_COLUMNS) req2.select_table_columns = JSON.parse(process.env.SEARCH_SELECT_COLUMNS);
-          const found = await exec(req2);
-          for (const [tbl, rows] of Object.entries(found || {})) {
-            for (const r of (Array.isArray(rows) ? rows : []).slice(0, 6)) hits.push({ table: tbl, row: r });
-          }
-        }
-      } catch (e) { /* Search not configured/indexed yet — graceful empty */ }
-
-      if (!hits.length) {
-        reply(200, { answer: "No matching records were found in Cloud Scale for that query. (Configure Cloud Scale Search + SEARCH_TABLE_COLUMNS.)", sources: [] });
-        return;
-      }
-
-      // 2. Ground the LLM answer strictly in the retrieved Cloud Scale rows.
-      const context = hits.map((h) => `[${h.table}] ${JSON.stringify(h.row)}`).join("\n").slice(0, 4000);
-      const up = await quickml(LLM_PATH, {
-        prompt: `Records retrieved from Cloud Scale:\n${context}\n\nOfficer's question: ${query}`,
-        guided_prompt: "You are NETRA, a Karnataka State Police assistant. Answer ONLY from the supplied Cloud Scale records. Be factual and brief. If they don't answer it, say so.",
-        temperature: 0.2, max_tokens: 700,
-      }, token);
+      const up = await quickml(process.env.QML_RAG_PATH || "rag/answer", { query }, token);
+      if (!up.ok) { reply(502, { error: "QuickML RAG error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
       const answer = d.response ?? d.answer ?? d.output ?? d.text ?? null;
-      const sources = hits.map((h) => ({ title: h.table, snippet: JSON.stringify(h.row).slice(0, 240), score: null }));
+      const sources = (Array.isArray(d.retrieved_nodes) ? d.retrieved_nodes : []).slice(0, 6).map((node, i) => ({
+        title: node.title || node.document_name || `Case dossier ${i + 1}`,
+        snippet: String(node.content || node.text || "").slice(0, 240),
+        score: node.score ?? null,
+      }));
       reply(200, { answer, sources });
       return;
     }
