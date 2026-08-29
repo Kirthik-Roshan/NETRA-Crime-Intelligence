@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Keep the dev compiler separate from production/export builds. Running
+  // both at once otherwise lets them overwrite the same webpack chunks.
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+
   // Slate serves static/CDN content but drops any response its Node function
   // renders at runtime (proven: a trivial API route returns 200 + empty body,
   // dynamic SSR pages hang → 524). So NETRA ships as a fully static site: every
