@@ -324,10 +324,10 @@ module.exports = async (req, res) => {
 
     if (mode === "transcribe") {
       if (!payload.audio) { reply(400, { error: "audio required" }); return; }
-      // Zia Audio-to-Text model. Exact path/fields TBC from the console — set
-      // ZIA_TRANSCRIBE_PATH once confirmed (default matches the tts/translate
-      // naming). Response field read defensively across likely names.
-      const up = await zia(process.env.ZIA_TRANSCRIBE_PATH || "transcribe", {
+      // Zia Audio-to-Text model — confirmed path (see scripts/catalyst-check.mjs
+      // and src/lib/catalyst.ts's ziaTranscribe, which hit this same endpoint
+      // directly). Response field read defensively across likely names.
+      const up = await zia(process.env.ZIA_TRANSCRIBE_PATH || "audio/transcribe", {
         audio: payload.audio,
         language: String(payload.language || "en").split("-")[0],
       }, token);
