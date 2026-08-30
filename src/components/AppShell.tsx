@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye } from "lucide-react";
 import { getClientUser } from "@/lib/auth-client";
 import type { SessionUser } from "@/lib/types";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { StatusBar } from "@/components/StatusBar";
 import { AmbientBackground } from "@/components/AmbientBackground";
+import { Emblem } from "@/components/Emblem";
 
 /**
  * Client-side auth gate + app chrome for the static build.
@@ -36,8 +36,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="grid min-h-screen place-items-center" style={{ background: "rgb(var(--bg))" }}>
         <div className="flex items-center gap-3 text-muted">
-          <div className="grid h-10 w-10 animate-pulse place-items-center rounded-xl bg-accent text-accent-fg">
-            <Eye className="h-5 w-5" />
+          <div className="animate-pulse">
+            <Emblem size={44} glass={false} />
           </div>
           <span className="text-sm">Securing workspace…</span>
         </div>

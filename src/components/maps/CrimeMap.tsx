@@ -6,6 +6,9 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
 import karnatakaGeo from "@/data/karnataka-districts.json";
 
+type GeoFeature = { type: string; properties: Record<string, unknown>; geometry: { type: string; coordinates: unknown } };
+type GeoFC = { type: "FeatureCollection"; features: GeoFeature[] };
+
 // Minimal local GeoJSON type (avoids a hard dependency on @types/geojson).
 type FeatureCollection = { type: "FeatureCollection"; features: Array<{ type: string; properties: Record<string, unknown>; geometry: unknown }> };
 
@@ -38,9 +41,45 @@ const SEV_WEIGHT: Record<string, number> = { critical: 1, high: 0.8, medium: 0.5
 const KA_BOUNDS = new LatLngBounds([11.3, 73.9], [18.6, 78.7]);
 const KA_CENTER: [number, number] = [14.9, 75.9];
 
+function buildMask(fc: GeoFC): GeoFC {
+  const holes: number[][][] = [];
+  for (const f of fc.features) {
+    const g = f.geometry;
+    if (!g) continue;
+    if (g.type === "Polygon") {
+      const coords = g.coordinates as number[][][];
+      if (coords[0]) holes.push(coords[0]);
+    } else if (g.type === "MultiPolygon") {
+      const multi = g.coordinates as number[][][][];
+      for (const poly of multi) if (poly[0]) holes.push(poly[0]);
+    }
+  }
+  const outer: number[][] = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]];
+  return {
+    type: "FeatureCollection",
+    features: [{ type: "Feature", properties: { role: "mask" }, geometry: { type: "Polygon", coordinates: [outer, ...holes] } as never } as GeoFeature],
+  };
+}
+
+function LockToKarnataka({ data }: { data: GeoFC }) {
+  const map = useMap();
+  useEffect(() => {
+    try {
+      const layer = L.geoJSON(data as never);
+      const b = layer.getBounds();
+      map.fitBounds(b, { padding: [12, 12] });
+      const padded = b.pad(0.05);
+      map.setMaxBounds(padded);
+      map.options.maxBoundsViscosity = 1.0;
+      const fitZoom = map.getBoundsZoom(b, false);
+      map.setMinZoom(Math.max(1, fitZoom - 1));
+    } catch { /* noop */ }
+  }, [map, data]);
+  return null;
+}
+
 /** Tile-free base map: Karnataka district outlines from a self-hosted GeoJSON. */
 function DistrictBaseLayer() {
-  // Bundled (served from _next/static) — Slate does not serve public/ files.
   const geo = karnatakaGeo as unknown as FeatureCollection;
   if (!geo) return null;
   return (
@@ -166,19 +205,21 @@ export default function CrimeMap({
         <MapContainer
           center={KA_CENTER}
           zoom={7}
-          maxBounds={KA_BOUNDS}
-          maxBoundsViscosity={1.0}
-          minZoom={6}
-          maxZoom={14}
-          style={{ height: "100%", width: "100%", background: "rgb(var(--surface))" }}
+          style={{ height: "100%", width: "100%", background: "rgb(var(--bg))" }}
+          zoomControl
           scrollWheelZoom
+          worldCopyJump={false}
         >
-          {/* OpenStreetMap base tiles (ODbL — attribution shown). District
-              outlines overlay on top for the Karnataka reference. */}
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            noWrap
             maxZoom={19}
+          />
+          <LockToKarnataka data={karnatakaGeo as unknown as GeoFC} />
+          <GeoJSON
+            data={buildMask(karnatakaGeo as unknown as GeoFC) as never}
+            style={(() => ({ stroke: false, fillColor: "rgb(var(--bg))", fillOpacity: 0.88, interactive: false })) as never}
           />
           <DistrictBaseLayer />
 
