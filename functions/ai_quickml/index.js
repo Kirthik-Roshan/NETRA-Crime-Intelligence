@@ -29,6 +29,7 @@ const {
   cacheKey,
   cachePut,
   createRequestContext,
+  countRows,
   decodeImage,
   generatePdf,
   listAudits,
@@ -328,6 +329,12 @@ module.exports = async (req, res) => {
     }
 
     // Cloud Scale reads, Search, Cache, and auth do not depend on an LLM token.
+    if (mode === "records:counts") {
+      const result = await countRows(platformContext, payload.tables, !!payload.refresh);
+      reply(200, result);
+      return;
+    }
+
     if (mode === "records" || mode === "records:list") {
       const table = mode === "records:list" ? "Evidence" : String(payload.table || "");
       const result = await listRows(platformContext, table, mode === "records:list" ? Math.max(200, Number(payload.max) || 200) : payload.max, !!payload.refresh);

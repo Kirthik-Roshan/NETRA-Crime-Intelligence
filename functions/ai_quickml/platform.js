@@ -434,6 +434,47 @@ async function listRows(context, table, max, refresh = false) {
   return value;
 }
 
+async function countRows(context, tables, refresh = false) {
+  const requested = [...new Set((Array.isArray(tables) ? tables : DATASTORE_TABLES).map(String))];
+  if (requested.some((table) => !DATASTORE_TABLES.includes(table))) {
+    const error = new Error("One or more tables are not available through the NETRA API");
+    error.statusCode = 403;
+    throw error;
+  }
+  const key = cacheKey("row-counts", `${context.officer.id}|${context.officer.role}|${requested.join(",")}`);
+  if (!refresh) {
+    const cached = await cacheGet(context.app, key);
+    if (cached && cached.counts) return cached;
+  }
+
+  const counts = {};
+  const unavailable = [];
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < requested.length) {
+      const table = requested[cursor++];
+      let total = 0;
+      let nextToken;
+      try {
+        const dsTable = context.app.datastore().table(table);
+        do {
+          const page = await dsTable.getPagedRows({ nextToken, maxRows: 300 });
+          total += ((page && page.data) || []).length;
+          nextToken = page && page.next_token;
+        } while (nextToken);
+        counts[table] = total;
+      } catch {
+        counts[table] = null;
+        unavailable.push(table);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, requested.length) }, worker));
+  const value = { counts, unavailable };
+  await cachePut(context.app, key, value, 1);
+  return value;
+}
+
 function rowNumber(row, ...keys) {
   for (const key of keys) {
     if (row && row[key] != null) {
@@ -612,6 +653,7 @@ module.exports = {
   decodeImage,
   generatePdf,
   listAudits,
+  countRows,
   listRows,
   criminalIntelligence,
   normalizePlate,

@@ -3,17 +3,19 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Table2, Database, Layers, Eye, ScrollText, Loader2, ChevronLeft, ChevronRight, Search, SearchX, X, Rows3, Columns3 } from "lucide-react";
 import { EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { useT } from "@/lib/i18n-client";
-import { listRecords } from "@/lib/ai-client";
+import { listRecordCounts, listRecords } from "@/lib/ai-client";
 
-interface TableInfo { name: string; count: number }
+interface TableInfo { name: string; count: number | null | undefined }
 interface Group { group: string; tables: TableInfo[] }
 interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number }
 
 const CLOUD_GROUPS: Group[] = [
-  { group: "official", tables: ["Firs", "Cases", "Criminals", "FirCriminals", "Arrests", "Victims", "Complainants", "Evidence"].map((name) => ({ name, count: 0 })) },
-  { group: "intel", tables: ["Relationships", "Phones", "Vehicles", "Addresses", "Organizations", "OrgMembers", "PoliceStations", "Chargesheets", "OcrResult"].map((name) => ({ name, count: 0 })) },
-  { group: "audit", tables: ["AuditLogs", "Notifications"].map((name) => ({ name, count: 0 })) },
+  { group: "official", tables: ["Firs", "Cases", "Criminals", "FirCriminals", "Arrests", "Victims", "Complainants", "Evidence"].map((name) => ({ name, count: undefined })) },
+  { group: "intel", tables: ["Relationships", "Phones", "Vehicles", "Addresses", "Organizations", "OrgMembers", "PoliceStations", "Chargesheets", "OcrResult"].map((name) => ({ name, count: undefined })) },
+  { group: "audit", tables: ["AuditLogs", "Notifications"].map((name) => ({ name, count: undefined })) },
 ];
+
+const CLOUD_TABLES = CLOUD_GROUPS.flatMap((group) => group.tables.map((table) => table.name));
 
 const GROUP_META: Record<string, { icon: typeof Table2; key: "database.official" | "database.intel" | "database.views" | "admin.audit" }> = {
   official: { icon: Database, key: "database.official" },
@@ -43,7 +45,9 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
       setBaked({ table, columns, rows, total: rows.length });
       setGroups((current) => current.map((group) => ({
         ...group,
-        tables: group.tables.map((item) => item.name === table ? { ...item, count: rows.length } : item),
+        tables: group.tables.map((item) => (
+          item.name === table && item.count == null ? { ...item, count: rows.length } : item
+        )),
       })));
     } catch {
       setBaked({ table, columns: [], rows: [], total: 0 });
@@ -54,6 +58,18 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
     const first = initialTable || groups?.[0]?.tables?.[0]?.name;
     if (first) void load(first);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void listRecordCounts(CLOUD_TABLES).then((counts) => {
+      if (!active) return;
+      setGroups((current) => current.map((group) => ({
+        ...group,
+        tables: group.tables.map((item) => ({ ...item, count: counts[item.name] ?? null })),
+      })));
+    });
+    return () => { active = false; };
   }, []);
 
   function selectTable(table: string) {
@@ -148,8 +164,8 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                           {on && <span aria-hidden className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-accent" />}
                           <Table2 className={`h-3.5 w-3.5 shrink-0 ${on ? "text-accent" : "text-muted/70 group-hover:text-muted"}`} />
                           <span className="truncate font-mono">{tb.name}</span>
-                          <span className={`ml-auto shrink-0 font-mono text-[10px] tabular-nums ${on ? "text-subtle" : "text-muted/70"}`}>
-                            {tb.count.toLocaleString()}
+                          <span className={`ml-auto min-w-6 shrink-0 text-right font-mono text-[10px] tabular-nums ${on ? "text-subtle" : "text-muted/70"}`}>
+                            {tb.count === undefined ? "…" : tb.count === null ? "—" : tb.count.toLocaleString()}
                           </span>
                         </button>
                       );

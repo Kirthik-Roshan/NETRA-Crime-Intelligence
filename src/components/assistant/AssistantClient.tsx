@@ -372,6 +372,9 @@ export function AssistantClient() {
   }, [lang]);
 
   const prepareVoiceTranscript = useCallback(async (transcript: string) => {
+    // Keep the captured command usable even when the optional Zia enrichment
+    // call is unavailable or slow.
+    setInput(transcript);
     setVoiceMsg("Analyzing command with Catalyst Zia...");
     const analyzed = await analyzeVoiceCommand(transcript);
     const command = analyzed?.text || transcript;
@@ -400,12 +403,25 @@ export function AssistantClient() {
         void prepareVoiceTranscript(transcript);
       }
     };
-    rec.onend = () => setListening(false);
-    rec.onerror = (e) => { setListening(false); setVoiceMsg(speechErr(e?.error)); };
+    rec.onend = () => {
+      setListening(false);
+      recRef.current = null;
+    };
+    rec.onerror = (e) => {
+      setListening(false);
+      recRef.current = null;
+      setVoiceMsg(speechErr(e?.error));
+    };
     recRef.current = rec;
     setListening(true);
     setVoiceMsg(null);
-    rec.start();
+    try {
+      rec.start();
+    } catch {
+      recRef.current = null;
+      setListening(false);
+      setVoiceMsg("Could not start microphone recognition. Check this site's microphone permission and try again.");
+    }
   }, [lang, prepareVoiceTranscript]);
 
   const startCloudRecording = useCallback(async () => {
@@ -491,8 +507,15 @@ export function AssistantClient() {
       setVoiceMsg("Voice input needs microphone access in a current Chrome, Edge, Firefox, or Safari browser.");
       return;
     }
+    // Chromium exposes native speech recognition on localhost. Prefer it for
+    // immediate capture, then enrich the transcript through Catalyst Zia NLP.
+    // MediaRecorder + Zia speech-to-text remains the cross-browser fallback.
+    if (getSpeechRecognition()) {
+      startWebSpeech();
+      return;
+    }
     void startCloudRecording();
-  }, [listening, startCloudRecording, voiceBusy, voiceSupported]);
+  }, [listening, startCloudRecording, startWebSpeech, voiceBusy, voiceSupported]);
 
   // Scan an FIR document — Catalyst Zia OCR via the Function. Extracted text
   // drops into the ask box (and the Function stores the scan + result).

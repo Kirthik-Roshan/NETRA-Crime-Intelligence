@@ -70,7 +70,9 @@ async function callFunction(body: Record<string, unknown>): Promise<Response | n
           "Content-Type": "text/plain",
           ...(accessToken ? { Authorization: accessToken } : {}),
         },
-        credentials: "include",
+        // Development uses a public Function route and must remain a simple
+        // CORS request. Catalyst cookies are only needed with hosted auth.
+        credentials: accessToken ? "include" : "omit",
         body: JSON.stringify(body),
       });
       return res;
@@ -316,8 +318,38 @@ export interface CloudSearchResult {
 
 /** Full-text Search over indexed Catalyst tables, with a bounded DB fallback. */
 export async function searchCloudRecords(query: string, max = 24): Promise<CloudSearchResult | null> {
-  if (!query.trim()) return null;
-  return ziaCall<CloudSearchResult>({ mode: "search:records", query, max });
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+  const remote = await ziaCall<CloudSearchResult>({ mode: "search:records", query: trimmed, max });
+  if (remote?.hits?.length) return remote;
+
+  // Older Function deployments expose table reads but not Search. Keep the
+  // investigation usable by matching a bounded set of Cloud Scale rows in the
+  // browser until the current Function is promoted.
+  const tableLimits: Array<[string, number]> = [
+    ["Firs", 1000],
+    ["Cases", 500],
+    ["Criminals", 500],
+    ["Evidence", 500],
+    ["Vehicles", 500],
+  ];
+  const stop = new Set(["about", "and", "are", "case", "cases", "files", "from", "give", "into", "show", "summarise", "summary", "tell", "that", "the", "these", "this", "what", "which", "with"]);
+  const tokens = trimmed.toLowerCase().match(/[a-z0-9]+/g)?.map((token) => token.length > 4 && token.endsWith("s") ? token.slice(0, -1) : token)
+    .filter((token) => token.length >= 3 && !stop.has(token)) || [];
+  const rowsByTable = await Promise.all(tableLimits.map(async ([table, limit]) => ({ table, rows: await listRecords(table, limit) })));
+  const hits = rowsByTable.flatMap(({ table, rows }) => rows.map((row) => {
+    const searchable = Object.entries(row).flatMap(([key, value]) => [key, value]).join(" ").toLowerCase();
+    const score = tokens.reduce((total, token) => total + (searchable.includes(token) ? 1 : 0), 0)
+      + (searchable.includes(trimmed.toLowerCase()) ? 2 : 0);
+    return { table, score, row };
+  })).filter((hit) => hit.score > 0).sort((a, b) => b.score - a.score).slice(0, Math.max(1, max));
+
+  const fallback = hits.length ? hits : rowsByTable.find(({ table }) => table === "Firs")?.rows.slice(0, Math.max(1, max)).map((row) => ({ table: "Firs", score: 0.1, row })) || [];
+  return {
+    hits: fallback,
+    engine: "browser-cloudscale-scan",
+    warning: "Catalyst Search is not available in the current Function deployment; results were matched directly against live Cloud Scale rows.",
+  };
 }
 
 export interface PdfExportResult {
@@ -348,6 +380,12 @@ export async function predictWithAutoML(input: Record<string, unknown>): Promise
 export async function listRecords(table: string, max = 50, refresh = false): Promise<Array<Record<string, unknown>>> {
   const j = await ziaCall<{ rows?: Array<Record<string, unknown>> }>({ mode: "records", table, max, refresh });
   return j?.rows || [];
+}
+
+/** Read table totals without transferring police records to the browser. */
+export async function listRecordCounts(tables: string[], refresh = false): Promise<Record<string, number | null>> {
+  const result = await ziaCall<{ counts?: Record<string, number | null> }>({ mode: "records:counts", tables, refresh });
+  return result?.counts || Object.fromEntries(tables.map((table) => [table, null]));
 }
 
 /* ── Notifications — durable state in a Cloud Scale Data Store table ──────── */
