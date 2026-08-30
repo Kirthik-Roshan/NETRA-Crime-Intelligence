@@ -29,11 +29,27 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       maxWidth: {
-        workspace: "1600px",
+        workspace: "1560px",
+      },
+      // Tighter, sharper radius scale — the console reads as precise panels, not
+      // soft rounded cards. `full` is preserved for avatars, dots and meters.
+      borderRadius: {
+        none: "0",
+        sm: "4px",
+        DEFAULT: "5px",
+        md: "6px",
+        lg: "8px",
+        xl: "10px",
+        "2xl": "12px",
+        "3xl": "16px",
+        full: "9999px",
       },
       boxShadow: {
-        card: "0 1px 0 0 rgb(var(--border) / 0.6), 0 8px 24px -12px rgb(0 0 0 / 0.5)",
-        glow: "0 0 0 1px rgb(var(--accent) / 0.25), 0 0 24px -6px rgb(var(--accent) / 0.35)",
+        // Restrained elevation — a hairline contact shadow, no diffuse bloom.
+        card: "0 1px 2px 0 rgb(0 0 0 / 0.18)",
+        // "glow" is intentionally NOT a glow anymore: a crisp accent ring so
+        // existing usages become a tasteful selection outline, not an AI halo.
+        glow: "0 0 0 1px rgb(var(--accent) / 0.35)",
       },
       keyframes: {
         "fade-in": {

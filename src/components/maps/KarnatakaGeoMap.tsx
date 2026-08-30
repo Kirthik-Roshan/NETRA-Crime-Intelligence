@@ -1,12 +1,13 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import karnatakaGeo from "@/data/karnataka-districts.json";
 
 // Minimal local GeoJSON type (avoids a hard dependency on @types/geojson).
-type FeatureCollection = { type: "FeatureCollection"; features: Array<{ type: string; properties: Record<string, unknown>; geometry: unknown }> };
+type Feature = { type: string; properties: Record<string, unknown>; geometry: { type: string; coordinates: unknown } };
+type FeatureCollection = { type: "FeatureCollection"; features: Feature[] };
 
 interface DistrictCounts {
   [district: string]: number;
@@ -20,21 +21,64 @@ const NAME_ALIAS: Record<string, string> = {
 function color(count: number, max: number, accent: string): string {
   if (!count) return "rgb(var(--muted) / 0.12)";
   const t = Math.sqrt(count / max);
-  // Blend from faint to full accent by opacity.
   return `rgb(var(${accent}) / ${(0.18 + t * 0.62).toFixed(2)})`;
 }
 
-function FitToData({ data }: { data: FeatureCollection }) {
+/**
+ * Fit the map to the Karnataka bounds and hold it there — cannot pan to
+ * neighbouring states, cannot zoom out to see the rest of India.
+ */
+function LockToKarnataka({ data }: { data: FeatureCollection }) {
   const map = useMap();
   useEffect(() => {
     try {
-      const layer = L.geoJSON(data);
-      map.fitBounds(layer.getBounds(), { padding: [16, 16] });
+      const layer = L.geoJSON(data as never);
+      const b = layer.getBounds();
+      map.fitBounds(b, { padding: [12, 12] });
+      const padded = b.pad(0.05);
+      map.setMaxBounds(padded);
+      map.options.maxBoundsViscosity = 1.0;
+      // The zoom that fits Karnataka is the floor — you can zoom in, not out.
+      const fitZoom = map.getBoundsZoom(b, false);
+      map.setMinZoom(Math.max(1, fitZoom - 1));
     } catch {
       /* noop */
     }
   }, [map, data]);
   return null;
+}
+
+// Build a "mask" feature: a world-covering polygon with the Karnataka outline
+// as a hole. Rendered semi-opaque with the theme bg, so tiles outside the state
+// visually recede while Karnataka's districts stay bright and legible.
+function buildMask(fc: FeatureCollection): FeatureCollection {
+  const holes: number[][][] = [];
+  for (const f of fc.features) {
+    const g = f.geometry;
+    if (!g) continue;
+    if (g.type === "Polygon") {
+      const coords = g.coordinates as number[][][];
+      if (coords[0]) holes.push(coords[0]);
+    } else if (g.type === "MultiPolygon") {
+      const multi = g.coordinates as number[][][][];
+      for (const poly of multi) if (poly[0]) holes.push(poly[0]);
+    }
+  }
+  // Outer ring is (nearly) the whole world; holes cut Karnataka out of it so
+  // only the surrounding area is filled.
+  const outer: number[][] = [
+    [-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85],
+  ];
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { role: "mask" },
+        geometry: { type: "Polygon", coordinates: [outer, ...holes] } as never,
+      } as Feature,
+    ],
+  };
 }
 
 export default function KarnatakaGeoMap({
@@ -48,38 +92,54 @@ export default function KarnatakaGeoMap({
   onSelect?: (district: string) => void;
   height?: number;
 }) {
-  // Bundled (served from _next/static) — Slate does not serve public/ files.
   const geo = karnatakaGeo as unknown as FeatureCollection;
 
-  // Map GeoJSON district → our count (respecting aliases).
   const geoCount = useMemo(() => {
     const inv: Record<string, string> = {};
     for (const [ours, theirs] of Object.entries(NAME_ALIAS)) inv[theirs] = ours;
     return (geoName: string) => counts[inv[geoName] ?? geoName] ?? 0;
   }, [counts]);
 
+  const mask = useMemo(() => buildMask(geo), [geo]);
   const max = Math.max(1, ...Object.values(counts));
   const selectedGeo = selected ? NAME_ALIAS[selected] ?? selected : null;
 
   return (
-    <div style={{ height }} className="overflow-hidden rounded-xl border border-border bg-surface">
+    <div style={{ height }} className="overflow-hidden rounded-lg border border-border bg-surface">
       {!geo ? (
         <div className="grid h-full place-items-center text-sm text-muted">Loading Karnataka map…</div>
       ) : (
         <MapContainer
           zoom={7}
           center={[14.9, 75.9]}
-          style={{ height: "100%", width: "100%", background: "transparent" }}
+          style={{ height: "100%", width: "100%", background: "rgb(var(--bg))" }}
           zoomControl
           scrollWheelZoom
+          worldCopyJump={false}
         >
-          {/* OpenStreetMap base tiles (ODbL); the district choropleth overlays on top. */}
+          {/* OpenStreetMap base tiles (ODbL). We overlay a mask so anything
+              outside Karnataka is heavily dimmed — the state stays bright. */}
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            noWrap
             maxZoom={19}
           />
-          <FitToData data={geo} />
+
+          <LockToKarnataka data={geo} />
+
+          {/* Mask everything outside Karnataka with the theme background. */}
+          <GeoJSON
+            data={mask as never}
+            style={(() => ({
+              stroke: false,
+              fillColor: "rgb(var(--bg))",
+              fillOpacity: 0.88,
+              interactive: false,
+            })) as never}
+          />
+
+          {/* District choropleth (Karnataka only). */}
           <GeoJSON
             key={selectedGeo ?? "none"}
             data={geo as never}

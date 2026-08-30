@@ -221,78 +221,91 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Reusable component classes ────────────────────────────── */
 @layer components {
-  /* Premium dark glass — semi-transparent surface + blur + soft shadow +
-     a hairline top highlight so cards read as floating panes, not rectangles. */
+  /* Operational console panel — a solid, crisp surface with a hairline border
+     and a restrained contact shadow. No translucency, no blur: panels read as
+     precise rectangles in an intelligence workstation, not floating glass. */
   .card {
-    @apply relative rounded-xl border;
-    background: rgb(var(--surface) / 0.72);
-    backdrop-filter: blur(14px) saturate(1.1);
-    -webkit-backdrop-filter: blur(14px) saturate(1.1);
-    border-color: rgb(var(--border) / 0.7);
-    /* Layered elevation: a hairline top highlight, a crisp contact edge, and a
-       deep soft ambient so panes read as floating glass, not flat rectangles. */
-    box-shadow:
-      0 1px 0 0 rgb(255 255 255 / 0.05) inset,
-      0 1px 2px -1px rgb(0 0 0 / 0.3),
-      0 16px 40px -22px rgb(0 0 0 / 0.6);
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    @apply relative rounded-lg border;
+    background: rgb(var(--surface));
+    border-color: rgb(var(--border));
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.16);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .card:hover {
+    border-color: rgb(var(--muted) / 0.32);
+  }
+  /* Opt-out hover for static (non-interactive) panels. */
+  .card-static:hover { border-color: rgb(var(--border)); }
+  .card-elevated {
+    @apply rounded-lg border;
+    background: rgb(var(--elevated));
     border-color: rgb(var(--border));
   }
-  .card-elevated {
-    @apply rounded-xl border;
-    background: rgb(var(--elevated) / 0.8);
-    backdrop-filter: blur(14px);
-    border-color: rgb(var(--border) / 0.7);
-  }
+  /* Kept for the login/emblem chrome — a lightly frosted surface. */
   .glass {
-    background: rgb(var(--surface) / 0.6);
-    backdrop-filter: blur(16px) saturate(1.1);
-    -webkit-backdrop-filter: blur(16px) saturate(1.1);
-    border: 1px solid rgb(var(--border) / 0.6);
+    background: rgb(var(--surface) / 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgb(var(--border));
   }
   .panel-pad {
-    @apply p-5;
+    @apply p-4;
   }
+  /* Squared micro-tag — the workhorse metadata token (replaces rounded pills). */
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-elevated/60 px-2.5 py-1 text-xs font-medium text-subtle;
+    @apply inline-flex items-center gap-1.5 rounded-[5px] border border-border bg-elevated/60 px-2 py-0.5 text-xs font-medium text-subtle;
+  }
+  .tag {
+    @apply inline-flex items-center gap-1 rounded border border-border/80 bg-elevated/50 px-1.5 py-0.5 text-[11px] font-medium text-muted;
   }
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium tracking-[-0.01em] transition duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium tracking-[-0.01em] transition duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-accent {
-    @apply btn bg-accent text-accent-fg hover:opacity-95;
-    /* Top sheen + accent-tinted lift so the primary action feels raised. */
-    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.16) inset, 0 6px 16px -8px rgb(var(--accent) / 0.55);
+    @apply btn bg-accent text-accent-fg hover:brightness-110;
+    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.12) inset;
   }
   .btn-ghost {
-    @apply btn border border-border bg-surface/40 text-subtle hover:border-border hover:bg-elevated hover:text-fg;
+    @apply btn border border-border bg-surface text-subtle hover:border-muted/40 hover:bg-elevated hover:text-fg;
+  }
+  /* Quiet tertiary button — no border, for dense toolbars. */
+  .btn-subtle {
+    @apply btn text-muted hover:bg-elevated hover:text-fg;
   }
   .input {
-    @apply w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-fg outline-none transition placeholder:text-muted focus:border-accent/70 focus:ring-2 focus:ring-accent/25;
-    box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.08);
+    @apply w-full rounded-md border border-border bg-elevated/40 px-3 py-2 text-sm text-fg outline-none transition placeholder:text-muted focus:border-accent/70 focus:bg-elevated/70 focus:ring-2 focus:ring-accent/20;
   }
   .stat-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.11em] text-muted;
+    @apply text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted;
   }
   /* Command-console eyebrow — the signature label treatment. */
   .eyebrow {
-    @apply font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-accent;
+    @apply font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-accent;
   }
   .kbd {
     @apply inline-flex items-center rounded border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted;
-    box-shadow: 0 1px 0 0 rgb(0 0 0 / 0.2);
   }
-  /* Faded navigation — inactive rows recede into the background; only the
-     active row is legible, marked by a soft teal left-accent (no filled pill). */
+  /* Segmented control — squared, elevated active segment. */
+  .seg {
+    @apply inline-flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5;
+  }
+  .seg-item {
+    @apply inline-flex select-none items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-fg;
+  }
+  .seg-item[aria-pressed="true"],
+  .seg-item[data-active="true"] {
+    @apply bg-elevated text-fg;
+    box-shadow: inset 0 0 0 1px rgb(var(--border));
+  }
+  /* Navigation rows — inactive recede; the active row is marked by a solid
+     accent edge and an elevated ground (no glow, no gradient). */
   .link-row {
-    @apply relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted/70 transition-colors hover:bg-elevated/50 hover:text-fg;
+    @apply relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated/60 hover:text-fg;
   }
   .link-row-active {
     @apply font-semibold text-fg;
-    box-shadow: inset 3px 0 0 0 rgb(var(--accent));
-    background: linear-gradient(90deg, rgb(var(--accent) / 0.18), transparent 66%);
+    background: rgb(var(--elevated));
+    box-shadow: inset 2px 0 0 0 rgb(var(--accent));
   }
   /* Skeleton shimmer for loading states */
   .skeleton {

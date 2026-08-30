@@ -1,10 +1,11 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, Fragment } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Sparkles, Send, Database, ChevronDown, ShieldCheck, Lightbulb, User, CornerDownLeft, Loader2,
-  Mic, MicOff, Volume2, FileDown, History, Cpu, Route, ScanText,
-  UserSearch, Network as NetworkIcon, Flame, GitCompare, Users,
+  Search, ArrowRight, Database, ChevronDown, ShieldCheck, CornerDownLeft, Loader2,
+  Mic, MicOff, Volume2, FileDown, History, Cpu, Route, ScanText, ScanSearch,
+  UserSearch, Network as NetworkIcon, Flame, GitCompare, Users, FileText,
+  ListChecks, FolderSearch, Hash, Terminal, AlertTriangle, BadgeCheck, ChevronRight, X,
 } from "lucide-react";
 import type { AiInsight } from "@/lib/types";
 import { TrendLine, BarSeries } from "@/components/charts";
@@ -13,7 +14,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
 import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, analyzeVoiceCommand, transcribeAudio, extractText, type RagSource } from "@/lib/ai-client";
 import { Translated } from "@/components/Translated";
-import { Badge } from "@/components/ui";
+import { parseBlocks, keyFindings, extractFirs, naturalizeForSpeech, type AnswerBlock } from "@/lib/answer-format";
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -46,6 +47,12 @@ function ragInsight(answer: string, sources: RagSource[]): AiInsight {
     .slice(0, 8);
   return {
     answer,
+    // Keep the rich source structure (title/snippet/score) for the Sources panel.
+    sources: sources.slice(0, 8).map((s) => ({
+      title: (s.title || "").toString(),
+      snippet: (s.snippet || "").toString(),
+      score: typeof s.score === "number" ? s.score : null,
+    })),
     explain: {
       confidence: 0.85,
       reasoning: sources.length
@@ -65,23 +72,24 @@ function ragInsight(answer: string, sources: RagSource[]): AiInsight {
 interface Turn {
   id: number;
   q: string;
+  ts: number;
   insight?: AiInsight;
   loading?: boolean;
 }
 
 // Queries that hit the QuickML RAG knowledge base (the uploaded case dossiers).
-const EXAMPLES = [
-  "What crimes are recorded in the case files?",
-  "Summarise the burglary cases and the accused",
-  "Tell me about the cybercrime OTP fraud case",
-  "Which cases involve vehicle theft?",
-  "What evidence was collected in these cases?",
+const EXAMPLES: { icon: typeof FolderSearch; q: string; hint: string }[] = [
+  { icon: FolderSearch, q: "What crimes are recorded in the case files?", hint: "Case-file overview" },
+  { icon: UserSearch, q: "Summarise the burglary cases and the accused", hint: "Accused & modus operandi" },
+  { icon: NetworkIcon, q: "Tell me about the cybercrime OTP fraud case", hint: "Cyber / financial fraud" },
+  { icon: GitCompare, q: "Which cases involve vehicle theft?", hint: "Cross-case pattern" },
+  { icon: ListChecks, q: "What evidence was collected in these cases?", hint: "Evidence inventory" },
 ];
 
 const SOURCE_LABEL: Record<string, string> = {
   "template-sql": "Verified SQL",
   llm: "Catalyst QuickML",
-  rag: "Catalyst QuickML · RAG",
+  rag: "QuickML · RAG",
   cache: "Cache",
   "demo-engine": "Keyword search",
   semantic: "Semantic search",
@@ -104,6 +112,10 @@ const ROUTE_LABEL: Record<string, string> = {
   "db-lookup": "database lookup (local)",
   fallback: "keyword fallback (local)",
 };
+// Headings the model tends to echo that duplicate our own section labels — we
+// drop these from the summary so the dossier structure isn't repeated.
+const SECTION_ECHO = /^(investigation summary|summary|overview|key findings?|findings|highlights|related (fir|firs|case|cases)|firs|cases|evidence|sources?|source documents?|records? used|verification|answer|result)\s*:?\s*$/i;
+
 function routeLabel(model: string): string {
   if (ROUTE_LABEL[model]) return ROUTE_LABEL[model];
   if (/rag/i.test(model)) return "Catalyst QuickML · RAG";
@@ -200,6 +212,14 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+function fmtTime(ts: number): string {
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
 export function AssistantClient() {
   const params = useSearchParams();
   const lang = useAppStore((s) => s.lang);
@@ -212,7 +232,8 @@ export function AssistantClient() {
   const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -239,15 +260,15 @@ export function AssistantClient() {
     setInput("");
     // Conversation memory: send previous user turns so follow-ups
     // ("what about vehicle theft?") resolve against earlier context.
-    const history = turnsRef.current.map((t) => t.q).slice(-8);
+    const history = turnsRef.current.map((x) => x.q).slice(-8);
     // Stable per-turn id so a response always updates its own turn, even if the
     // user fires another question while this one is still loading.
     void history;
     void viaVoice;
     const id = ++idRef.current;
-    setTurns((t) => [...t, { id, q, loading: true }]);
+    setTurns((prev) => [...prev, { id, q, ts: Date.now(), loading: true }]);
     if (!aiConfigured()) {
-      setTurns((t) => t.map((x) => (x.id === id ? { id, q, insight: textInsight(
+      setTurns((prev) => prev.map((x) => (x.id === id ? { id, q, ts: x.ts, insight: textInsight(
         "The AI assistant isn't connected in this build. Set NEXT_PUBLIC_AI_FN_URL to your Catalyst Function endpoint to enable live answers. The rest of NETRA — cases, criminals, network, maps, analytics — works from the loaded records.",
         "demo-engine",
       ) } : x)));
@@ -266,9 +287,9 @@ export function AssistantClient() {
           ? textInsight(text, "llm")
           : textInsight("The AI backend didn't return an answer. Check the Catalyst Function, the QuickML token, and that case documents are uploaded to the RAG knowledge base, then try again.", "demo-engine");
       }
-      setTurns((t) => t.map((x) => (x.id === id ? { id, q, insight } : x)));
+      setTurns((prev) => prev.map((x) => (x.id === id ? { id, q, ts: x.ts, insight } : x)));
     } catch {
-      setTurns((t) => t.map((x) => (x.id === id ? { id, q, insight: undefined } : x)));
+      setTurns((prev) => prev.map((x) => (x.id === id ? { id, q, ts: x.ts, insight: undefined } : x)));
     }
   }, []);
 
@@ -425,200 +446,340 @@ export function AssistantClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Newest result sits at the top of the feed, directly under the command bar —
+  // keep the feed scrolled to the top when a new query lands.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [turns]);
+    resultsRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [turns.length]);
 
   const empty = turns.length === 0;
+  // Newest-first: an investigator reads the latest result, not the oldest.
+  const ordered = useMemo(() => [...turns].reverse(), [turns]);
+  const resultCount = turns.length;
 
   return (
     <div className="flex h-[calc(100vh-8.5rem)] flex-col print:block print:h-auto">
-      {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border/60 bg-accent/10 shadow-glow print:hidden">
-          <Sparkles className="h-5 w-5 text-accent" />
+      {/* Header — aligned to the console PageHeader language */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-border/60 pb-4">
+        <div className="flex min-w-0 items-stretch gap-3">
+          <span aria-hidden className="w-[3px] shrink-0 self-stretch rounded-full bg-accent print:hidden" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <ScanSearch className="h-5 w-5 shrink-0 text-accent print:hidden" />
+              <h1 className="font-display text-[1.5rem] font-bold leading-[1.08] tracking-[-0.03em] md:text-[1.7rem]">{t("assistant.title")}</h1>
+            </div>
+            <p className="mt-1 text-sm text-muted print:hidden">{t("assistant.subtitle")}</p>
+            <p className="hidden text-sm text-muted print:block" suppressHydrationWarning>
+              NETRA — Investigation query log · Karnataka State Police (demo)
+            </p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight">{t("assistant.title")}</h1>
-          <p className="mt-0.5 text-sm text-muted print:hidden">{t("assistant.subtitle")}</p>
-          <p className="hidden text-sm text-muted print:block" suppressHydrationWarning>
-            NETRA — Conversation transcript · Karnataka State Police (demo)
-          </p>
-        </div>
-        <div className="ml-auto flex shrink-0 items-center gap-2 print:hidden">
-          <Badge tone="accent"><Cpu className="h-3 w-3" /> On-device routing</Badge>
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto print:hidden">
+          <span className="chip border-success/30 bg-success/10 text-success" title="Every query is routed to the best local engine — no external AI is ever used">
+            <Cpu className="h-3 w-3" /> On-device routing
+          </span>
           {!empty && (
-            <button onClick={exportPdf} className="btn-ghost" title="Export conversation as PDF">
+            <button onClick={exportPdf} className="btn-ghost" title="Export query log as PDF">
               <FileDown className="h-4 w-4" /> {t("assistant.export")}
             </button>
           )}
         </div>
       </div>
 
-      {/* Conversation */}
-      <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto pr-1 print:overflow-visible">
-        {empty && (
-          <div className="card panel-pad animate-fade-in space-y-5">
-            <div>
-              <div className="flex items-center gap-1.5 stat-label text-accent">
-                <Lightbulb className="h-3.5 w-3.5" /> {t("assistant.try")}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {EXAMPLES.map((e) => (
-                  <button key={e} onClick={() => ask(e)} className="chip max-w-full text-left transition-colors hover:border-accent/50 hover:text-fg">
-                    {e}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 rounded-lg border border-border/70 bg-elevated/60 p-3.5 text-xs leading-relaxed text-muted">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-              <span>
-                NETRA never sends raw records to a black box. Queries run through intent detection → permission checks →
-                validated SQL → evidence verification → audit log. The officer stays in command.
+      {/* ── Command console — the intelligence search / command interface ── */}
+      <div className="print:hidden">
+        <form
+          onSubmit={(e) => { e.preventDefault(); ask(input); }}
+          className={cn(
+            "group relative rounded-lg border bg-surface shadow-[0_1px_2px_0_rgb(0_0_0/0.16)] transition-colors",
+            listening ? "border-accent/60" : "border-border focus-within:border-accent/60",
+          )}
+        >
+          <div className="flex items-center gap-1 border-b border-border/60 px-3.5 py-1.5">
+            <Terminal className="h-3 w-3 text-accent" />
+            <span className="eyebrow">Intelligence query</span>
+            <span className="ml-auto hidden items-center gap-1 text-[10.5px] text-muted sm:flex">
+              <Route className="h-3 w-3" /> English &amp; ಕನ್ನಡ · voice · document scan
+            </span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            <Search className={cn("h-4 w-4 shrink-0", listening ? "text-accent" : "text-muted")} />
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={listening ? "Listening… speak your query" : t("assistant.placeholder")}
+              className="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-muted"
+              aria-label="Investigation query"
+            />
+            {input && (
+              <button
+                type="button"
+                onClick={() => { setInput(""); inputRef.current?.focus(); }}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-fg"
+                title="Clear"
+                aria-label="Clear query"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <span className="mx-0.5 hidden h-6 w-px bg-border/70 sm:block" />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => onScan(e.target.files?.[0] ?? null)}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={scanning}
+              className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border bg-elevated/60 text-subtle transition-colors hover:border-accent/50 hover:text-fg", scanning && "text-accent")}
+              title="Scan an FIR document (Zia OCR)"
+              aria-label="Scan document"
+            >
+              {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={toggleMic}
+              className={cn(
+                "grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border bg-elevated/60 text-subtle transition-colors hover:border-accent/50 hover:text-fg",
+                listening && "border-accent/60 text-accent",
+                voiceBusy && "border-accent/40 text-accent",
+              )}
+              title={listening ? "Stop listening" : `Voice command (${lang === "kn" ? "ಕನ್ನಡ" : "English"}) via Catalyst Zia speech and NLP`}
+              aria-label="Voice input"
+              aria-pressed={listening}
+            >
+              {voiceBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : listening ? <MicOff className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
+            </button>
+            <button className="btn-accent h-9 shrink-0 px-4" disabled={!input.trim()} title="Run query">
+              Run <ArrowRight className="h-4 w-4" />
+              <span className="kbd ml-1 hidden border-accent-fg/20 bg-accent-fg/10 text-accent-fg/80 md:inline-flex">
+                <CornerDownLeft className="h-3 w-3" />
               </span>
-            </div>
+            </button>
+          </div>
+        </form>
+
+        {/* Quick investigation tasks */}
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="stat-label mr-0.5">Quick queries</span>
+          {TASKS.map((task) => (
+            <button
+              key={task.label}
+              onClick={() => ask(task.q)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-elevated/50 px-2.5 py-1 text-xs font-medium text-subtle transition-colors hover:border-accent/50 hover:bg-elevated hover:text-fg"
+              title={task.q}
+            >
+              <task.icon className="h-3.5 w-3.5 text-accent" /> {task.label}
+            </button>
+          ))}
+        </div>
+
+        {(listening || voiceBusy || voiceMsg) && (
+          <p className={cn("mt-2 flex items-center gap-1.5 text-xs", voiceMsg ? "text-warning" : "text-accent")}>
+            {(listening || voiceBusy) && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />}
+            {voiceMsg || "Listening… speak now, then tap the mic again to stop."}
+          </p>
+        )}
+      </div>
+
+      {/* ── Results feed ── */}
+      <div ref={resultsRef} className="mt-4 flex-1 space-y-4 overflow-y-auto pr-1 print:overflow-visible">
+        {!empty && (
+          <div className="flex items-center gap-2 print:hidden">
+            <span className="stat-label">Query log</span>
+            <span className="text-[11px] text-muted">{resultCount} result{resultCount === 1 ? "" : "s"} · newest first</span>
+            <span className="h-px flex-1 bg-border/50" />
           </div>
         )}
 
-        {turns.map((t) => (
-          <div key={t.id} className="space-y-3">
-            {/* user */}
-            <div className="flex items-start justify-end gap-2">
-              <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-accent/10 px-4 py-2.5 text-sm text-fg">{t.q}</div>
-              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-elevated">
-                <User className="h-3.5 w-3.5 text-muted" />
-              </div>
-            </div>
-            {/* assistant */}
-            <div className="flex items-start gap-2">
-              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent/10">
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
-              </div>
-              <div className="min-w-0 flex-1">
-                {t.loading ? (
-                  <div className="card panel-pad animate-fade-in space-y-3.5">
-                    <div className="flex items-center gap-2 text-sm text-muted">
-                      <Loader2 className="h-4 w-4 animate-spin text-accent" /> Reasoning over crime records…
-                    </div>
-                    <div className="space-y-2" aria-hidden>
-                      <div className="skeleton h-3 w-full" />
-                      <div className="skeleton h-3 w-11/12" />
-                      <div className="skeleton h-3 w-3/4" />
-                    </div>
-                  </div>
-                ) : t.insight ? (
-                  <InsightCard insight={t.insight} onAlt={ask} lang={lang} />
-                ) : (
-                  <div className="text-sm text-danger">Something went wrong. Please try again.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+        {empty ? (
+          <EmptyState onPick={ask} />
+        ) : (
+          ordered.map((turn, i) => (
+            <ResultRecord
+              key={turn.id}
+              turn={turn}
+              index={resultCount - i}
+              onAlt={ask}
+              lang={lang}
+            />
+          ))
+        )}
       </div>
-
-      {/* Option A — one-click investigative tasks (all answered by the local engine) */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-3 print:hidden">
-        <span className="flex items-center gap-1 text-[11px] text-muted"><Route className="h-3 w-3" /> Quick tasks:</span>
-        {TASKS.map((task) => (
-          <button
-            key={task.label}
-            onClick={() => ask(task.q)}
-            className="chip text-[11px] hover:border-accent/50 hover:text-fg"
-            title={task.q}
-          >
-            <task.icon className="h-3 w-3 text-accent" /> {task.label}
-          </button>
-        ))}
-      </div>
-
-      {(listening || voiceBusy || voiceMsg) && (
-        <p className={cn("mb-1 text-xs", voiceMsg ? "text-warning" : "text-accent")}>
-          {voiceMsg || "🎙 Listening… speak now, then tap the mic again to stop."}
-        </p>
-      )}
-
-      {/* Composer */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          ask(input);
-        }}
-        className="mt-3 flex items-center gap-2 print:hidden"
-      >
-        <div className="relative flex-1">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={listening ? "Listening… speak now" : t("assistant.placeholder")}
-            className={cn("input h-12 pr-24", listening && "border-accent/60")}
-          />
-          <span className="kbd pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-            <CornerDownLeft className="inline h-3 w-3" /> enter
-          </span>
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => onScan(e.target.files?.[0] ?? null)}
-        />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={scanning}
-          className={cn("btn-ghost h-12 w-12 shrink-0 justify-center px-0", scanning && "text-accent")}
-          title="Scan an FIR document (Zia OCR)"
-          aria-label="Scan document"
-        >
-          {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
-        </button>
-        <button
-          type="button"
-          onClick={toggleMic}
-          className={cn(
-            "btn-ghost h-12 w-12 shrink-0 justify-center px-0",
-            listening && "border-accent/60 text-accent",
-            voiceBusy && "border-accent/40 text-accent"
-          )}
-          title={
-            listening
-              ? "Stop listening"
-              : `Voice command (${lang === "kn" ? "ಕನ್ನಡ" : "English"}) via Catalyst Zia speech and NLP`
-          }
-          aria-label="Voice input"
-          aria-pressed={listening}
-        >
-          {voiceBusy
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : listening
-            ? <MicOff className="h-4 w-4 animate-pulse" />
-            : <Mic className="h-4 w-4" />}
-        </button>
-        <button className="btn-accent h-12 px-5" disabled={!input.trim()}>
-          <Send className="h-4 w-4" />
-        </button>
-      </form>
     </div>
   );
 }
 
-function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: string) => void; lang: string }) {
-  const [showSql, setShowSql] = useState(false);
+/* ─────────────────────────── Empty / briefing state ─────────────────────── */
+
+function EmptyState({ onPick }: { onPick: (q: string) => void }) {
+  return (
+    <div className="animate-fade-in space-y-4">
+      <div className="card panel-pad">
+        <div className="flex items-center gap-2">
+          <FolderSearch className="h-4 w-4 text-accent" />
+          <span className="stat-label text-fg">Start an investigation query</span>
+        </div>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+          Ask in natural language — English or ಕನ್ನಡ, typed or by voice. NETRA resolves the query
+          against the case-file knowledge base and returns a structured, sourced result with a
+          verifiable audit trail. Pick a starting point:
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {EXAMPLES.map((ex) => (
+            <button
+              key={ex.q}
+              onClick={() => onPick(ex.q)}
+              className="group flex items-center gap-3 rounded-lg border border-border/70 bg-elevated/40 px-3.5 py-3 text-left transition-colors hover:border-accent/50 hover:bg-elevated/70"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border/60 bg-surface/60 transition-colors group-hover:border-accent/40">
+                <ex.icon className="h-4 w-4 text-accent" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-fg">{ex.q}</span>
+                <span className="block text-[11px] text-muted">{ex.hint}</span>
+              </span>
+              <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-accent" />
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-start gap-2.5 rounded-lg border border-border/70 bg-elevated/40 p-3.5 text-xs leading-relaxed text-muted">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+        <span>
+          NETRA never sends raw records to a black box. Queries run through intent detection →
+          permission checks → validated SQL → evidence verification → audit log. The officer stays in command.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Result record (per query) ──────────────────── */
+
+function ResultRecord({ turn, index, onAlt, lang }: { turn: Turn; index: number; onAlt: (q: string) => void; lang: string }) {
+  return (
+    <section className="card animate-fade-in overflow-hidden">
+      {/* Query header strip — dossier record marker + question */}
+      <header className="flex items-start gap-3 border-b border-border/60 bg-elevated/40 px-4 py-3">
+        <span
+          className="mt-0.5 inline-flex shrink-0 items-center rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[11px] font-semibold text-muted tabular-nums"
+          title={`Query record ${index}`}
+        >
+          {String(index).padStart(2, "0")}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+            <Search className="h-3 w-3 text-accent" /> Query
+            <span className="font-mono font-normal normal-case tracking-normal text-muted/70">· {fmtTime(turn.ts)}</span>
+          </div>
+          <p className="mt-1 text-[15px] font-semibold leading-snug text-fg">{turn.q}</p>
+        </div>
+      </header>
+
+      <div className="px-4 py-4">
+        {turn.loading ? (
+          <LoadingResult />
+        ) : turn.insight ? (
+          <InsightBody insight={turn.insight} onAlt={onAlt} lang={lang} />
+        ) : (
+          <div className="flex items-center gap-2 rounded-md border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">
+            <AlertTriangle className="h-4 w-4 shrink-0" /> The query could not be completed. Check the connection and try again.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function LoadingResult() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm text-muted">
+        <Loader2 className="h-4 w-4 animate-spin text-accent" /> Retrieving case documents &amp; reasoning over records…
+      </div>
+      <div>
+        <div className="stat-label mb-2">Investigation summary</div>
+        <div className="space-y-2" aria-hidden>
+          <div className="skeleton h-3 w-full" />
+          <div className="skeleton h-3 w-11/12" />
+          <div className="skeleton h-3 w-4/5" />
+        </div>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2" aria-hidden>
+        <div className="skeleton h-16 w-full" />
+        <div className="skeleton h-16 w-full" />
+      </div>
+    </div>
+  );
+}
+
+/* Inline renderer: bold, code, and highlighted / inspectable FIR references. */
+function renderInline(text: string, onFir?: (fir: string) => void): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*|`([^`]+)`|\b(?:FIR[\s.:#-]*)?(\d{15,18})\b/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(<Fragment key={key++}>{text.slice(last, m.index)}</Fragment>);
+    if (m[1] != null) {
+      nodes.push(<strong key={key++} className="font-semibold text-fg">{m[1]}</strong>);
+    } else if (m[2] != null) {
+      nodes.push(<code key={key++} className="rounded bg-elevated px-1 py-0.5 font-mono text-[0.85em] text-accent">{m[2]}</code>);
+    } else if (m[3] != null) {
+      const fir = m[3];
+      nodes.push(
+        <button
+          key={key++}
+          type="button"
+          onClick={() => onFir?.(fir)}
+          title="Inspect this case"
+          className="mx-px inline-flex items-center gap-0.5 rounded border border-accent/30 bg-accent/10 px-1 font-mono text-[0.82em] font-medium text-accent align-baseline transition-colors hover:border-accent/60 hover:bg-accent/20 print:border-none print:bg-transparent print:p-0"
+        >
+          <Hash className="h-2.5 w-2.5 print:hidden" />{fir}
+        </button>,
+      );
+    }
+    last = re.lastIndex;
+  }
+  if (last < text.length) nodes.push(<Fragment key={key++}>{text.slice(last)}</Fragment>);
+  return nodes;
+}
+
+function InsightBody({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: string) => void; lang: string }) {
+  const [showTech, setShowTech] = useState(false);
   const [showData, setShowData] = useState(false);
+  const [showSql, setShowSql] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [kannada, setKannada] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const e = insight.explain;
   const pct = Math.round(e.confidence * 100);
-  const confTone = pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-muted";
-  const spoken = kannada ?? insight.answer;
+  const confTone = pct >= 80 ? "success" : pct >= 60 ? "warning" : "muted";
+  const confColor = confTone === "success" ? "text-success" : confTone === "warning" ? "text-warning" : "text-muted";
+
+  const display = kannada ?? insight.answer;
+  const blocks = useMemo<AnswerBlock[]>(() => parseBlocks(display), [display]);
+  const findings = useMemo(() => keyFindings(blocks), [blocks]);
+  const firs = useMemo(() => extractFirs(insight.answer), [insight.answer]);
+  // Prose = paragraphs + any genuine sub-headings, minus headings that just echo
+  // our own section labels (Investigation Summary / Key Findings / …).
+  const proseBlocks = blocks.filter(
+    (b): b is Exclude<AnswerBlock, { kind: "list" }> =>
+      b.kind !== "list" && !(b.kind === "heading" && SECTION_ECHO.test(b.text.trim())),
+  );
+  const hasProse = proseBlocks.length > 0;
 
   // Read aloud via Catalyst Zia TTS; fall back to the browser voice if the
-  // Function/Zia is unavailable so the button always does something.
+  // Function/Zia is unavailable. Speech is a concise, naturalised version —
+  // never raw Markdown, no FIR numbers / audit IDs / metadata read aloud.
   const speak = useCallback(async () => {
     if (speaking) {
       audioRef.current?.pause();
@@ -626,8 +787,11 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
       setSpeaking(false);
       return;
     }
+    const speakLang: "en" | "kn" = kannada ? "kn" : lang === "kn" ? "kn" : "en";
+    const spoken = naturalizeForSpeech(kannada ?? insight.answer, speakLang);
+    const bcp = speakLang === "kn" ? "kn-IN" : "en-IN";
     setSpeaking(true);
-    const b64 = await synthesizeSpeech(spoken, kannada ? "kn-IN" : lang === "kn" ? "kn-IN" : "en-IN");
+    const b64 = await synthesizeSpeech(spoken, bcp);
     if (b64) {
       const audio = new Audio(b64.startsWith("data:") ? b64 : `data:audio/wav;base64,${b64}`);
       audioRef.current = audio;
@@ -638,7 +802,7 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
     }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       const u = new SpeechSynthesisUtterance(spoken);
-      u.lang = kannada ? "kn-IN" : lang === "kn" ? "kn-IN" : "en-IN";
+      u.lang = bcp;
       u.onend = () => setSpeaking(false);
       u.onerror = () => setSpeaking(false);
       window.speechSynthesis.cancel();
@@ -646,7 +810,7 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
       return;
     }
     setSpeaking(false);
-  }, [spoken, kannada, lang, speaking]);
+  }, [insight.answer, kannada, lang, speaking]);
 
   // Translate the answer to Kannada via Catalyst Zia.
   const translate = useCallback(async () => {
@@ -657,148 +821,274 @@ function InsightCard({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
     setTranslating(false);
   }, [insight.answer, kannada]);
 
+  const hasSources = (insight.sources?.length ?? 0) > 0;
+  const hasEvidenceStrings = !hasSources && e.evidence.length > 0;
+
   return (
-    <div className="card panel-pad animate-fade-in space-y-4">
-      <div className="flex items-start gap-2">
-        <p className="flex-1 text-[15px] leading-relaxed text-fg">
-          {/* Manual per-answer translate takes precedence; otherwise the global
-              EN|ಕನ್ನಡ toggle drives translate-on-display via <Translated>. */}
-          {kannada ?? <Translated text={insight.answer} />}
-        </p>
-        <button
-          onClick={translate}
-          disabled={translating}
-          className={cn("shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-elevated hover:text-fg disabled:opacity-50 print:hidden", kannada && "text-accent")}
-          title={kannada ? "Show English" : "Translate to Kannada (ಕನ್ನಡ)"}
-          aria-label="Translate to Kannada"
-        >
-          {translating ? <Loader2 className="h-4 w-4 animate-spin" /> : kannada ? "EN" : "ಕನ್ನಡ"}
-        </button>
-        <button
-          onClick={speak}
-          className={cn("shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-elevated hover:text-fg print:hidden", speaking && "text-accent")}
-          title={speaking ? "Stop reading" : "Read answer aloud"}
-          aria-label="Read answer aloud"
-        >
-          <Volume2 className={cn("h-4 w-4", speaking && "animate-pulse")} />
-        </button>
+    <div className="space-y-4">
+      {/* Result toolbar: status + actions */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="chip border-accent/30 bg-accent/10 text-accent">
+          <Database className="h-3 w-3" /> {SOURCE_LABEL[e.source] || e.source}
+        </span>
+        <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+          confTone === "success" ? "border-success/30 bg-success/10 text-success"
+          : confTone === "warning" ? "border-warning/30 bg-warning/10 text-warning"
+          : "border-border text-muted")}>
+          <BadgeCheck className="h-3 w-3" /> Confidence {pct}%
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={translate}
+            disabled={translating}
+            className={cn("inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted transition-colors hover:border-accent/50 hover:text-fg disabled:opacity-50 print:hidden", kannada && "border-accent/50 text-accent")}
+            title={kannada ? "Show English" : "Translate to Kannada (ಕನ್ನಡ)"}
+          >
+            {translating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : kannada ? "EN" : "ಕನ್ನಡ"}
+          </button>
+          <button
+            onClick={speak}
+            className={cn("inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted transition-colors hover:border-accent/50 hover:text-fg print:hidden", speaking && "border-accent/50 text-accent")}
+            title={speaking ? "Stop reading" : "Read a concise summary aloud"}
+          >
+            <Volume2 className={cn("h-3.5 w-3.5", speaking && "animate-pulse")} /> {speaking ? "Stop" : "Listen"}
+          </button>
+        </div>
       </div>
 
-      {/* meta */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="chip">
-          <Database className="h-3 w-3 text-accent" /> {SOURCE_LABEL[e.source] || e.source}
-        </span>
-        {/* Option C — smart routing: which local engine handled this query */}
-        <span className="chip font-mono text-accent" title="Query was automatically routed to the best local engine — no external AI is ever used">
-          <Route className="h-3 w-3" /> routed to {routeLabel(e.ai_model)}
-        </span>
-        <span className={cn("chip font-mono", confTone)}>confidence {pct}%</span>
-        <span className="chip font-mono">{e.records_used} records</span>
-        <span className="chip font-mono">{e.processing_ms}ms</span>
-        <span className="chip font-mono text-muted"><Cpu className="h-3 w-3" /> on-device</span>
-      </div>
-
-      {/* conversation-memory context */}
-      {e.context_used && e.context_used.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="flex items-center gap-1 text-muted"><History className="h-3 w-3" /> Context:</span>
-          {e.context_used.map((c, i) => (
-            <span key={i} className="chip text-[10px] text-info">{c}</span>
-          ))}
-        </div>
-      )}
-
-      {/* chart */}
-      {insight.chart && insight.rows && insight.rows.length > 1 && (
-        <div className="rounded-lg border border-border bg-elevated p-3">
-          {insight.chart.kind === "line" ? (
-            <TrendLine data={insight.rows} x={insight.chart.x} y={insight.chart.y} height={200} />
-          ) : (
-            <BarSeries data={insight.rows.slice(0, 12)} x={insight.chart.x} y={insight.chart.y} height={220} />
-          )}
-        </div>
-      )}
-
-      {/* explainability */}
-      <div className="rounded-lg border border-border bg-elevated p-3 text-sm">
-        <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-accent">
-          <ShieldCheck className="h-3.5 w-3.5" /> Why this answer
-        </div>
-        <p className="text-muted">{e.reasoning}</p>
-        {e.evidence.length > 0 && (
-          <div className="mt-2">
-            <span className="stat-label">{e.source === "rag" ? "Source documents" : "Records used"}</span>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {e.evidence.map((ev, i) => (
-                <span key={i} className="chip font-mono text-[10px]">{ev}</span>
-              ))}
-            </div>
+      {/* Investigation Summary — shown when there is prose, or when there is
+          nothing else structured to fall back on. List-only answers skip this
+          and are carried entirely by Key Findings. */}
+      {(hasProse || findings.length === 0) && (
+        <div>
+          <SectionLabel icon={FileText}>Investigation summary</SectionLabel>
+          <div className="mt-2 space-y-2.5 text-[15px] leading-relaxed text-subtle">
+            {hasProse ? (
+              proseBlocks.map((b, i) =>
+                b.kind === "heading" ? (
+                  <h4 key={i} className="pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{renderInline(b.text, (f) => onAlt(`Tell me about case ${f}`))}</h4>
+                ) : (
+                  <p key={i}>{renderInline(b.text, (f) => onAlt(`Tell me about case ${f}`))}</p>
+                ),
+              )
+            ) : (
+              <p>{kannada ?? <Translated text={insight.answer} />}</p>
+            )}
           </div>
-        )}
-        <div className="mt-2 text-[11px] text-muted">Audit ID · <span className="font-mono">{e.audit_id}</span></div>
-      </div>
-
-      {/* data table */}
-      {insight.rows && insight.rows.length > 0 && (
-        <div className="print:hidden">
-          <button onClick={() => setShowData((s) => !s)} className="flex items-center gap-1 text-xs font-medium text-subtle hover:text-fg">
-            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showData && "rotate-180")} />
-            {showData ? "Hide" : "Show"} data ({insight.rows.length} rows)
-          </button>
-          {showData && (
-            <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-border">
-              <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 bg-elevated">
-                  <tr>
-                    {insight.columns?.map((c) => (
-                      <th key={c} className="whitespace-nowrap px-3 py-2 font-medium text-muted">{c}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {insight.rows.slice(0, 50).map((r, i) => (
-                    <tr key={i} className="border-t border-border/50">
-                      {insight.columns?.map((c) => (
-                        <td key={c} className="whitespace-nowrap px-3 py-1.5 font-mono text-subtle">{String(r[c] ?? "")}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       )}
 
-      {/* SQL */}
-      {insight.sql && (
-        <div className="print:hidden">
-          <button onClick={() => setShowSql((s) => !s)} className="flex items-center gap-1 text-xs font-medium text-subtle hover:text-fg">
-            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showSql && "rotate-180")} />
-            {showSql ? "Hide" : "Show"} generated SQL
-          </button>
-          {showSql && (
-            <pre className="mt-2 overflow-x-auto rounded-lg border border-border bg-bg p-3 font-mono text-[11px] leading-relaxed text-subtle">
-              {insight.sql}
-            </pre>
-          )}
+      {/* Key Findings */}
+      {findings.length > 0 && (
+        <div>
+          <SectionLabel icon={ListChecks}>Key findings</SectionLabel>
+          <ul className="mt-2 space-y-1.5">
+            {findings.map((f, i) => (
+              <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-subtle">
+                <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-[2px] bg-accent/70" />
+                <span>{renderInline(f, (fir) => onAlt(`Tell me about case ${fir}`))}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {/* alternatives */}
-      {e.alternatives.length > 0 && (
-        <div className="print:hidden">
-          <span className="stat-label">Follow-up</span>
-          <div className="mt-1.5 flex flex-wrap gap-2">
-            {e.alternatives.map((a, i) => (
-              <button key={i} onClick={() => onAlt(a)} className="chip hover:border-accent/50 hover:text-fg">
-                {a}
+      {/* Related FIRs / Cases */}
+      {firs.length > 0 && (
+        <div>
+          <SectionLabel icon={FolderSearch}>Related FIRs / cases</SectionLabel>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {firs.map((fir) => (
+              <button
+                key={fir}
+                onClick={() => onAlt(`Tell me about case ${fir}`)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-elevated/50 px-2.5 py-1.5 font-mono text-xs font-medium text-subtle transition-colors hover:border-accent/50 hover:text-accent"
+                title="Inspect this case"
+              >
+                <Hash className="h-3 w-3 text-accent" />{fir}
+                <ChevronRight className="h-3 w-3 opacity-50" />
               </button>
             ))}
           </div>
         </div>
       )}
+
+      {/* Evidence & Sources */}
+      {(hasSources || hasEvidenceStrings) && (
+        <div>
+          <SectionLabel icon={Database}>{e.source === "rag" ? "Evidence & source documents" : "Records used"}</SectionLabel>
+          {hasSources ? (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {insight.sources!.map((s, i) => (
+                <div key={i} className="rounded-md border border-border bg-elevated/40 p-3 transition-colors hover:border-accent/40">
+                  <div className="flex items-start gap-2">
+                    <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-semibold text-fg" title={s.title || `Source ${i + 1}`}>
+                        {s.title || `Source document ${i + 1}`}
+                      </div>
+                      {s.snippet && <p className="mt-1 line-clamp-3 text-[11.5px] leading-relaxed text-muted">{s.snippet}</p>}
+                    </div>
+                    {typeof s.score === "number" && (
+                      <span className="shrink-0 rounded border border-border px-1 font-mono text-[10px] text-muted" title="Retrieval relevance score">
+                        {s.score.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {e.evidence.map((ev, i) => (
+                <span key={i} className="chip font-mono text-[10.5px]">{ev}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Chart (when a template/SQL answer carries series data) */}
+      {insight.chart && insight.rows && insight.rows.length > 1 && (
+        <div>
+          <SectionLabel icon={GitCompare}>Visualisation</SectionLabel>
+          <div className="mt-2 rounded-md border border-border bg-elevated/40 p-3">
+            {insight.chart.kind === "line" ? (
+              <TrendLine data={insight.rows} x={insight.chart.x} y={insight.chart.y} height={200} />
+            ) : (
+              <BarSeries data={insight.rows.slice(0, 12)} x={insight.chart.x} y={insight.chart.y} height={220} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Verification */}
+      <div className="rounded-lg border border-border/70 bg-elevated/30 p-3.5">
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Verification</span>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{e.reasoning}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+          <span className="flex items-center gap-1.5">
+            <span className="text-muted">Confidence</span>
+            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-surface ring-1 ring-inset ring-border/60">
+              <span className={cn("block h-full rounded-full", confTone === "success" ? "bg-success" : confTone === "warning" ? "bg-warning" : "bg-muted")} style={{ width: `${pct}%` }} />
+            </span>
+            <span className={cn("font-mono font-semibold tabular-nums", confColor)}>{pct}%</span>
+          </span>
+          <span className="text-muted">Records used <span className="font-mono text-subtle">{e.records_used}</span></span>
+          {e.context_used && e.context_used.length > 0 && (
+            <span className="flex items-center gap-1.5 text-muted">
+              <History className="h-3 w-3" /> Context:
+              {e.context_used.map((c, i) => <span key={i} className="font-mono text-info">{c}</span>)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Follow-up */}
+      {e.alternatives.length > 0 && (
+        <div className="print:hidden">
+          <SectionLabel icon={Search}>Follow-up queries</SectionLabel>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {e.alternatives.map((a, i) => (
+              <button
+                key={i}
+                onClick={() => onAlt(a)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-elevated/40 px-2.5 py-1.5 text-xs text-subtle transition-colors hover:border-accent/50 hover:text-fg"
+              >
+                {a} <ArrowRight className="h-3 w-3 opacity-50" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Technical details — subtle, collapsed by default */}
+      <div className="border-t border-border/50 pt-3 print:hidden">
+        <button
+          onClick={() => setShowTech((s) => !s)}
+          className="flex w-full items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-muted transition-colors hover:text-subtle"
+        >
+          <Cpu className="h-3 w-3" /> Technical details
+          <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", showTech && "rotate-180")} />
+        </button>
+        {showTech && (
+          <div className="mt-3 space-y-3 animate-fade-in">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+              <TechItem label="Routing"><span className="text-subtle">{routeLabel(e.ai_model)}</span></TechItem>
+              <TechItem label="Source"><span className="text-subtle">{SOURCE_LABEL[e.source] || e.source}</span></TechItem>
+              <TechItem label="Latency"><span className="font-mono text-subtle">{e.processing_ms} ms</span></TechItem>
+              <TechItem label="Records used"><span className="font-mono text-subtle">{e.records_used}</span></TechItem>
+              <TechItem label="Execution"><span className="inline-flex items-center gap-1 text-subtle"><Cpu className="h-3 w-3" /> on-device</span></TechItem>
+              <TechItem label="Audit ID"><span className="font-mono text-subtle">{e.audit_id}</span></TechItem>
+            </dl>
+
+            {insight.rows && insight.rows.length > 0 && (
+              <div>
+                <button onClick={() => setShowData((s) => !s)} className="flex items-center gap-1 text-[11px] font-medium text-subtle hover:text-fg">
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showData && "rotate-180")} />
+                  {showData ? "Hide" : "Show"} result table ({insight.rows.length} rows)
+                </button>
+                {showData && (
+                  <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-border">
+                    <table className="w-full text-left text-xs">
+                      <thead className="sticky top-0 bg-elevated">
+                        <tr>
+                          {insight.columns?.map((c) => (
+                            <th key={c} className="whitespace-nowrap px-3 py-2 font-medium text-muted">{c}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {insight.rows.slice(0, 50).map((r, i) => (
+                          <tr key={i} className="border-t border-border/50">
+                            {insight.columns?.map((c) => (
+                              <td key={c} className="whitespace-nowrap px-3 py-1.5 font-mono text-subtle">{String(r[c] ?? "")}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {insight.sql && (
+              <div>
+                <button onClick={() => setShowSql((s) => !s)} className="flex items-center gap-1 text-[11px] font-medium text-subtle hover:text-fg">
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showSql && "rotate-180")} />
+                  {showSql ? "Hide" : "Show"} generated SQL
+                </button>
+                {showSql && (
+                  <pre className="mt-2 overflow-x-auto rounded-lg border border-border bg-bg p-3 font-mono text-[11px] leading-relaxed text-subtle">
+                    {insight.sql}
+                  </pre>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SectionLabel({ icon: Icon, children }: { icon: typeof FileText; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+      <Icon className="h-3.5 w-3.5 text-accent" /> {children}
+    </div>
+  );
+}
+
+function TechItem({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] uppercase tracking-[0.1em] text-muted/70">{label}</dt>
+      <dd className="mt-0.5 truncate">{children}</dd>
     </div>
   );
 }

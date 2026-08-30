@@ -4,6 +4,7 @@ import { Volume2, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 import { synthesizeSpeech } from "@/lib/ai-client";
+import { naturalizeForSpeech } from "@/lib/answer-format";
 
 /**
  * Small "Listen" button — reads `text` aloud via Catalyst Zia TTS in the
@@ -24,7 +25,10 @@ export function ReadAloud({ text, label = "Listen" }: { text: string; label?: st
     }
     if (state === "loading" || !text.trim()) return;
     setState("loading");
-    const b64 = await synthesizeSpeech(text, lang === "kn" ? "kn-IN" : "en-IN");
+    // Never send raw Markdown / IDs / metadata to TTS — speak a concise,
+    // naturalised version (FIR numbers → natural phrases, no audit IDs, etc.).
+    const spoken = naturalizeForSpeech(text, lang === "kn" ? "kn" : "en");
+    const b64 = await synthesizeSpeech(spoken, lang === "kn" ? "kn-IN" : "en-IN");
     if (!b64) {
       setState("error");
       setTimeout(() => setState("idle"), 1800);

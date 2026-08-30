@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Table2, Database, Layers, Eye, ScrollText, Loader2, ChevronLeft, ChevronRight, Search, SearchX, X, Rows3, Columns3 } from "lucide-react";
-import { Badge, EmptyState } from "@/components/ui";
+import { EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { useT } from "@/lib/i18n-client";
 import BAKED from "@/data/db-baked.json";
 
@@ -24,12 +24,10 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const [baked, setBaked] = useState<BakedTable | null>(null);
   const loading = false;
   const [offset, setOffset] = useState(0);
-  const [filter, setFilter] = useState(""); // filters the table LIST (left)
-  const [dataQuery, setDataQuery] = useState(""); // searches ROWS in the current table
+  const [filter, setFilter] = useState("");
+  const [dataQuery, setDataQuery] = useState("");
   const LIMIT = 50;
 
-  // All tables are bundled (served from _next/static) — Slate does not serve
-  // public/ files, so we read the baked module in memory instead of fetching.
   const load = useCallback((table: string) => {
     setActive(table);
     setOffset(0);
@@ -48,7 +46,6 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
     load(table);
   }
 
-  // Client-side row search over the baked rows + pagination.
   const matched = useMemo(() => {
     if (!baked) return [];
     const q = dataQuery.trim().toLowerCase();
@@ -62,7 +59,6 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
     ? { table: baked.table, columns: baked.columns, rows: matched.slice(offset, offset + LIMIT), total: matched.length, q: dataQuery.trim() || undefined }
     : null;
 
-  // Presentation only — the visible table list and its headline counts.
   const tableCount = useMemo(() => groups.reduce((n, g) => n + g.tables.length, 0), [groups]);
   const visibleGroups = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -75,28 +71,28 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const pages = data ? Math.max(1, Math.ceil(data.total / LIMIT)) : 1;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-      {/* Table list — fixed header, scrolling body, so the filter never scrolls away */}
-      <aside className="card panel-pad flex max-h-[calc(100vh-12rem)] flex-col">
-        <div className="shrink-0">
-          <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h2 className="truncate font-display text-sm font-semibold tracking-tight">{t("database.tables")}</h2>
+    <div className="grid gap-4 lg:grid-cols-[264px_1fr]">
+      {/* Table list */}
+      <aside className="card flex max-h-[calc(100vh-12rem)] flex-col">
+        <div className="shrink-0 border-b border-border p-3">
+          <div className="mb-2.5 flex items-baseline justify-between gap-2">
+            <h2 className="truncate font-display text-sm font-semibold tracking-[-0.01em]">{t("database.tables")}</h2>
             <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">{tableCount}</span>
           </div>
-          <div className="relative mb-3">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter tables…"
               aria-label="Filter tables"
-              className="input h-9 py-0 pl-9 pr-8 text-sm"
+              className="h-8 w-full rounded-md border border-border bg-elevated/40 pl-8 pr-8 text-xs text-fg outline-none placeholder:text-muted focus:border-accent/60 focus:bg-elevated/70 focus:ring-2 focus:ring-accent/15"
             />
             {filter && (
               <button
                 onClick={() => setFilter("")}
                 aria-label="Clear table filter"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded text-muted transition-colors hover:text-fg"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded text-muted transition-colors hover:text-fg"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -104,8 +100,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
           </div>
         </div>
 
-        {/* -mr-2/pr-2 gives the scrollbar its own gutter without shifting rows */}
-        <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-2">
+        <div className="-mr-2 min-h-0 flex-1 overflow-y-auto p-3 pr-2">
           {visibleGroups.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-2 py-10 text-center">
               <SearchX className="h-5 w-5 text-muted/60" />
@@ -116,7 +111,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
               const meta = GROUP_META[g.group] || GROUP_META.official;
               return (
                 <div key={g.group} className="mb-4 last:mb-0">
-                  <div className="mb-2 flex items-center gap-1.5 stat-label">
+                  <div className="mb-1.5 flex items-center gap-1.5 stat-label">
                     <meta.icon className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{t(meta.key)}</span>
                     <span className="ml-auto shrink-0 font-mono text-[10px] tabular-nums text-muted/70">{g.tables.length}</span>
@@ -130,12 +125,12 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                           onClick={() => selectTable(tb.name)}
                           title={tb.name}
                           aria-current={on ? "true" : undefined}
-                          className={`group relative flex w-full items-center gap-2 rounded-md py-1.5 pl-2.5 pr-2 text-left text-xs transition-colors ${
+                          className={`group relative flex w-full items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-left text-xs transition-colors ${
                             on ? "bg-elevated text-fg" : "text-muted hover:bg-elevated/60 hover:text-subtle"
                           }`}
                         >
                           {on && <span aria-hidden className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-accent" />}
-                          <Table2 className={`h-3.5 w-3.5 shrink-0 transition-colors ${on ? "text-accent" : "text-muted/70 group-hover:text-muted"}`} />
+                          <Table2 className={`h-3.5 w-3.5 shrink-0 ${on ? "text-accent" : "text-muted/70 group-hover:text-muted"}`} />
                           <span className="truncate font-mono">{tb.name}</span>
                           <span className={`ml-auto shrink-0 font-mono text-[10px] tabular-nums ${on ? "text-subtle" : "text-muted/70"}`}>
                             {tb.count.toLocaleString()}
@@ -151,7 +146,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
         </div>
       </aside>
 
-      {/* Rows */}
+      {/* Data view */}
       <section className="card panel-pad min-w-0">
         {!data ? (
           loading ? (
@@ -164,46 +159,43 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
           )
         ) : (
           <>
-            <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border/60 bg-elevated/60">
-                <Table2 className="h-4 w-4 text-accent" />
-              </span>
-              <h2 className="min-w-0 truncate font-mono text-sm font-semibold text-fg" title={data.table}>{data.table}</h2>
-              {loading && <Loader2 className="h-4 w-4 animate-spin text-muted" />}
-              {/* Row search — scans every column of the loaded table */}
-              <div className="relative ml-auto w-full sm:w-64">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
-                <input
-                  value={dataQuery}
-                  onChange={(e) => setDataQuery(e.target.value)}
-                  placeholder="Search this table…"
-                  aria-label={`Search rows in ${data.table}`}
-                  className="input h-9 py-0 pl-9 pr-8 text-sm"
-                />
-                {dataQuery && (
-                  <button
-                    onClick={() => setDataQuery("")}
-                    aria-label="Clear row search"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded text-muted transition-colors hover:text-fg"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
+            <PanelHeader
+              icon={Table2}
+              title={<span className="font-mono">{data.table}</span>}
+              sub={`${data.total.toLocaleString()} rows · ${data.columns.length} columns`}
+              action={
+                <div className="relative w-full sm:w-64">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+                  <input
+                    value={dataQuery}
+                    onChange={(e) => setDataQuery(e.target.value)}
+                    placeholder="Search this table…"
+                    aria-label={`Search rows in ${data.table}`}
+                    className="h-8 w-full rounded-md border border-border bg-elevated/40 pl-8 pr-8 text-xs text-fg outline-none placeholder:text-muted focus:border-accent/60 focus:bg-elevated/70 focus:ring-2 focus:ring-accent/15"
+                  />
+                  {dataQuery && (
+                    <button
+                      onClick={() => setDataQuery("")}
+                      aria-label="Clear row search"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded text-muted transition-colors hover:text-fg"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              }
+            />
 
-            {/* Readout — table shape first, then what the current view holds */}
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-              <span className="chip"><Rows3 className="h-3 w-3 text-muted" />{data.total.toLocaleString()} {t("common.rows")}</span>
-              <span className="chip"><Columns3 className="h-3 w-3 text-muted" />{data.columns.length} columns</span>
-              {data.q && <Badge tone="accent">matching &ldquo;{data.q}&rdquo;</Badge>}
+              <Tag mono><Rows3 className="h-3 w-3 text-muted" />{data.total.toLocaleString()} {t("common.rows")}</Tag>
+              <Tag mono><Columns3 className="h-3 w-3 text-muted" />{data.columns.length} cols</Tag>
+              {data.q && <Tag>match &ldquo;{data.q}&rdquo;</Tag>}
               <span className="ml-auto text-muted">
                 showing <span className="font-mono tabular-nums text-subtle">{data.rows.length.toLocaleString()}</span>
               </span>
             </div>
 
-            {/* BOTH scrollbars: vertical (max-h) + horizontal (min-w table) */}
-            <div className="max-h-[calc(100vh-21rem)] overflow-auto rounded-lg border border-border/70">
+            <div className="max-h-[calc(100vh-22rem)] overflow-auto rounded-md border border-border">
               <table className="min-w-max text-left text-xs">
                 <thead className="sticky top-0 z-10 bg-elevated">
                   <tr>
@@ -211,7 +203,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                       <th
                         key={c}
                         scope="col"
-                        className={`whitespace-nowrap border-b border-border px-3 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] ${
+                        className={`whitespace-nowrap border-b border-border px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.06em] ${
                           ci === 0 ? "text-subtle" : "text-muted"
                         }`}
                       >
@@ -223,9 +215,8 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                 <tbody>
                   {data.rows.length === 0 && (
                     <tr><td colSpan={Math.max(1, data.columns.length)} className="px-3 py-12">
-                      {/* sticky left keeps the message on screen on very wide tables */}
                       <div className="sticky left-0 inline-flex items-center gap-2.5">
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border/60 bg-elevated/70">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-elevated/70">
                           <SearchX className="h-4 w-4 text-muted" />
                         </span>
                         <span className="text-sm text-muted">
@@ -242,7 +233,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                           className={`max-w-[320px] truncate whitespace-nowrap px-3 py-2 font-mono tabular-nums ${ci === 0 ? "text-fg" : "text-subtle"}`}
                           title={String(r[c] ?? "")}
                         >
-                          {r[c] === null ? <span className="italic tracking-wide text-muted/50">null</span> : String(r[c])}
+                          {r[c] === null ? <span className="italic text-muted/50">null</span> : String(r[c])}
                         </td>
                       ))}
                     </tr>
@@ -251,9 +242,8 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
               </table>
             </div>
 
-            {/* Pagination */}
             {data.total > LIMIT && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-3 text-xs">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs">
                 <span className="font-mono tabular-nums text-muted">
                   {(offset + 1).toLocaleString()}&ndash;{Math.min(offset + LIMIT, data.total).toLocaleString()}
                   <span className="px-1 text-muted/60">/</span>

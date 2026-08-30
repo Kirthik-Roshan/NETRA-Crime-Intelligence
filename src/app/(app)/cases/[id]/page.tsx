@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft, Sparkles, FileText, Users, Eye, ShieldQuestion, Clock, Paperclip,
-  MapPin, AlertTriangle, Lightbulb, GitCompare, ChevronRight,
+  ArrowLeft, FileText, Users, UserCheck, ShieldQuestion, Paperclip, AlertTriangle,
+  Lightbulb, GitCompare, ChevronRight, ScanText, History, Radar, ScanSearch, Fingerprint,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { get, all } from "@/lib/db";
 import { similarFirs } from "@/lib/embeddings";
-import { PageHeader, Badge, StatusBadge, Avatar, RiskMeter, EmptyState } from "@/components/ui";
+import { PageHeader, PanelHeader, Badge, StatusBadge, Avatar, RiskMeter, EmptyState } from "@/components/ui";
 import { CaseIntelligence } from "@/components/ai/CaseIntelligence";
 import { ReadAloud } from "@/components/ReadAloud";
 import { Translated } from "@/components/Translated";
@@ -68,13 +68,26 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
       timeline.push({ icon: FileText, label: `${label}${chargesheet.CourtName ? ` — ${chargesheet.CourtName}` : ""}`, date: chargesheet.csdate, tone: "accent" });
     }
   }
-  timeline.push({ icon: Sparkles, label: "AI linked this case to related incidents", date: c.updated_at, tone: "accent" });
+  timeline.push({ icon: Radar, label: "AI linked this case to related incidents", date: c.updated_at, tone: "accent" });
   timeline.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const questions = [
     `Do any suspects in ${c.district} share a phone or vehicle?`,
     `Show other ${fir?.crime_type?.toLowerCase() || "similar"} cases with modus "${fir?.modus?.replace(/_/g, " ")}"`,
     `Which of these suspects are repeat offenders?`,
+  ];
+
+  // Presentation-only derivations from the rows already fetched above.
+  const primeAccused = suspects.some((s) => s.role === "prime_accused");
+  const ipcSections = (fir?.ipc_sections || "").split(/[,/]+/).map((s) => s.trim()).filter(Boolean);
+  const summaryText = [c.summary, fir?.description].filter(Boolean).join(" ");
+  const metrics: { label: string; value: number; icon: LucideIcon; tone: MetricTone }[] = [
+    { label: "Suspects", value: suspects.length, icon: ShieldQuestion, tone: primeAccused ? "danger" : "default" },
+    { label: "Victims", value: victims.length, icon: Users, tone: "default" },
+    { label: "Evidence", value: evidence.length, icon: Paperclip, tone: "info" },
+    { label: "Arrests", value: arrests.length, icon: Fingerprint, tone: arrests.length ? "warning" : "default" },
+    { label: "Related", value: related.length, icon: GitCompare, tone: "default" },
+    { label: "Similar FIRs", value: similar.length, icon: ScanSearch, tone: "accent" },
   ];
 
   return (
@@ -85,35 +98,75 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
       >
         <ArrowLeft className="h-4 w-4 transition-transform duration-150 group-hover:-translate-x-0.5" aria-hidden /> All cases
       </Link>
-      <PageHeader title={c.title} subtitle={`${c.case_number} · ${c.officer || "Unassigned"}`}>
+      <PageHeader title={c.title} subtitle={`${c.case_number} · ${fir?.crime_type ?? "—"} · ${c.officer || "Unassigned"}`}>
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={c.priority === "critical" ? "danger" : c.priority === "high" ? "warning" : "info"}>{c.priority}</Badge>
           <StatusBadge status={c.status} />
         </div>
       </PageHeader>
 
-      <div className="grid gap-5 lg:grid-cols-[260px_1fr_300px]">
-        {/* LEFT — case info */}
+      {/* Case overview — record density at a glance */}
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        {metrics.map((m) => (
+          <MetricTile key={m.label} {...m} />
+        ))}
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[288px_1fr_320px]">
+        {/* LEFT — case record */}
         <div className="min-w-0 space-y-4">
           <div className="card panel-pad">
-            <CardHead icon={FileText} title="Case Record" />
-            <dl className="space-y-2.5 text-sm">
-              <Info label="District" value={c.district} icon={MapPin} />
-              <Info label="Opened" value={formatDate(c.opened_at)} icon={Clock} />
-              {fir && <>
-                <Info label="FIR" value={fir.fir_number} icon={FileText} mono />
-                <Info label="IPC" value={fir.ipc_sections} icon={AlertTriangle} mono />
-                <Info label="Modus" value={fir.modus?.replace(/_/g, " ")} icon={GitCompare} />
-              </>}
+            <PanelHeader icon={FileText} title="Case Record" />
+
+            <div className="rounded-md border border-border bg-elevated/40 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="stat-label">Offence</div>
+                  <div className="mt-0.5 truncate font-display text-sm font-semibold capitalize" title={fir?.crime_type}>
+                    {fir?.crime_type ?? "—"}
+                  </div>
+                </div>
+                {fir?.severity && (
+                  <Badge tone={severityTone(fir.severity)}>{fir.severity}</Badge>
+                )}
+              </div>
+              <div className="mt-2.5 flex items-center gap-2 border-t border-border/50 pt-2.5">
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />
+                <span className="min-w-0 truncate font-mono text-xs text-subtle">{fir?.fir_number ?? "—"}</span>
+                <span className="ml-auto shrink-0"><StatusBadge status={fir?.status ?? c.status} /></span>
+              </div>
+            </div>
+
+            <dl className="mt-3 divide-y divide-border/40 text-sm">
+              <RecordRow label="District" value={c.district} />
+              <RecordRow label="Officer" value={c.officer || "Unassigned"} />
+              <RecordRow label="Opened" value={formatDate(c.opened_at)} mono />
+              <RecordRow label="Updated" value={formatDate(c.updated_at)} mono />
+              {fir && <RecordRow label="Reported" value={formatDate(fir.reported_at)} mono />}
+              {fir && <RecordRow label="Occurred" value={formatDate(fir.occurred_at)} mono />}
+              {fir?.modus && <RecordRow label="Modus" value={fir.modus.replace(/_/g, " ")} />}
             </dl>
+
+            {ipcSections.length > 0 && (
+              <div className="mt-3 border-t border-border/50 pt-3">
+                <div className="stat-label mb-1.5 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3 w-3 text-muted" aria-hidden /> IPC Sections
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {ipcSections.map((s) => (
+                    <span key={s} className="chip py-0.5 font-mono text-[11px]">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {victims.length > 0 && (
             <div className="card panel-pad">
-              <CardHead icon={Users} title="Victims" count={victims.length} />
+              <PanelHeader icon={Users} title="Victims" count={victims.length} tone="info" />
               <div className="divide-y divide-border/40">
                 {victims.map((v, i) => (
-                  <div key={i} className="flex items-baseline gap-2 py-1.5 first:pt-0 last:pb-0 text-sm">
+                  <div key={i} className="flex items-baseline gap-2 py-2 text-sm first:pt-0 last:pb-0">
                     <span className="min-w-0 truncate font-medium text-subtle">{v.name}</span>
                     <span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums text-muted">
                       {v.gender === "F" ? "F" : "M"} · {v.age}
@@ -126,11 +179,11 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
 
           {complainants.length > 0 && (
             <div className="card panel-pad">
-              <CardHead icon={Eye} title="Complainants" count={complainants.length} />
+              <PanelHeader icon={UserCheck} title="Complainants" count={complainants.length} tone="info" />
               <div className="divide-y divide-border/40">
                 {complainants.map((w, i) => (
                   <div key={i} className="py-2 first:pt-0 last:pb-0">
-                    <div className="truncate text-sm font-medium">{w.name}</div>
+                    <div className="truncate text-sm font-medium text-subtle">{w.name}</div>
                     <p className="mt-0.5 text-xs capitalize text-muted">
                       {w.occupation}{w.age ? ` · ${w.age} yrs` : ""}
                     </p>
@@ -141,14 +194,18 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* CENTER — notebook */}
+        {/* CENTER — investigation notebook */}
         <div className="min-w-0 space-y-4">
           <div className="card panel-pad">
-            <CardHead
-              icon={Sparkles}
-              title="AI Case Summary"
-              meta={<Badge tone="accent">generated</Badge>}
-              action={<ReadAloud label="Read Summary" text={[c.summary, fir?.description].filter(Boolean).join(" ")} />}
+            <PanelHeader
+              icon={ScanText}
+              title={
+                <span className="inline-flex items-center gap-2">
+                  AI Case Summary
+                  <Badge tone="accent">generated</Badge>
+                </span>
+              }
+              action={<ReadAloud label="Read Summary" text={summaryText} />}
             />
             <Translated as="p" className="text-[0.9375rem] leading-relaxed text-subtle" text={c.summary} />
             {fir && (
@@ -162,7 +219,7 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
           <CaseIntelligence text={[c.summary, fir?.description].filter(Boolean).join("\n\n")} />
 
           <div className="card panel-pad">
-            <CardHead icon={Clock} title="Case Timeline" count={timeline.length} />
+            <PanelHeader icon={History} title="Case Timeline" count={timeline.length} sub="Chronological record of events" />
             <ol>
               {timeline.map((t, i) => {
                 const last = i === timeline.length - 1;
@@ -171,19 +228,19 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
                     <div className="flex flex-col items-center">
                       <span
                         className={cn(
-                          "grid h-7 w-7 shrink-0 place-items-center rounded-full ring-1 ring-inset",
-                          t.tone === "accent" ? "bg-accent/10 text-accent ring-accent/30"
-                          : t.tone === "warning" ? "bg-warning/10 text-warning ring-warning/30"
-                          : "bg-elevated/70 text-muted ring-border/60"
+                          "grid h-7 w-7 shrink-0 place-items-center rounded-md border",
+                          t.tone === "accent" ? "border-accent/40 bg-accent/10 text-accent"
+                          : t.tone === "warning" ? "border-warning/40 bg-warning/10 text-warning"
+                          : "border-border bg-elevated/70 text-muted"
                         )}
                       >
                         <t.icon className="h-3.5 w-3.5" aria-hidden />
                       </span>
-                      {!last && <span className="my-1 w-px flex-1 bg-border/70" />}
+                      {!last && <span className="my-1 w-px flex-1 bg-border/60" />}
                     </div>
-                    <div className={cn("min-w-0", last ? "pb-0" : "pb-4")}>
-                      <div className="text-sm leading-snug text-subtle">{t.label}</div>
-                      <div className="mt-1 font-mono text-[11px] tabular-nums text-muted">{formatDate(t.date)}</div>
+                    <div className={cn("-mt-px min-w-0", last ? "pb-0" : "pb-5")}>
+                      <div className="font-mono text-[10px] uppercase tracking-[0.06em] tabular-nums text-muted">{formatDate(t.date)}</div>
+                      <div className="mt-0.5 text-sm leading-snug text-subtle">{t.label}</div>
                     </div>
                   </li>
                 );
@@ -192,18 +249,23 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
           </div>
 
           <div className="card panel-pad">
-            <CardHead icon={Paperclip} title="Evidence" count={evidence.length} />
+            <PanelHeader icon={Paperclip} title="Evidence" count={evidence.length} sub="Seized items & forensic exhibits" />
             {evidence.length === 0 ? (
               <EmptyState icon={Paperclip} title="No evidence recorded" hint="Seized items and forensic exhibits appear here once logged against this FIR." />
             ) : (
               <div className="grid gap-2.5 sm:grid-cols-2">
                 {evidence.map((e, i) => (
-                  <div key={i} className="rounded-lg border border-border/60 bg-elevated/40 p-3 transition-colors hover:border-border">
+                  <div key={i} className="rounded-md border border-border bg-elevated/40 p-3 transition-colors hover:border-border/80">
                     <div className="flex items-center gap-2">
                       <Badge tone="info">{e.type}</Badge>
                       <span className="ml-auto truncate font-mono text-[10px] text-muted" title={e.storage_ref}>{e.storage_ref}</span>
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-subtle">{e.description}</p>
+                    {e.collected_at && (
+                      <div className="mt-2 border-t border-border/50 pt-2 font-mono text-[10px] tabular-nums text-muted">
+                        Collected {formatDate(e.collected_at)}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -211,10 +273,10 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* RIGHT — AI intelligence panel */}
+        {/* RIGHT — intelligence rail */}
         <div className="min-w-0 space-y-4">
           <div className="card panel-pad">
-            <CardHead icon={ShieldQuestion} title="Suspects" count={suspects.length} />
+            <PanelHeader icon={ShieldQuestion} title="Suspects" count={suspects.length} tone={primeAccused ? "danger" : "accent"} />
             {suspects.length === 0 ? (
               <Blank>No suspects linked to this FIR.</Blank>
             ) : (
@@ -223,15 +285,18 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
                   <Link
                     key={s.id}
                     href={`/criminals/${s.id}`}
-                    className="group flex items-center gap-2.5 rounded-lg border border-transparent p-2 transition-colors hover:border-border/60 hover:bg-elevated/60"
+                    className="group flex items-center gap-2.5 rounded-md border border-transparent p-2 transition-colors hover:border-border/60 hover:bg-elevated/60"
                   >
-                    <Avatar name={s.name} size={32} />
+                    <Avatar name={s.name} size={36} />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium transition-colors group-hover:text-accent">{s.name}</div>
-                      <div className="mt-1 flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="min-w-0 truncate text-sm font-medium transition-colors group-hover:text-accent">{s.name}</span>
                         {s.role === "prime_accused" && (
-                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-danger">Prime accused</span>
+                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-danger">Prime</span>
                         )}
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <StatusBadge status={s.status} />
                         <span className="ml-auto shrink-0"><RiskMeter score={s.risk_score} /></span>
                       </div>
                     </div>
@@ -242,13 +307,13 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
           </div>
 
           <div className="card panel-pad">
-            <CardHead icon={Lightbulb} title="Questions to ask" />
+            <PanelHeader icon={Lightbulb} title="Questions to ask" sub="Send to the AI assistant" />
             <div className="space-y-2">
               {questions.map((q, i) => (
                 <Link
                   key={i}
                   href={`/assistant?q=${encodeURIComponent(q)}`}
-                  className="group flex items-start gap-2 rounded-lg border border-border/60 bg-elevated/30 p-2.5 text-xs leading-relaxed text-subtle transition-colors hover:border-accent/40 hover:bg-elevated/60 hover:text-fg"
+                  className="group flex items-start gap-2 rounded-md border border-border/60 bg-elevated/30 p-2.5 text-xs leading-relaxed text-subtle transition-colors hover:border-accent/40 hover:bg-elevated/60 hover:text-fg"
                 >
                   <span className="min-w-0 flex-1">{q}</span>
                   <ChevronRight className="mt-px h-3.5 w-3.5 shrink-0 text-muted transition-all duration-150 group-hover:translate-x-0.5 group-hover:text-accent" aria-hidden />
@@ -258,7 +323,7 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
           </div>
 
           <div className="card panel-pad">
-            <CardHead icon={GitCompare} title="Related cases" count={related.length} />
+            <PanelHeader icon={GitCompare} title="Related cases" count={related.length} tone="info" />
             {related.length === 0 ? (
               <Blank>No related cases in this district or offence class.</Blank>
             ) : (
@@ -267,10 +332,18 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
                   <Link
                     key={r.id}
                     href={`/cases/${r.id}`}
-                    className="group block rounded-lg border border-transparent p-2 transition-colors hover:border-border/60 hover:bg-elevated/60"
+                    className="group block rounded-md border border-transparent p-2 transition-colors hover:border-border/60 hover:bg-elevated/60"
                   >
-                    <div className="truncate text-sm font-medium transition-colors group-hover:text-accent">{r.title}</div>
-                    <div className="mt-0.5 font-mono text-[10px] text-muted">{r.case_number}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 truncate text-sm font-medium transition-colors group-hover:text-accent">{r.title}</span>
+                      <span className="shrink-0">
+                        <Badge tone={r.priority === "critical" ? "danger" : r.priority === "high" ? "warning" : "muted"}>{r.priority}</Badge>
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="font-mono text-[10px] tabular-nums text-muted">{r.case_number}</span>
+                      <span className="ml-auto truncate text-[11px] capitalize text-muted">{r.status.replace(/_/g, " ")}</span>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -279,14 +352,11 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
 
           {similar.length > 0 && (
             <div className="card panel-pad">
-              <CardHead icon={Sparkles} title="Similar FIRs" count={similar.length} />
-              <p className="-mt-1.5 mb-3 text-[11px] leading-relaxed text-muted">
-                Ranked by AI similarity · crime type, modus &amp; facts
-              </p>
+              <PanelHeader icon={ScanSearch} title="Similar FIRs" count={similar.length} sub="Ranked by AI similarity — crime type, modus & facts" />
               <div className="divide-y divide-border/40">
                 {similar.map((m) => (
                   <div key={m.id} className="flex items-center gap-2 py-2 text-xs first:pt-0 last:pb-0">
-                    <span className="shrink-0 font-mono text-muted">{m.fir_number}</span>
+                    <span className="shrink-0 font-mono tabular-nums text-muted">{m.fir_number}</span>
                     <span className="min-w-0 truncate text-subtle" title={`${m.crime_type} · ${m.district}`}>{m.crime_type} · {m.district}</span>
                     <span className="ml-auto flex shrink-0 items-center gap-1.5">
                       <span className="block h-1.5 w-10 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border/60">
@@ -305,51 +375,60 @@ export default function CaseWorkspace({ params }: { params: { id: string } }) {
   );
 }
 
-/** Card header — one rhythm for every pane on this workspace. */
-function CardHead({
-  icon: Icon,
-  title,
-  count,
-  meta,
-  action,
-}: {
-  icon: LucideIcon;
-  title: string;
-  count?: number;
-  meta?: React.ReactNode;
-  action?: React.ReactNode;
-}) {
+type MetricTone = "default" | "accent" | "danger" | "warning" | "info";
+
+const METRIC_VALUE: Record<MetricTone, string> = {
+  default: "text-fg",
+  accent: "text-accent",
+  danger: "text-danger",
+  warning: "text-warning",
+  info: "text-info",
+};
+const METRIC_ICON: Record<MetricTone, string> = {
+  default: "text-muted",
+  accent: "text-accent",
+  danger: "text-danger",
+  warning: "text-warning",
+  info: "text-info",
+};
+
+/** Compact KPI tile for the case overview strip — icon, caption, tabular figure. */
+function MetricTile({ label, value, icon: Icon, tone = "default" }: { label: string; value: number; icon: LucideIcon; tone?: MetricTone }) {
   return (
-    <div className="mb-3 flex items-center gap-2">
-      <Icon className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-      <h3 className="min-w-0 truncate font-display text-sm font-semibold tracking-tight">{title}</h3>
-      {count !== undefined && (
-        <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">{count}</span>
-      )}
-      {meta}
-      {action && <span className="ml-auto shrink-0">{action}</span>}
+    <div className="card px-3.5 py-3">
+      <div className="flex items-center gap-1.5">
+        <Icon className={cn("h-3.5 w-3.5 shrink-0", value ? METRIC_ICON[tone] : "text-muted")} aria-hidden />
+        <span className="stat-label truncate">{label}</span>
+      </div>
+      <div className={cn("mt-1.5 font-display text-2xl font-bold leading-none tabular-nums", value ? METRIC_VALUE[tone] : "text-muted/50")}>
+        {value}
+      </div>
     </div>
   );
+}
+
+function severityTone(sev: string): "danger" | "warning" | "info" | "muted" {
+  return sev === "critical" ? "danger" : sev === "high" ? "warning" : sev === "medium" ? "info" : "muted";
 }
 
 /** Compact placeholder for the narrow rails, where EmptyState would tower. */
 function Blank({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted">
+    <p className="rounded-md border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted">
       {children}
     </p>
   );
 }
 
-function Info({ label, value, icon: Icon, mono }: { label: string; value: string; icon: LucideIcon; mono?: boolean }) {
+/** Aligned label/value row for the case-record definition list. */
+function RecordRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-center gap-2">
-      <Icon className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />
+    <div className="flex items-baseline justify-between gap-3 py-1.5 first:pt-0 last:pb-0">
       <dt className="stat-label shrink-0">{label}</dt>
       <dd
         className={cn(
           "ml-auto min-w-0 truncate text-right font-medium text-subtle",
-          mono ? "font-mono text-xs" : "capitalize"
+          mono ? "font-mono text-xs tabular-nums" : "capitalize"
         )}
         title={value}
       >

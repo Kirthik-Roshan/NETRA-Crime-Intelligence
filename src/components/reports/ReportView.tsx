@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { FileText, Eye, Inbox } from "lucide-react";
-import { PageHeader, Badge, StatusBadge } from "@/components/ui";
+import { FileText, Eye, Inbox, TrendingUp, Users, MapPin } from "lucide-react";
+import { PageHeader, Badge, StatusBadge, Segmented } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { cn, formatDate, riskBand, severityColor } from "@/lib/utils";
 import { useT } from "@/lib/i18n-client";
@@ -16,12 +16,17 @@ export interface ReportData {
 }
 
 const REPORTS = [
-  { id: "district", label: "District Crime Report" },
-  { id: "trend", label: "Crime Trend Report" },
-  { id: "network", label: "Network Intelligence Report" },
+  { id: "district", label: "District", icon: MapPin },
+  { id: "trend", label: "Trend", icon: TrendingUp },
+  { id: "network", label: "Network", icon: Users },
 ] as const;
-
 type ReportType = (typeof REPORTS)[number]["id"];
+
+const REPORT_TITLE: Record<ReportType, string> = {
+  district: "District Crime Report",
+  trend: "Crime Trend Report",
+  network: "Network Intelligence Report",
+};
 
 export function ReportView({ data }: { data: ReportData }) {
   const t = useT();
@@ -34,38 +39,31 @@ export function ReportView({ data }: { data: ReportData }) {
         <PrintButton label={t("reports.branded_pdf")} />
       </PageHeader>
 
-      <div className="no-print mb-5 flex flex-wrap items-center gap-2" role="group" aria-label="Report type">
-        <span className="stat-label mr-1">Report</span>
-        {REPORTS.map((r) => (
-          <button
-            key={r.id}
-            onClick={() => setType(r.id)}
-            aria-pressed={type === r.id}
-            className={cn(
-              "chip transition-colors",
-              type === r.id
-                ? "border-accent/50 bg-accent/10 text-fg"
-                : "text-muted hover:border-border hover:bg-elevated hover:text-fg"
-            )}
-          >
-            <FileText className={cn("h-3.5 w-3.5", type === r.id && "text-accent")} /> {r.label}
-          </button>
-        ))}
+      <div className="no-print mb-4 flex flex-wrap items-center gap-3">
+        <span className="stat-label">Report type</span>
+        <Segmented<ReportType>
+          ariaLabel="Report type"
+          value={type}
+          onChange={setType}
+          options={REPORTS.map((r) => ({ value: r.id, label: r.label, icon: r.icon }))}
+        />
       </div>
 
-      <div className="card panel-pad space-y-7">
+      <div className="card panel-pad space-y-6">
+        {/* Branded document header */}
         <div className="flex flex-wrap items-start justify-between gap-3 break-inside-avoid border-b border-border pb-5">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-fg shadow-[0_6px_16px_-8px_rgb(var(--accent)/0.55)]"><Eye className="h-4 w-4" /></span>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-accent text-accent-fg"><Eye className="h-4 w-4" /></span>
               <span className="stat-label !text-subtle">NETRA · State Crime Records Bureau</span>
             </div>
-            <h2 className="mt-3 font-display text-xl font-bold tracking-tight">{REPORTS.find((r) => r.id === type)?.label}</h2>
-            <p className="mt-0.5 text-sm text-muted">Karnataka State Police · Generated <span className="tabular-nums">{generatedOn}</span></p>
+            <h2 className="mt-3 font-display text-xl font-bold tracking-[-0.02em]">{REPORT_TITLE[type]}</h2>
+            <p className="mt-1 text-sm text-muted">Karnataka State Police · Generated <span className="font-mono tabular-nums">{generatedOn}</span></p>
           </div>
           <Badge tone="accent">CONFIDENTIAL</Badge>
         </div>
 
+        {/* Report KPIs */}
         <div className="grid grid-cols-2 gap-3 break-inside-avoid sm:grid-cols-4">
           {[
             ["Total FIRs", stats.totalFirs],
@@ -73,7 +71,7 @@ export function ReportView({ data }: { data: ReportData }) {
             ["Suspects at large", stats.atLarge],
             ["Solve rate", `${stats.solveRate}%`],
           ].map(([l, v]) => (
-            <div key={l} className="rounded-lg border border-border/70 bg-elevated/20 p-3 transition-colors hover:border-border">
+            <div key={l as string} className="rounded-md border border-border bg-elevated/40 p-3">
               <div className="stat-label">{l}</div>
               <div className="mt-1 font-display text-2xl font-bold leading-none tabular-nums">{v}</div>
             </div>
@@ -81,14 +79,20 @@ export function ReportView({ data }: { data: ReportData }) {
         </div>
 
         {type === "district" && (
-          <ReportSection title="District Crime Distribution" meta={`${hotspots.length} districts`}>
+          <ReportSection title="District crime distribution" meta={`${hotspots.length} districts`}>
             <table className="w-full min-w-[24rem] text-left text-sm">
-              <thead><tr className="text-[11px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">District</th><th className="pb-2 text-right font-semibold">FIRs</th><th className="pb-2 text-right font-semibold">Share</th></tr></thead>
+              <thead>
+                <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  <th className="pb-2 pr-4">District</th>
+                  <th className="pb-2 pr-4 text-right">FIRs</th>
+                  <th className="pb-2 text-right">Share</th>
+                </tr>
+              </thead>
               <tbody>
                 {hotspots.map((h) => (
-                  <tr key={h.district} className="border-t border-border/50 transition-colors hover:bg-elevated/40">
-                    <td className="py-2 font-medium">{h.district}</td>
-                    <td className="py-2 text-right font-mono tabular-nums">{h.cases}</td>
+                  <tr key={h.district} className="border-t border-border/50 transition-colors hover:bg-elevated/50">
+                    <td className="py-2 pr-4 font-medium">{h.district}</td>
+                    <td className="py-2 pr-4 text-right font-mono tabular-nums">{h.cases}</td>
                     <td className="py-2 text-right font-mono tabular-nums text-muted">{stats.totalFirs ? Math.round((h.cases / stats.totalFirs) * 100) : 0}%</td>
                   </tr>
                 ))}
@@ -99,13 +103,18 @@ export function ReportView({ data }: { data: ReportData }) {
         )}
 
         {type === "trend" && (
-          <ReportSection title="Crime Type Breakdown" meta={`${byType.length} categories`}>
+          <ReportSection title="Crime-type breakdown" meta={`${byType.length} categories`}>
             <table className="w-full min-w-[24rem] text-left text-sm">
-              <thead><tr className="text-[11px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">Crime Type</th><th className="pb-2 text-right font-semibold">Count</th></tr></thead>
+              <thead>
+                <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  <th className="pb-2 pr-4">Crime type</th>
+                  <th className="pb-2 text-right">Count</th>
+                </tr>
+              </thead>
               <tbody>
                 {byType.map((ct) => (
-                  <tr key={ct.crime_type} className="border-t border-border/50 transition-colors hover:bg-elevated/40">
-                    <td className="py-2 font-medium capitalize">{ct.crime_type}</td>
+                  <tr key={ct.crime_type} className="border-t border-border/50 transition-colors hover:bg-elevated/50">
+                    <td className="py-2 pr-4 font-medium capitalize">{ct.crime_type}</td>
                     <td className="py-2 text-right font-mono tabular-nums">{ct.count}</td>
                   </tr>
                 ))}
@@ -116,15 +125,22 @@ export function ReportView({ data }: { data: ReportData }) {
         )}
 
         {type === "network" && (
-          <ReportSection title="Highest-Risk Individuals" meta={`Top ${topCriminals.length}`}>
+          <ReportSection title="Highest-risk individuals" meta={`Top ${topCriminals.length}`}>
             <table className="w-full min-w-[32rem] text-left text-sm">
-              <thead><tr className="text-[11px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">Name</th><th className="pb-2 font-semibold">District</th><th className="pb-2 font-semibold">Category</th><th className="pb-2 text-right font-semibold">Risk</th></tr></thead>
+              <thead>
+                <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  <th className="pb-2 pr-4">Name</th>
+                  <th className="pb-2 pr-4">District</th>
+                  <th className="pb-2 pr-4">Category</th>
+                  <th className="pb-2 text-right">Risk</th>
+                </tr>
+              </thead>
               <tbody>
                 {topCriminals.map((c) => (
-                  <tr key={c.name} className="border-t border-border/50 transition-colors hover:bg-elevated/40">
-                    <td className="py-2 font-medium">{c.name}</td>
-                    <td className="py-2 text-muted">{c.home_district}</td>
-                    <td className="py-2 capitalize text-muted">{c.crime_category}</td>
+                  <tr key={c.name} className="border-t border-border/50 transition-colors hover:bg-elevated/50">
+                    <td className="py-2 pr-4 font-medium">{c.name}</td>
+                    <td className="py-2 pr-4 text-muted">{c.home_district}</td>
+                    <td className="py-2 pr-4 capitalize text-muted">{c.crime_category}</td>
                     <td className={cn("py-2 text-right font-mono font-semibold tabular-nums", riskBand(c.risk_score).color)}>{c.risk_score}</td>
                   </tr>
                 ))}
@@ -134,16 +150,24 @@ export function ReportView({ data }: { data: ReportData }) {
           </ReportSection>
         )}
 
-        <ReportSection title="Recent Cases" meta={`${recentCases.length} latest`}>
+        <ReportSection title="Recent cases" meta={`${recentCases.length} latest`}>
           <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead><tr className="text-[11px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">Case</th><th className="pb-2 font-semibold">District</th><th className="pb-2 font-semibold">Priority</th><th className="pb-2 font-semibold">Status</th><th className="pb-2 text-right font-semibold">Updated</th></tr></thead>
+            <thead>
+              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                <th className="pb-2 pr-4">Case</th>
+                <th className="pb-2 pr-4">District</th>
+                <th className="pb-2 pr-4">Priority</th>
+                <th className="pb-2 pr-4">Status</th>
+                <th className="pb-2 text-right">Updated</th>
+              </tr>
+            </thead>
             <tbody>
               {recentCases.map((c) => (
-                <tr key={c.case_number} className="border-t border-border/50 align-top transition-colors hover:bg-elevated/40">
-                  <td className="py-2"><span className="font-medium">{c.title}</span><br /><span className="font-mono text-[10px] tracking-wide text-muted">{c.case_number}</span></td>
-                  <td className="py-2 text-muted">{c.district}</td>
-                  <td className={cn("py-2 font-medium capitalize", severityColor(c.priority))}>{c.priority}</td>
-                  <td className="py-2"><StatusBadge status={c.status} /></td>
+                <tr key={c.case_number} className="border-t border-border/50 align-top transition-colors hover:bg-elevated/50">
+                  <td className="py-2 pr-4"><span className="font-medium">{c.title}</span><br /><span className="font-mono text-[10px] tracking-wide text-muted">{c.case_number}</span></td>
+                  <td className="py-2 pr-4 text-muted">{c.district}</td>
+                  <td className={cn("py-2 pr-4 font-medium capitalize", severityColor(c.priority))}>{c.priority}</td>
+                  <td className="py-2 pr-4"><StatusBadge status={c.status} /></td>
                   <td className="py-2 text-right text-xs tabular-nums text-muted">{formatDate(c.updated_at)}</td>
                 </tr>
               ))}
@@ -153,7 +177,8 @@ export function ReportView({ data }: { data: ReportData }) {
         </ReportSection>
 
         <div className="border-t border-border pt-4 text-xs leading-relaxed text-muted">
-          Generated by NETRA AI · Every figure is derived from audited crime records. This document is for authorized law-enforcement use only.
+          <FileText className="mr-1.5 inline h-3 w-3 text-accent" />
+          Generated by NETRA · Every figure is derived from audited crime records. This document is for authorized law-enforcement use only.
         </div>
       </div>
     </div>
@@ -164,10 +189,9 @@ function ReportSection({ title, meta, children }: { title: string; meta?: string
   return (
     <section className="break-inside-avoid">
       <div className="mb-2.5 flex items-baseline justify-between gap-4 border-b border-border/60 pb-1.5">
-        <h3 className="font-display text-base font-semibold tracking-tight">{title}</h3>
+        <h3 className="font-display text-sm font-semibold uppercase tracking-[0.06em] text-fg">{title}</h3>
         {meta && <span className="shrink-0 font-mono text-[11px] uppercase tracking-wider text-muted">{meta}</span>}
       </div>
-      {/* Wide tables scroll inside the section instead of the page; print gets the full width. */}
       <div className="overflow-x-auto print:overflow-visible">{children}</div>
     </section>
   );

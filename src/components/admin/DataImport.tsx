@@ -1,5 +1,6 @@
 "use client";
 import { FileSpreadsheet, Info } from "lucide-react";
+import { PanelHeader } from "@/components/ui";
 import { useOfficer } from "@/components/OfficerName";
 
 /**
@@ -16,13 +17,12 @@ export function DataImport() {
 
   return (
     <div className="card panel-pad">
-      <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold">
-        <FileSpreadsheet className="h-4 w-4 text-accent" /> Import Real FIR Data
-      </h2>
-      <p className="mb-3 text-xs text-muted">
-        Load actual SCRB extracts (CSV) into the official CaseMaster schema. Maps to Catalyst Data Store bulk-import in production.
-      </p>
-      <div className="flex items-start gap-2 rounded-lg border border-border bg-elevated p-3 text-xs text-muted">
+      <PanelHeader
+        icon={FileSpreadsheet}
+        title="Import real FIR data"
+        sub="Load actual SCRB extracts (CSV) into the official CaseMaster schema — maps to Catalyst Data Store bulk-import in production."
+      />
+      <div className="flex items-start gap-2.5 rounded-md border border-border bg-elevated/40 p-3 text-xs leading-relaxed text-muted">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
         <span>
           {isAdmin

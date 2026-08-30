@@ -76,6 +76,13 @@ export interface GraphEdge {
   note?: string | null;
 }
 
+/** A retrieved source document backing a RAG answer. */
+export interface AiSource {
+  title: string;
+  snippet: string;
+  score?: number | null;
+}
+
 /** Structured, explainable answer returned by the AI pipeline. */
 export interface AiInsight {
   answer: string;
@@ -83,6 +90,8 @@ export interface AiInsight {
   columns?: string[];
   rows?: Record<string, unknown>[];
   chart?: { kind: "bar" | "line"; x: string; y: string } | null;
+  /** Grounding documents (RAG). Optional — present only for retrieved answers. */
+  sources?: AiSource[];
   explain: {
     confidence: number; // 0..1
     reasoning: string;

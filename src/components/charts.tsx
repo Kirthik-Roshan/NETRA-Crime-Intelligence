@@ -14,13 +14,13 @@ import {
   Pie,
 } from "recharts";
 
-const AXIS = { fontSize: 11, fill: "rgb(var(--muted))" };
-const GRID = "rgb(var(--border))";
+const AXIS = { fontSize: 10.5, fill: "rgb(var(--muted))" };
+const GRID = "rgb(var(--border) / 0.55)";
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-border bg-elevated px-3 py-2 text-xs shadow-card">
+    <div className="rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-card">
       <div className="mb-1 font-medium text-fg">{label}</div>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-muted">
@@ -65,8 +65,8 @@ export function BarSeries({
         <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
         <XAxis dataKey={x} tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} interval={0} angle={data.length > 8 ? -30 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 60 : 30} />
         <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgb(var(--elevated))" }} />
-        <Bar dataKey={y} radius={[4, 4, 0, 0]} fill={`rgb(var(--${color}))`} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgb(var(--elevated) / 0.6)" }} />
+        <Bar dataKey={y} radius={[3, 3, 0, 0]} fill={`rgb(var(--${color}))`} maxBarSize={46} />
       </BarChart>
     </ResponsiveContainer>
   );

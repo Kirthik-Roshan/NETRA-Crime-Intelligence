@@ -6,7 +6,7 @@ import {
   Flame, MapPin, Radar, Activity, Database, ArrowRight, ScanText,
   Network, Phone, Car, Landmark,
 } from "lucide-react";
-import { PageHeader, StatCard, Badge, Avatar, EmptyState } from "@/components/ui";
+import { PageHeader, StatCard, Badge, Avatar, EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { MapPanel } from "@/components/maps/MapPanel";
 import { fetchDashboard, type DashboardData } from "@/lib/cloudscale";
 import { fetchCriminals } from "@/lib/cloudscale";
@@ -46,7 +46,6 @@ export default function AnalyticsPage() {
   const queue = useMemo(() => [...cases].sort((a, b) => (PRI[a.priority] ?? 9) - (PRI[b.priority] ?? 9)).slice(0, 6), [cases]);
 
   // Cross-case connections — derived proxies (no link tables in Cloud Scale yet).
-  // Linked = cases that share a district+crime_type with at least one other case.
   const links = useMemo(() => {
     const districts = new Set(cases.map((c) => c.district).filter(Boolean));
     const types = new Set(cases.map((c) => c.crime_type).filter(Boolean));
@@ -77,7 +76,7 @@ export default function AnalyticsPage() {
   const threats = hotspots.slice(0, 4).map((h, i) => ({
     title: `Elevated activity in ${h.district}`,
     detail: `${h.cases} FIRs registered · ${byType[i]?.crime_type ?? "mixed offences"}`,
-    tone: i === 0 ? "danger" : i < 2 ? "warning" : "info",
+    tone: (i === 0 ? "danger" : i < 2 ? "warning" : "info") as "danger" | "warning" | "info",
   }));
 
   const perf = [
@@ -88,18 +87,18 @@ export default function AnalyticsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader title="Crime Intelligence Overview" subtitle="Real-time intelligence and investigation insights · from Cloud Scale">
-        <Link href="/database?table=firs" className="btn-ghost text-sm"><Database className="h-4 w-4" /> Open in database</Link>
+        <Link href="/database?table=firs" className="btn-ghost h-9 text-xs"><Database className="h-4 w-4" /> Open in database</Link>
       </PageHeader>
 
-      {/* Stat row */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {d === null ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="card panel-pad">
               <div className="skeleton h-3 w-20" />
-              <div className="skeleton mt-4 h-8 w-16" />
+              <div className="skeleton mt-3 h-7 w-16" />
             </div>
           ))
         ) : (
@@ -117,28 +116,36 @@ export default function AnalyticsPage() {
       {/* AI summary + hotspots + threats */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card panel-pad">
-          <div className="mb-3 flex items-center gap-2">
-            <Radar className="h-4 w-4 text-accent" />
-            <h2 className="font-display text-base font-semibold">AI Intelligence Summary</h2>
-            {summary.length > 0 && (
-              <span className="ml-auto">
-                <ReadAloud label="Read Intelligence Brief" text={summary.join(". ")} />
-              </span>
-            )}
-          </div>
-          <div className="space-y-2.5">
-            {summary.length === 0 && <p className="text-sm text-muted">No Cloud Scale records yet.</p>}
-            {summary.map((s, i) => <div key={i} className="flex gap-2 text-sm text-subtle"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" /><Translated text={s} /></div>)}
-          </div>
+          <PanelHeader
+            icon={Radar}
+            title="Intelligence summary"
+            sub="Derived from live Cloud Scale records"
+            action={summary.length > 0 ? <ReadAloud label="Listen" text={summary.join(". ")} /> : undefined}
+          />
+          {summary.length === 0 ? (
+            <p className="text-sm text-muted">No Cloud Scale records yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {summary.map((s, i) => (
+                <li key={i} className="flex gap-2 text-sm leading-relaxed text-subtle">
+                  <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                  <Translated text={s} />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="card panel-pad">
-          <div className="mb-3 flex items-center gap-2"><Flame className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Crime Hotspots</h2></div>
-          <MapPanel points={geo} height={210} />
+          <PanelHeader icon={Flame} tone="warning" title="Crime hotspots" sub="Top districts by volume" />
+          <MapPanel points={geo} height={200} />
           <div className="mt-3 space-y-1">
             {hotspots.slice(0, 5).map((h, i) => (
               <div key={h.district} className="flex items-center justify-between text-xs">
-                <span className="text-subtle">{i + 1}. {h.district}</span>
+                <span className="text-subtle">
+                  <span className="mr-2 font-mono tabular-nums text-muted">{String(i + 1).padStart(2, "0")}</span>
+                  {h.district}
+                </span>
                 <Badge tone={i === 0 ? "danger" : i < 2 ? "warning" : "info"}>{h.cases}</Badge>
               </div>
             ))}
@@ -147,14 +154,14 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="card panel-pad">
-          <div className="mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Active Threats & Alerts</h2></div>
+          <PanelHeader icon={AlertTriangle} tone="danger" title="Active threats & alerts" />
           <div className="space-y-2">
             {threats.length === 0 && <p className="text-sm text-muted">No alerts derived yet.</p>}
             {threats.map((tr, i) => (
-              <div key={i} className="rounded-lg border border-border/70 bg-elevated/20 p-2.5 transition-colors hover:border-border">
+              <div key={i} className="rounded-md border border-border bg-elevated/40 p-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{tr.title}</span>
-                  <Badge tone={tr.tone as "danger" | "warning" | "info"} >{tr.tone === "danger" ? "HIGH" : tr.tone === "warning" ? "MED" : "LOW"}</Badge>
+                  <span className="text-[13px] font-semibold">{tr.title}</span>
+                  <Badge tone={tr.tone}>{tr.tone === "danger" ? "HIGH" : tr.tone === "warning" ? "MED" : "LOW"}</Badge>
                 </div>
                 <p className="mt-0.5 text-xs text-muted">{tr.detail}</p>
               </div>
@@ -166,51 +173,57 @@ export default function AnalyticsPage() {
       {/* Repeat offenders (selectable) + performance */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card panel-pad lg:col-span-2">
-          <div className="mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Repeat Offender Analysis</h2></div>
+          <PanelHeader icon={Users} title="Repeat offender analysis" sub={`${criminals.length} profiles indexed`} />
           {active ? (
             <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
-              <div className="flex flex-col items-center rounded-lg border border-border p-4 text-center">
-                <Avatar name={active.name} size={64} />
-                <div className="mt-2 font-display text-base font-semibold">{active.name}</div>
-                <div className="font-mono text-xs text-accent">KSP-{active.id}</div>
-                <div className="mt-0.5 text-xs text-muted">Age {active.age || "—"} · {active.home_district || "—"}</div>
-                <div className="mt-3 w-full">
-                  <div className="flex items-center justify-between text-xs"><span className="text-subtle">Risk Score</span><span className="font-mono tabular-nums text-danger">{active.risk_score}%</span></div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border/60"><div className="h-full rounded-full bg-danger transition-[width] duration-500 ease-out" style={{ width: `${Math.min(100, active.risk_score)}%` }} /></div>
+              <div className="rounded-md border border-border bg-elevated/40 p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar name={active.name} size={44} />
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">{active.name}</div>
+                    <div className="font-mono text-[11px] text-accent">KSP-{String(active.id).padStart(4, "0")}</div>
+                  </div>
                 </div>
-                <div className="mt-3 grid w-full grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-border/70 bg-elevated/20 p-2"><div className="stat-label">FIRs</div><div className="font-display text-lg font-bold tabular-nums">{active.fir_count}</div></div>
-                  <div className="rounded-lg border border-border/70 bg-elevated/20 p-2"><div className="stat-label">Arrests</div><div className="font-display text-lg font-bold tabular-nums">{active.arrest_count}</div></div>
+                <div className="mt-3 text-xs text-muted">
+                  Age {active.age || "—"} · {active.home_district || "—"}
                 </div>
-                <div className="mt-2 text-xs text-muted capitalize">{active.crime_category || active.status}</div>
-                <Link href={`/criminals/${active.id}`} className="btn-ghost mt-3 w-full justify-center text-xs">View profile <ArrowRight className="h-3.5 w-3.5" /></Link>
+                <div className="mt-3">
+                  <div className="mb-1 flex items-center justify-between text-xs"><span className="text-subtle">Risk score</span><span className="font-mono tabular-nums text-danger">{active.risk_score}%</span></div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border"><div className="h-full rounded-full bg-danger transition-[width] duration-500 ease-out" style={{ width: `${Math.min(100, active.risk_score)}%` }} /></div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded border border-border bg-surface/60 p-2"><div className="stat-label">FIRs</div><div className="mt-1 font-mono text-lg font-semibold tabular-nums">{active.fir_count}</div></div>
+                  <div className="rounded border border-border bg-surface/60 p-2"><div className="stat-label">Arrests</div><div className="mt-1 font-mono text-lg font-semibold tabular-nums">{active.arrest_count}</div></div>
+                </div>
+                <div className="mt-2 text-xs capitalize text-muted">{active.crime_category || active.status}</div>
+                <Link href={`/criminals/${active.id}`} className="btn-ghost mt-3 h-8 w-full justify-center text-xs">View profile <ArrowRight className="h-3.5 w-3.5" /></Link>
               </div>
               <div>
-                <div className="mb-1 stat-label">Select an offender</div>
-                <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                <div className="stat-label mb-2">Select an offender</div>
+                <div className="max-h-72 space-y-0.5 overflow-y-auto pr-1">
                   {ranked.map((c) => (
-                    <button key={c.id} onClick={() => setSel(c.id)} className={`flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors ${active.id === c.id ? "bg-elevated ring-1 ring-inset ring-accent/40" : "hover:bg-elevated"}`}>
-                      <Avatar name={c.name} size={28} />
+                    <button key={c.id} onClick={() => setSel(c.id)} className={`flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition-colors ${active.id === c.id ? "bg-elevated ring-1 ring-inset ring-accent/40" : "hover:bg-elevated/60"}`}>
+                      <Avatar name={c.name} size={26} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{c.name}</div>
-                        <div className="text-[10px] text-muted capitalize">{c.crime_category || c.home_district} · {c.fir_count} FIRs</div>
+                        <div className="truncate text-[13px] font-medium">{c.name}</div>
+                        <div className="text-[10.5px] capitalize text-muted">{c.crime_category || c.home_district} · {c.fir_count} FIRs</div>
                       </div>
-                      <span className="font-mono tabular-nums text-xs text-danger">{c.risk_score}</span>
+                      <span className="font-mono text-xs font-semibold tabular-nums text-danger">{c.risk_score}</span>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
-          ) : <EmptyState icon={Users} title="No offenders on record" hint="Repeat-offender analysis appears once criminal profiles sync from Cloud Scale." />}
+          ) : <EmptyState icon={Users} title="No offenders on record" hint="Analysis appears once profiles sync from Cloud Scale." />}
         </div>
 
         <div className="card panel-pad">
-          <div className="mb-3 flex items-center gap-2"><Activity className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">Investigation Performance</h2></div>
+          <PanelHeader icon={Activity} title="Investigation performance" />
           <div className="space-y-3">
             {perf.map((p) => (
               <div key={p.label}>
                 <div className="mb-1 flex items-center justify-between text-xs"><span className="text-subtle">{p.label}</span><span className="font-mono tabular-nums text-muted">{p.value}{p.pct ? "%" : ""}</span></div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border/60"><div className={`h-full rounded-full transition-[width] duration-500 ease-out ${p.color}`} style={{ width: `${Math.min(100, (p.value / p.max) * 100)}%` }} /></div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border"><div className={`h-full rounded-full transition-[width] duration-500 ease-out ${p.color}`} style={{ width: `${Math.min(100, (p.value / p.max) * 100)}%` }} /></div>
               </div>
             ))}
           </div>
@@ -219,29 +232,25 @@ export default function AnalyticsPage() {
 
       {/* Cross-case connections */}
       <div className="card panel-pad">
-        <div className="mb-3 flex items-center gap-2">
-          <Network className="h-4 w-4 text-accent" />
-          <h2 className="font-display text-base font-semibold">Cross-Case Connections</h2>
-          <Badge tone="info">Derived</Badge>
-        </div>
+        <PanelHeader icon={Network} title="Cross-case connections" action={<Tag>derived</Tag>} />
         {cases.length === 0 && criminals.length === 0 ? (
           <EmptyState icon={Network} title="No connections derived yet" hint="Links surface once cases share a district and crime type." />
         ) : (
-          <div className="grid items-center gap-4 lg:grid-cols-[200px_1fr]">
-            <div className="flex flex-col items-center justify-center rounded-lg border border-accent/30 bg-accent/10 p-6 text-center">
-              <div className="font-display text-4xl font-bold tabular-nums text-accent">{links.linkedCases}</div>
-              <div className="mt-1 text-sm font-medium text-subtle">Linked Cases</div>
-              <div className="mt-1 text-[10px] text-muted">shared district + crime type</div>
+          <div className="grid items-stretch gap-4 lg:grid-cols-[180px_1fr]">
+            <div className="flex flex-col items-center justify-center rounded-md border border-accent/30 bg-accent/5 p-4 text-center">
+              <div className="font-display text-3xl font-bold tabular-nums text-accent">{links.linkedCases}</div>
+              <div className="mt-1 text-xs font-semibold text-subtle">Linked cases</div>
+              <div className="mt-0.5 text-[10px] text-muted">shared district + crime type</div>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {links.entities.map((e) => (
-                <div key={e.label} className="rounded-lg border border-border/70 bg-elevated/20 p-3 transition-colors hover:border-border">
+                <div key={e.label} className="rounded-md border border-border bg-elevated/40 p-2.5">
                   <div className="flex items-center justify-between">
                     <e.icon className={`h-4 w-4 ${e.cls}`} />
                     <span className="font-display text-lg font-bold tabular-nums">{e.value}</span>
                   </div>
                   <div className="mt-1 text-xs font-medium text-subtle">{e.label}</div>
-                  <div className="text-[10px] text-muted">{e.note}</div>
+                  <div className="text-[10.5px] text-muted">{e.note}</div>
                 </div>
               ))}
             </div>
@@ -252,17 +261,25 @@ export default function AnalyticsPage() {
       {/* Queue + evidence */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card panel-pad lg:col-span-2">
-          <h2 className="mb-3 font-display text-base font-semibold">Investigation Queue (Priority)</h2>
+          <PanelHeader icon={FolderKanban} title="Priority investigation queue" sub="Top by priority" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-[11px] uppercase tracking-wider text-muted"><th className="pb-2 font-semibold">Priority</th><th className="pb-2 font-semibold">Case</th><th className="pb-2 font-semibold">Type</th><th className="pb-2 font-semibold">District</th><th className="pb-2 font-semibold">Status</th></tr></thead>
+              <thead>
+                <tr className="border-b border-border text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  <th className="pb-2 pr-3">Priority</th>
+                  <th className="pb-2 pr-3">Case</th>
+                  <th className="pb-2 pr-3">Type</th>
+                  <th className="pb-2 pr-3">District</th>
+                  <th className="pb-2">Status</th>
+                </tr>
+              </thead>
               <tbody>
                 {queue.map((c) => (
-                  <tr key={c.id} className="border-t border-border/50 transition-colors hover:bg-elevated/40">
-                    <td className="py-2"><Badge tone={c.priority === "critical" ? "danger" : c.priority === "high" ? "warning" : "info"}>{c.priority}</Badge></td>
-                    <td className="py-2 font-mono text-xs">{c.case_number || `#${c.id}`}</td>
-                    <td className="py-2 text-subtle">{c.crime_type || "—"}</td>
-                    <td className="py-2 text-muted">{c.district || "—"}</td>
+                  <tr key={c.id} className="border-t border-border/50 transition-colors hover:bg-elevated/50">
+                    <td className="py-2 pr-3"><Badge tone={c.priority === "critical" ? "danger" : c.priority === "high" ? "warning" : "info"}>{c.priority}</Badge></td>
+                    <td className="py-2 pr-3 font-mono text-xs">{c.case_number || `#${c.id}`}</td>
+                    <td className="py-2 pr-3 text-subtle">{c.crime_type || "—"}</td>
+                    <td className="py-2 pr-3 text-muted">{c.district || "—"}</td>
                     <td className="py-2 text-xs capitalize text-muted">{c.status?.replace(/_/g, " ")}</td>
                   </tr>
                 ))}
@@ -273,11 +290,11 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="card panel-pad">
-          <h2 className="mb-3 font-display text-base font-semibold">Evidence & Processing</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Stat icon={ScanText} label="OCR Documents" value={ocr} />
+          <PanelHeader icon={ScanText} title="Evidence & processing" />
+          <div className="grid grid-cols-2 gap-2">
+            <Stat icon={ScanText} label="OCR documents" value={ocr} />
             <Stat icon={MapPin} label="Geolocated FIRs" value={geo.length} />
-            <Stat icon={FolderKanban} label="Total Cases" value={cases.length} />
+            <Stat icon={FolderKanban} label="Total cases" value={cases.length} />
             <Stat icon={Users} label="Profiles" value={criminals.length} />
           </div>
         </div>
@@ -288,10 +305,10 @@ export default function AnalyticsPage() {
 
 function Stat({ icon: Icon, label, value }: { icon: typeof MapPin; label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-elevated/20 p-3 transition-colors hover:border-border">
-      <Icon className="h-5 w-5 text-accent" />
-      <div className="mt-2 font-display text-xl font-bold tabular-nums">{value}</div>
-      <div className="text-[11px] text-muted">{label}</div>
+    <div className="rounded-md border border-border bg-elevated/40 p-2.5">
+      <Icon className="h-4 w-4 text-accent" />
+      <div className="mt-1.5 font-display text-lg font-bold tabular-nums">{value}</div>
+      <div className="text-[10.5px] text-muted">{label}</div>
     </div>
   );
 }

@@ -2,11 +2,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  FolderKanban, AlertTriangle, UserSearch, Fingerprint, TrendingUp, Sparkles,
+  FolderKanban, AlertTriangle, UserSearch, Fingerprint, TrendingUp,
   MapPin, ArrowRight, Flame, Radar, Activity, PieChart, BarChart3,
+  ScanSearch, Network, Gauge, FileText, Target, Crosshair,
 } from "lucide-react";
 import { OfficerFirstName } from "@/components/OfficerName";
-import { StatCard, PageHeader, Badge, EmptyState } from "@/components/ui";
+import { StatCard, PageHeader, PanelHeader, Badge, EmptyState } from "@/components/ui";
 import { TrendLine, BarSeries, Donut } from "@/components/charts";
 import { MapPanel } from "@/components/maps/MapPanel";
 import { useT } from "@/lib/i18n-client";
@@ -33,70 +34,161 @@ export default function DashboardPage() {
   if (hotspots[0]) alerts.push({ icon: Flame, title: "Top hotspot", detail: `${hotspots[0].district} leads with ${hotspots[0].cases} FIRs.` });
   if (byType[0]) alerts.push({ icon: TrendingUp, title: "Leading offence", detail: `${byType[0].crime_type} is the most frequent (${byType[0].count}).` });
 
+  const overallPct = Math.round(confidence.overall * 100);
+  const quickActions = [
+    { href: "/assistant", icon: ScanSearch, label: "AI Assistant", desc: "Natural-language case intelligence" },
+    { href: "/cases", icon: FolderKanban, label: "Case Registry", desc: "Open & active investigations" },
+    { href: "/network", icon: Network, label: "Link Analysis", desc: "Suspect & entity network graph" },
+    { href: "/maps", icon: MapPin, label: "Crime Map", desc: "Geospatial hotspot explorer" },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader title={<>{t("dash.greeting")}, <OfficerFirstName /></>} subtitle={`${today} · ${t("dash.subtitle")}`}>
+        <span className="chip hidden sm:inline-flex">
+          <span className={`h-1.5 w-1.5 rounded-full ${d === null ? "animate-pulse bg-warning" : "bg-success"}`} />
+          <span className="font-mono text-[11px] tracking-wide">{d === null ? "SYNCING" : "CLOUD SCALE · LIVE"}</span>
+        </span>
         <Link href="/assistant" className="btn-accent">
-          <Sparkles className="h-4 w-4" /> {t("dash.ask")}
+          <ScanSearch className="h-4 w-4" /> {t("dash.ask")}
         </Link>
       </PageHeader>
 
+      {/* Live-sync affordance while the first payload resolves */}
       {d === null && (
-        <div className="chip">
+        <div className="flex items-center gap-2.5 rounded-md border border-border bg-elevated/40 px-3 py-2">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-          Loading live data from Cloud Scale…
+          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Loading live data from Cloud Scale…</span>
         </div>
       )}
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* KPI strip — the state of the operation at a glance */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <StatCard label={t("dash.active_cases")} value={stats.activeCases} sub={`${stats.critical} critical priority`} icon={FolderKanban} tone="accent" />
         <StatCard label={t("dash.critical_alerts")} value={stats.critical} sub="Require immediate review" icon={AlertTriangle} tone="danger" />
         <StatCard label={t("dash.suspects_at_large")} value={stats.atLarge} sub={`of ${stats.totalFirs} FIRs on record`} icon={UserSearch} tone="warning" />
         <StatCard label={t("dash.arrests_30d")} value={stats.arrests30} sub={`${stats.solveRate}% case solve rate`} icon={Fingerprint} tone="success" />
+        <StatCard label="Total FIRs" value={stats.totalFirs} sub="On record · Cloud Scale" icon={FileText} tone="info" />
+        <StatCard label="Solve Rate" value={`${stats.solveRate}%`} sub="Charge-sheeted or closed" icon={Target} tone="default" />
       </div>
 
-      {/* Trend + type */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="card panel-pad lg:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="flex items-center gap-2 font-display text-base font-semibold"><Flame className="h-4 w-4 text-accent" /> Crime Heat Evolution</h2>
-              <p className="text-xs text-muted">Incident volume across timescales · Δ vs previous window · from Cloud Scale</p>
-            </div>
-            <Badge tone="accent"><TrendingUp className="h-3 w-3" /> live</Badge>
-          </div>
-          {/* Windowed density evolution — 24h → 6mo, anchored to the newest FIR */}
-          <div className="mb-4 grid grid-cols-4 gap-2">
-            {(heat.length ? heat : [{ key: "24h", label: "24 hours", count: 0, delta: 0 }, { key: "7d", label: "7 days", count: 0, delta: 0 }, { key: "30d", label: "30 days", count: 0, delta: 0 }, { key: "6mo", label: "6 months", count: 0, delta: 0 }]).map((w) => {
-              const up = w.delta > 0, flat = w.delta === 0;
-              return (
-                <div key={w.key} className="rounded-lg border border-border/60 bg-elevated/40 p-3 transition-colors hover:border-border">
-                  <div className="stat-label">{w.label}</div>
-                  <div className="mt-1 font-display text-xl font-bold tabular-nums">{w.count}</div>
-                  <div className={`mt-0.5 font-mono text-[11px] tabular-nums ${flat ? "text-muted" : up ? "text-danger" : "text-success"}`}>
-                    {flat ? "±0%" : `${up ? "▲" : "▼"} ${Math.abs(w.delta)}%`}
+      {/* Primary working grid — trend/heat + district load on the left, ops rail on the right */}
+      <div className="grid gap-5 xl:grid-cols-3">
+        <div className="space-y-5 xl:col-span-2">
+          {/* Crime heat evolution + incident trend */}
+          <div className="card panel-pad">
+            <PanelHeader
+              icon={Flame}
+              tone="danger"
+              title="Crime Heat Evolution"
+              sub="Incident volume across trailing windows · Δ vs previous window"
+              action={<Badge tone="accent"><TrendingUp className="h-3 w-3" /> live</Badge>}
+            />
+            {/* Windowed density evolution — 24h → 6mo, anchored to the newest FIR */}
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(heat.length ? heat : [{ key: "24h", label: "24 hours", count: 0, delta: 0 }, { key: "7d", label: "7 days", count: 0, delta: 0 }, { key: "30d", label: "30 days", count: 0, delta: 0 }, { key: "6mo", label: "6 months", count: 0, delta: 0 }]).map((w) => {
+                const up = w.delta > 0, flat = w.delta === 0;
+                return (
+                  <div key={w.key} className="rounded-md border border-border bg-elevated/40 p-3 transition-colors hover:border-border">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="stat-label">{w.label}</div>
+                      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${flat ? "bg-muted" : up ? "bg-danger" : "bg-success"}`} />
+                    </div>
+                    <div className="mt-1 font-display text-xl font-bold tabular-nums">{w.count}</div>
+                    <div className={`mt-0.5 font-mono text-[11px] tabular-nums ${flat ? "text-muted" : up ? "text-danger" : "text-success"}`}>
+                      {flat ? "±0%" : `${up ? "▲" : "▼"} ${Math.abs(w.delta)}%`}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            {trend.length ? <TrendLine data={trend} /> : <EmptyState icon={Activity} title="No FIR records yet" hint="Incident trends appear here once Cloud Scale has data." />}
           </div>
-          {trend.length ? <TrendLine data={trend} /> : <EmptyState icon={Activity} title="No FIR records yet" hint="Incident trends appear here once Cloud Scale has data." />}
+
+          {/* District load */}
+          <div className="card panel-pad">
+            <PanelHeader icon={BarChart3} tone="warning" title={t("dash.district_load")} sub="FIRs by district · top 8" />
+            {hotspots.length ? <BarSeries data={hotspots.slice(0, 8)} x="district" y="cases" color="warning" height={300} /> : <EmptyState icon={BarChart3} title="No district data yet" hint="District load ranks appear once FIRs are geotagged." />}
+          </div>
+        </div>
+
+        {/* Operations rail — briefings, confidence, and jump-offs */}
+        <div className="space-y-5">
+          <div className="card panel-pad">
+            <PanelHeader icon={Radar} title={t("dash.ai_briefings")} count={alerts.length} sub="Derived from live Cloud Scale records" />
+            {alerts.length ? (
+              <div className="space-y-2">
+                {alerts.map((a, i) => (
+                  <div key={i} className="flex gap-3 rounded-md border border-border bg-elevated/40 p-3 animate-fade-in">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-warning/30 bg-warning/10">
+                      <a.icon className="h-4 w-4 text-warning" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold">{a.title}</div>
+                      <p className="mt-0.5 text-xs leading-relaxed text-muted">{a.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyState icon={Radar} title="No briefings yet" hint="Intelligence briefings surface as Cloud Scale accumulates records." />}
+          </div>
+
+          <div className="card panel-pad">
+            <PanelHeader icon={Gauge} title="Intelligence Confidence" sub="Record completeness & linkage signal" />
+            <div className="mb-3 flex items-center justify-between rounded-md border border-border bg-elevated/40 px-3 py-2.5">
+              <span className="stat-label">Overall</span>
+              <span className="font-display text-2xl font-bold tabular-nums text-accent">{overallPct}<span className="ml-0.5 text-base text-muted">%</span></span>
+            </div>
+            <ConfidenceBar label="Data quality" v={confidence.dataQuality} />
+            <ConfidenceBar label="Case linkage" v={confidence.caseLinkage} />
+            <ConfidenceBar label="Pattern signal" v={confidence.patternSignal} />
+            <ConfidenceBar label="Extraction readiness" v={confidence.extractionReadiness} />
+          </div>
+
+          <div className="card panel-pad">
+            <PanelHeader icon={Crosshair} title="Quick Actions" sub="Jump into an investigation surface" />
+            <div className="space-y-2">
+              {quickActions.map((a) => (
+                <Link key={a.href} href={a.href} className="group flex items-center gap-3 rounded-md border border-border bg-elevated/40 px-3 py-2.5 transition-colors hover:border-accent/40 hover:bg-elevated">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border bg-surface">
+                    <a.icon className="h-4 w-4 text-accent" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold">{a.label}</div>
+                    <div className="truncate text-[11px] text-muted">{a.desc}</div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Geographic intelligence + offence mix */}
+      <div className="grid gap-5 xl:grid-cols-3">
+        <div className="card panel-pad xl:col-span-2">
+          <PanelHeader
+            icon={MapPin}
+            title={t("dash.hotspots")}
+            sub={`${geo.length} geolocated FIRs · from Cloud Scale`}
+            action={<Link href="/maps" className="btn-ghost h-8 py-0 text-xs">{t("dash.full_map")} <ArrowRight className="h-3.5 w-3.5" /></Link>}
+          />
+          <MapPanel points={geo} height={360} />
         </div>
         <div className="card panel-pad">
-          <h2 className="mb-1 font-display text-base font-semibold">{t("dash.crime_mix")}</h2>
-          <p className="mb-2 text-xs text-muted">Share by category</p>
+          <PanelHeader icon={PieChart} title={t("dash.crime_mix")} sub="Share by category" />
           {byType.length ? (
             <>
               <Donut data={byType} nameKey="crime_type" valueKey="count" />
-              <div className="mt-3 space-y-1.5">
+              <div className="mt-3">
                 {byType.slice(0, 5).map((ct, i) => (
-                  <div key={ct.crime_type} className="flex items-center justify-between text-xs">
+                  <div key={ct.crime_type} className="flex items-center justify-between border-t border-border/50 py-1.5 text-xs first:border-t-0 first:pt-0">
                     <span className="flex items-center gap-2 text-subtle">
                       <span className="h-2 w-2 rounded-full" style={{ background: `rgb(var(${["--accent", "--info", "--warning", "--danger", "--success"][i]}))` }} />
                       {ct.crime_type}
                     </span>
-                    <span className="font-mono text-muted">{ct.count}</span>
+                    <span className="font-mono tabular-nums text-muted">{ct.count}</span>
                   </div>
                 ))}
               </div>
@@ -105,83 +197,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Investigation velocity + intelligence confidence — derived from Cloud Scale records */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="card panel-pad lg:col-span-2">
-          <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold"><Activity className="h-4 w-4 text-accent" /> Investigation Velocity</h2>
-          <p className="mb-3 text-xs text-muted">Live case throughput across the state · from Cloud Scale</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-            <VelocityTile label="Open" value={velocity.open} />
-            <VelocityTile label="Active" value={velocity.active} />
-            <VelocityTile label="Closed" value={velocity.closed} tone="success" />
-            <VelocityTile label="Escalated" value={velocity.escalated} tone="danger" />
-            <VelocityTile label="Avg closure" value={velocity.avgClosureDays ? `${velocity.avgClosureDays}d` : "—"} />
-          </div>
-        </div>
-        <div className="card panel-pad">
-          <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold"><Radar className="h-4 w-4 text-accent" /> Intelligence Confidence</h2>
-          <p className="mb-3 text-xs text-muted">Overall <span className="font-mono text-accent">{Math.round(confidence.overall * 100)}%</span> · from record completeness & linkage</p>
-          <ConfidenceBar label="Data quality" v={confidence.dataQuality} />
-          <ConfidenceBar label="Case linkage" v={confidence.caseLinkage} />
-          <ConfidenceBar label="Pattern signal" v={confidence.patternSignal} />
-          <ConfidenceBar label="Extraction readiness" v={confidence.extractionReadiness} />
-        </div>
-      </div>
-
-      {/* Data-derived insights */}
-      {alerts.length > 0 && (
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <Radar className="h-4 w-4 text-accent" />
-            <h2 className="font-display text-base font-semibold">{t("dash.ai_briefings")}</h2>
-            <Badge tone="accent">{alerts.length}</Badge>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {alerts.map((a, i) => (
-              <div key={i} className="card panel-pad flex gap-3 animate-fade-in">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-warning/10">
-                  <a.icon className="h-5 w-5 text-warning" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-sm font-semibold">{a.title}</span>
-                  <p className="mt-0.5 text-sm text-muted">{a.detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Map + hotspots */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="card panel-pad lg:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="flex items-center gap-2 font-display text-base font-semibold">
-                <MapPin className="h-4 w-4 text-accent" /> {t("dash.hotspots")}
-              </h2>
-              <p className="text-xs text-muted">{geo.length} geolocated FIRs · from Cloud Scale</p>
-            </div>
-            <Link href="/maps" className="btn-ghost h-8 py-0 text-xs">
-              {t("dash.full_map")} <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <MapPanel points={geo} height={360} />
-        </div>
-        <div className="card panel-pad">
-          <h2 className="mb-1 font-display text-base font-semibold">{t("dash.district_load")}</h2>
-          <p className="mb-2 text-xs text-muted">FIRs by district</p>
-          {hotspots.length ? <BarSeries data={hotspots.slice(0, 8)} x="district" y="cases" color="warning" height={300} /> : <EmptyState icon={BarChart3} title="No district data yet" hint="District load ranks appear once FIRs are geotagged." />}
+      {/* Investigation velocity — throughput strip */}
+      <div className="card panel-pad">
+        <PanelHeader icon={Activity} title="Investigation Velocity" sub="Live case throughput across the state · from Cloud Scale" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <VelocityTile label="Open" value={velocity.open} />
+          <VelocityTile label="Active" value={velocity.active} tone="warning" />
+          <VelocityTile label="Closed" value={velocity.closed} tone="success" />
+          <VelocityTile label="Escalated" value={velocity.escalated} tone="danger" />
+          <VelocityTile label="Avg closure" value={velocity.avgClosureDays ? `${velocity.avgClosureDays}d` : "—"} />
         </div>
       </div>
     </div>
   );
 }
 
-function VelocityTile({ label, value, tone }: { label: string; value: string | number; tone?: "success" | "danger" }) {
-  const color = tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-fg";
+function VelocityTile({ label, value, tone }: { label: string; value: string | number; tone?: "success" | "danger" | "warning" }) {
+  const color = tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-fg";
+  const edge = tone === "success" ? "bg-success" : tone === "danger" ? "bg-danger" : tone === "warning" ? "bg-warning" : "bg-border";
   return (
-    <div className="rounded-lg border border-border/60 bg-elevated/40 p-3 transition-colors hover:border-border">
+    <div className="relative overflow-hidden rounded-md border border-border bg-elevated/40 p-3 transition-colors hover:border-border">
+      <span aria-hidden className={`absolute inset-x-0 top-0 h-[2px] ${edge}`} />
       <div className="stat-label">{label}</div>
       <div className={`mt-1 font-display text-2xl font-bold tabular-nums ${color}`}>{value}</div>
     </div>
