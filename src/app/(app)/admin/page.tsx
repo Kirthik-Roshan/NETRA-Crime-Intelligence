@@ -1,21 +1,34 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Users, ScrollText, Cpu, ShieldCheck, Gauge, ClipboardList } from "lucide-react";
-import { all } from "@/lib/db";
 import { PageHeader, Badge, StatCard, Avatar, EmptyState, PanelHeader, Tag } from "@/components/ui";
-import { ROLE_LABEL, type Role } from "@/lib/types";
+import { ROLE_LABEL, type SessionUser } from "@/lib/types";
 import { timeAgo } from "@/lib/utils";
 import { DataImport } from "@/components/admin/DataImport";
-import { getT } from "@/lib/i18n-server";
+import { useT } from "@/lib/i18n-client";
 import { RequireRole, RoleBadge } from "@/components/OfficerName";
+import { fetchAuditTrail, fetchCatalystUsers, fetchInfraHealth, type CatalystInfraHealth } from "@/lib/ai-client";
 
 export default function AdminPage() {
-  const t = getT();
-
-  const users = all<{ id: number; username: string; full_name: string; role: Role; rank: string }>(
-    "SELECT id, username, full_name, role, rank FROM users ORDER BY id"
-  );
-  const audit = all<{ ts: string; username: string; role: string; action: string; entity: string; ai_model: string; processing_ms: number; request_id: string }>(
-    "SELECT ts, username, role, action, entity, ai_model, processing_ms, request_id FROM audit_logs ORDER BY ts DESC LIMIT 40"
-  );
+  const t = useT();
+  const [users, setUsers] = useState<SessionUser[]>([]);
+  const [infra, setInfra] = useState<CatalystInfraHealth | null>(null);
+  const [audit, setAudit] = useState<{ ts: string; username: string; role: string; action: string; entity: string; ai_model: string; processing_ms: number; request_id: string }[]>([]);
+  useEffect(() => {
+    void Promise.all([fetchCatalystUsers(), fetchAuditTrail(100), fetchInfraHealth()]).then(([officers, rows, health]) => {
+      setUsers(officers);
+      setInfra(health);
+      setAudit(rows.map((row) => {
+        const actor = row.actor && typeof row.actor === "object" ? row.actor as Record<string, unknown> : {};
+        return {
+          ts: String(row.occurred_at || ""), username: String(actor.username || actor.full_name || ""), role: String(actor.role || ""),
+          action: String(row.action || ""), entity: String(row.entity || ""), ai_model: String(row.model || ""),
+          processing_ms: Number(row.processing_ms || 0), request_id: String(row.id || ""),
+        };
+      }).sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 40));
+    }).catch(() => { setUsers([]); setAudit([]); setInfra(null); });
+  }, []);
 
   // Presentation-only rollups over the rows already loaded above.
   const admins = users.filter((u) => u.role === "administrator").length;
@@ -54,7 +67,7 @@ export default function AdminPage() {
                     <Avatar name={u.full_name} size={32} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">{u.full_name}</div>
-                      <div className="truncate font-mono text-[11px] text-muted">{u.username} · {u.rank}</div>
+                      <div className="truncate font-mono text-[11px] text-muted">{u.username} · {u.rank || ROLE_LABEL[u.role]}</div>
                     </div>
                     <Badge tone={u.role === "administrator" ? "danger" : "info"}>{ROLE_LABEL[u.role]}</Badge>
                   </div>
@@ -71,20 +84,22 @@ export default function AdminPage() {
               icon={Cpu}
               title="AI configuration"
               sub="Pipeline posture, guardrails, and traceability"
-              action={<Badge tone="success"><span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" /> operational</Badge>}
+              action={<Badge tone={infra?.services.datastore && infra?.services.zia ? "success" : "warning"}><span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" /> {infra ? "live" : "health unavailable"}</Badge>}
             />
-            <dl className="text-sm">
-              <ConfigRow label="AI backend" value="Zoho Catalyst QuickML" tone="accent" />
-              <ConfigRow label="Offline fallback" value="Built-in reasoning engine" tone="info" />
-              <ConfigRow label="SQL guard" value="SELECT-only · table whitelist" tone="success" />
+            <div className="text-sm">
+              <ConfigRow label="AI backend" value={infra?.services.quickml ? "Catalyst QuickML connected" : "QuickML unavailable"} tone={infra?.services.quickml ? "accent" : "warning"} />
+              <ConfigRow label="Identity session" value={infra?.services.authentication ? "Catalyst Authentication verified" : "Not authenticated in this session"} tone={infra?.services.authentication ? "success" : "warning"} />
+              <ConfigRow label="Record access" value={infra?.services.datastore ? "Cloud Scale connected" : "Cloud Scale unavailable"} tone={infra?.services.datastore ? "success" : "warning"} />
+              <ConfigRow label="Record search" value={infra?.services.search === true ? "Catalyst Search indexed" : "Bounded fallback scan"} tone={infra?.services.search === true ? "success" : "warning"} />
+              <ConfigRow label="Prediction model" value="Explainable baseline · India DC" tone="info" />
               <ConfigRow label="Explainability" value="Enabled · confidence + evidence" tone="success" />
-              <ConfigRow label="Audit logging" value="Immutable · all AI queries" tone="success" />
-            </dl>
-            <div className="mt-4 flex items-start gap-2.5 rounded-md border border-border bg-elevated/40 p-3 text-xs leading-relaxed text-muted">
+              <ConfigRow label="Audit logging" value="Immutable · Catalyst Stratus" tone="success" />
+            </div>
+            <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-border/60 bg-elevated/50 p-3 text-xs leading-relaxed text-muted">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
               <span>
-                The intelligence pipeline never sends raw SQL rows to a black box. Intent detection and permission
-                checks run before any record is retrieved. Every AI decision is traceable via its audit ID.
+                Catalyst user permissions are applied before records are retrieved. Every AI, Search, evidence-analysis,
+                and PDF operation is traceable through its immutable audit object.
               </span>
             </div>
           </div>
@@ -138,7 +153,7 @@ export default function AdminPage() {
   );
 }
 
-function ConfigRow({ label, value, tone }: { label: string; value: string; tone: "info" | "accent" | "success" }) {
+function ConfigRow({ label, value, tone }: { label: string; value: string; tone: "info" | "accent" | "success" | "warning" }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border/50 py-2.5 last:border-0">
       <span className="text-muted">{label}</span>

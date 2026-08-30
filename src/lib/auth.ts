@@ -66,9 +66,9 @@ export function getSession(): SessionUser | null {
 /** Coarse capability matrix used for RBAC gating in the UI + API. */
 const CAPS: Record<Role, string[]> = {
   administrator: ["*"],
-  senior_officer: ["view_all", "reports", "predictive", "analytics", "cases", "criminals", "network"],
+  senior_officer: ["view_all", "reports", "predictive", "analytics", "cases", "criminals", "network", "ai", "search"],
   investigation_officer: ["cases", "criminals", "network", "ai", "analytics"],
-  analyst: ["analytics", "criminals", "network", "patterns", "reports"],
+  analyst: ["analytics", "criminals", "network", "patterns", "reports", "ai", "search"],
   readonly: ["view", "search", "reports"],
 };
 

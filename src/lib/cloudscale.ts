@@ -26,7 +26,7 @@ const num = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) {
 export async function fetchCases(): Promise<CaseRow[]> {
   const rows = await listRecords("Cases", 1000);
   return rows.map((r, i) => ({
-    id: num(r, "ROWID", "id") || i + 1,
+    id: num(r, "id", "ROWID") || i + 1,
     case_number: str(r, "case_number", "CaseNo", "CrimeNo"),
     title: str(r, "title", "Title", "BriefFacts"),
     status: str(r, "status", "CaseStatus") || "registered",
@@ -41,7 +41,7 @@ export async function fetchCases(): Promise<CaseRow[]> {
 export async function fetchCriminals(): Promise<CrimRow[]> {
   const rows = await listRecords("Criminals", 1000);
   return rows.map((r, i) => ({
-    id: num(r, "ROWID", "id") || i + 1,
+    id: num(r, "id", "ROWID") || i + 1,
     name: str(r, "name", "Name", "AccusedName"),
     aliases: str(r, "aliases", "Aliases"),
     age: num(r, "age", "Age"),
@@ -62,7 +62,7 @@ export async function fetchFirs(): Promise<Row[]> {
 export function toGeoPoints(firs: Row[]): FirPoint[] {
   return firs
     .map((r, i) => ({
-      id: num(r, "ROWID", "id") || i + 1,
+      id: num(r, "id", "ROWID") || i + 1,
       fir_number: str(r, "fir_number", "CrimeNo", "CaseNo"),
       crime_type: str(r, "crime_type", "CrimeType", "CrimeHeadName"),
       district: str(r, "district", "District"),
@@ -115,6 +115,33 @@ export interface DashboardData {
   confidence: Confidence;
 }
 
+export interface IntelligenceDimensions {
+  victimGender: { label: string; count: number }[];
+  complainantOccupations: { label: string; count: number }[];
+  entities: { phones: number; vehicles: number; addresses: number; organizations: number; relationships: number };
+}
+
+export async function fetchIntelligenceDimensions(): Promise<IntelligenceDimensions> {
+  const [victims, complainants, phones, vehicles, addresses, organizations, relationships] = await Promise.all([
+    listRecords("Victims", 5000), listRecords("Complainants", 5000), listRecords("Phones", 5000),
+    listRecords("Vehicles", 5000), listRecords("Addresses", 5000), listRecords("Organizations", 5000),
+    listRecords("Relationships", 5000),
+  ]);
+  const group = (rows: Row[], keys: string[], fallback: string) => {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const value = str(row, ...keys).trim() || fallback;
+      counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    return [...counts.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+  };
+  return {
+    victimGender: group(victims, ["gender", "Gender"], "Not stated"),
+    complainantOccupations: group(complainants, ["occupation", "Occupation"], "Not stated"),
+    entities: { phones: phones.length, vehicles: vehicles.length, addresses: addresses.length, organizations: organizations.length, relationships: relationships.length },
+  };
+}
+
 const firTime = (f: Row): number => { const t = Date.parse(str(f, "occurred_at", "IncidentFromDate", "CREATEDTIME")); return Number.isNaN(t) ? 0 : t; };
 
 /** Trailing-window FIR counts anchored to the newest FIR, each vs the previous equal window. */
@@ -164,7 +191,9 @@ function intelligenceConfidence(firs: Row[]): Confidence {
 
 /** Pull the base tables and derive the dashboard stats client-side. */
 export async function fetchDashboard(): Promise<DashboardData> {
-  const [firs, cases, criminals] = await Promise.all([fetchFirs(), fetchCases(), fetchCriminals()]);
+  const [firs, cases, criminals, arrests] = await Promise.all([
+    fetchFirs(), fetchCases(), fetchCriminals(), listRecords("Arrests", 1000),
+  ]);
   const active = cases.filter((c) => c.status === "registered" || c.status === "under_investigation");
   const solved = cases.filter((c) => c.status === "charge_sheeted" || c.status === "closed");
   const byMonth = new Map<string, number>();
@@ -184,7 +213,12 @@ export async function fetchDashboard(): Promise<DashboardData> {
       critical: active.filter((c) => c.priority === "critical").length,
       totalFirs: firs.length,
       atLarge: criminals.filter((c) => c.status === "at_large").length,
-      arrests30: 0,
+      arrests30: (() => {
+        const dates = arrests.map((row) => Date.parse(str(row, "arrested_at", "ArrestedAt", "CREATEDTIME"))).filter((value) => !Number.isNaN(value));
+        if (!dates.length) return 0;
+        const anchor = Math.max(...dates);
+        return dates.filter((value) => value >= anchor - 30 * 86400000).length;
+      })(),
       solveRate: cases.length ? Math.round((solved.length / cases.length) * 100) : 0,
     },
     trend: [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([month, cases]) => ({ month, cases })),

@@ -12,9 +12,13 @@ import { TrendLine, BarSeries } from "@/components/charts";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 import { useT } from "@/lib/i18n-client";
-import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, analyzeVoiceCommand, transcribeAudio, extractText, type RagSource } from "@/lib/ai-client";
+import { askAssistant, askRag, aiConfigured, translateText, synthesizeSpeech, analyzeVoiceCommand, transcribeAudio, extractText, exportConversationPdf, searchCloudRecords, type RagSource } from "@/lib/ai-client";
 import { Translated } from "@/components/Translated";
 import { parseBlocks, keyFindings, extractFirs, naturalizeForSpeech, type AnswerBlock } from "@/lib/answer-format";
+import type { AiResponseMeta, ConversationMessage } from "@/lib/ai-client";
+
+const HISTORY_KEY = "netra_assistant_history_v1";
+const STALE_BACKEND_FAILURE = /AI backend didn't return an answer|AI assistant isn't connected in this build/i;
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -22,7 +26,7 @@ const NETRA_SYSTEM =
   "records you do not have, say so and suggest where in NETRA to look (cases, criminals, network, maps).";
 
 /** Build an AiInsight shell around a plain-text answer from the Catalyst Function. */
-function textInsight(answer: string, source: AiInsight["explain"]["source"]): AiInsight {
+function textInsight(answer: string, source: AiInsight["explain"]["source"], meta: AiResponseMeta = {}): AiInsight {
   return {
     answer,
     explain: {
@@ -32,15 +36,15 @@ function textInsight(answer: string, source: AiInsight["explain"]["source"]): Ai
       evidence: [],
       alternatives: [],
       source,
-      audit_id: `A-${Date.now().toString(36).toUpperCase()}`,
-      processing_ms: 0,
-      ai_model: source === "llm" ? "VL-Qwen3.6-35B-A3B" : "none",
+      audit_id: meta.audit_id || `A-${Date.now().toString(36).toUpperCase()}`,
+      processing_ms: meta.processing_ms || 0,
+      ai_model: meta.model || (source === "llm" ? "VL-Qwen3.6-35B-A3B" : "none"),
     },
   };
 }
 
 /** Build an AiInsight from a RAG answer + the case documents it was grounded on. */
-function ragInsight(answer: string, sources: RagSource[]): AiInsight {
+function ragInsight(answer: string, sources: RagSource[], meta: AiResponseMeta = {}): AiInsight {
   const evidence = sources
     .map((s) => (s.title || s.snippet || "").toString().slice(0, 80))
     .filter(Boolean)
@@ -62,9 +66,44 @@ function ragInsight(answer: string, sources: RagSource[]): AiInsight {
       evidence,
       alternatives: [],
       source: "rag",
-      audit_id: `A-${Date.now().toString(36).toUpperCase()}`,
-      processing_ms: 0,
-      ai_model: "rag",
+      audit_id: meta.audit_id || `A-${Date.now().toString(36).toUpperCase()}`,
+      processing_ms: meta.processing_ms || 0,
+      ai_model: meta.model || "QuickML RAG",
+    },
+  };
+}
+
+function value(row: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const raw = row[key];
+    if (raw != null && String(raw).trim()) return String(raw);
+  }
+  return "";
+}
+
+function searchInsight(query: string, hits: Array<{ table: string; row: Record<string, unknown> }>, warning?: string | null, meta: AiResponseMeta = {}): AiInsight {
+  const lines = hits.slice(0, 6).map((hit, index) => {
+    const row = hit.row;
+    const primary = value(row, "fir_number", "case_number", "name", "full_name", "vehicle_number", "record_id", "ROWID") || "record";
+    const detail = [
+      value(row, "crime_type", "offence_type", "status"),
+      value(row, "district", "station_name", "location"),
+      value(row, "description", "summary", "notes").slice(0, 110),
+    ].filter(Boolean).join(" · ");
+    return `${index + 1}. ${hit.table}: ${primary}${detail ? ` — ${detail}` : ""}`;
+  });
+  return {
+    answer: `Cloud Scale search is live for "${query}". I found ${hits.length} relevant record${hits.length === 1 ? "" : "s"}:\n\n${lines.join("\n")}${warning ? `\n\nNote: ${warning}` : ""}`,
+    explain: {
+      confidence: 0.72,
+      reasoning: "QuickML RAG/chat did not return a usable answer, so NETRA answered from bounded Catalyst Cloud Scale search results.",
+      records_used: hits.length,
+      evidence: hits.slice(0, 8).map((hit) => `${hit.table} · ${value(hit.row, "fir_number", "case_number", "name", "ROWID") || "record"}`),
+      alternatives: [],
+      source: "lookup",
+      audit_id: meta.audit_id || `A-${Date.now().toString(36).toUpperCase()}`,
+      processing_ms: meta.processing_ms || 0,
+      ai_model: meta.model || "Catalyst Cloud Scale Search",
     },
   };
 }
@@ -120,6 +159,11 @@ function routeLabel(model: string): string {
   if (ROUTE_LABEL[model]) return ROUTE_LABEL[model];
   if (/rag/i.test(model)) return "Catalyst QuickML · RAG";
   return `Catalyst QuickML · ${model}`;
+}
+function engineScope(source: AiInsight["explain"]["source"]): string {
+  if (source === "rag" || source === "llm") return "Catalyst";
+  if (source === "lookup") return "Cloud Scale";
+  return "local";
 }
 
 /* Minimal typings for the Web Speech API (not in TS dom lib everywhere). */
@@ -231,6 +275,7 @@ export function AssistantClient() {
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -255,16 +300,39 @@ export function AssistantClient() {
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]") as Turn[];
+      const restored = Array.isArray(saved)
+        ? saved.filter((turn) => turn && typeof turn.q === "string" && turn.insight).slice(-20)
+          .filter((turn) => !STALE_BACKEND_FAILURE.test(turn.insight?.answer || ""))
+        : [];
+      setTurns(restored);
+      idRef.current = restored.reduce((max, turn) => Math.max(max, Number(turn.id) || 0), 0);
+    } catch {
+      localStorage.removeItem(HISTORY_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const complete = turns.filter((turn) => turn.insight).slice(-20);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(complete)); } catch { /* storage unavailable */ }
+  }, [turns]);
+
   const ask = useCallback(async (q: string, viaVoice = false) => {
     if (!q.trim()) return;
     setInput("");
     // Conversation memory: send previous user turns so follow-ups
     // ("what about vehicle theft?") resolve against earlier context.
-    const history = turnsRef.current.map((x) => x.q).slice(-8);
+    const history: ConversationMessage[] = turnsRef.current
+      .filter((turn) => turn.insight)
+      .slice(-6)
+      .flatMap((turn) => [
+        { role: "user" as const, content: turn.q },
+        { role: "assistant" as const, content: turn.insight!.answer },
+      ]);
     // Stable per-turn id so a response always updates its own turn, even if the
     // user fires another question while this one is still loading.
-    void history;
-    void viaVoice;
     const id = ++idRef.current;
     setTurns((prev) => [...prev, { id, q, ts: Date.now(), loading: true }]);
     if (!aiConfigured()) {
@@ -277,21 +345,31 @@ export function AssistantClient() {
     try {
       // RAG first: retrieve the relevant case documents and answer grounded in
       // them. Fall back to a plain LLM answer if the knowledge base isn't set up.
-      const rag = await askRag(q);
+      const request = {
+        history,
+        language: (lang === "kn" ? "kn" : "en") as "en" | "kn",
+        via_voice: viaVoice,
+      };
+      const rag = await askRag(q, request);
       let insight: AiInsight;
       if (rag) {
-        insight = ragInsight(rag.answer, rag.sources);
+        insight = ragInsight(rag.answer, rag.sources, rag.meta);
       } else {
-        const text = await askAssistant(q, { system: NETRA_SYSTEM });
-        insight = text
-          ? textInsight(text, "llm")
-          : textInsight("The AI backend didn't return an answer. Check the Catalyst Function, the QuickML token, and that case documents are uploaded to the RAG knowledge base, then try again.", "demo-engine");
+        const response = await askAssistant(q, { system: NETRA_SYSTEM, ...request });
+        if (response) {
+          insight = textInsight(response.answer, "llm", response.meta);
+        } else {
+          const search = await searchCloudRecords(q, 8);
+          insight = search?.hits?.length
+            ? searchInsight(q, search.hits, search.warning)
+            : textInsight("I could reach the AI Function, but it did not return a usable answer for this query. Try a case, FIR number, crime type, district, suspect, vehicle, or evidence term.", "demo-engine");
+        }
       }
       setTurns((prev) => prev.map((x) => (x.id === id ? { id, q, ts: x.ts, insight } : x)));
     } catch {
       setTurns((prev) => prev.map((x) => (x.id === id ? { id, q, ts: x.ts, insight: undefined } : x)));
     }
-  }, []);
+  }, [lang]);
 
   const prepareVoiceTranscript = useCallback(async (transcript: string) => {
     setVoiceMsg("Analyzing command with Catalyst Zia...");
@@ -434,9 +512,31 @@ export function AssistantClient() {
     }
   }, [lang]);
 
-  // Conversation → PDF (print pipeline; audit-logged).
-  const exportPdf = useCallback(() => {
-    window.print();
+  const exportPdf = useCallback(async () => {
+    setPdfBusy(true);
+    try {
+      const transcript = turnsRef.current.filter((turn) => turn.insight).map((turn) => ({
+        question: turn.q,
+        answer: turn.insight?.answer || "",
+        audit_id: turn.insight?.explain.audit_id || "",
+      }));
+      const generated = await exportConversationPdf(transcript);
+      if (!generated?.pdf) {
+        window.print();
+        return;
+      }
+      const binary = atob(generated.pdf);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      const url = URL.createObjectURL(new Blob([bytes], { type: generated.mime || "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = generated.filename || "netra-investigation.pdf";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      setPdfBusy(false);
+    }
   }, []);
 
   // Auto-run a query passed via ?q= (from global search)
@@ -475,13 +575,23 @@ export function AssistantClient() {
           </div>
         </div>
         <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto print:hidden">
-          <span className="chip border-success/30 bg-success/10 text-success" title="Every query is routed to the best local engine — no external AI is ever used">
-            <Cpu className="h-3 w-3" /> On-device routing
+          <span className="chip border-success/30 bg-success/10 text-success" title="Catalyst QuickML RAG with Cloud Scale search fallback">
+            <Cpu className="h-3 w-3" /> Catalyst AI
           </span>
           {!empty && (
-            <button onClick={exportPdf} className="btn-ghost" title="Export query log as PDF">
-              <FileDown className="h-4 w-4" /> {t("assistant.export")}
-            </button>
+            <>
+              <button
+                onClick={() => { setTurns([]); localStorage.removeItem(HISTORY_KEY); }}
+                className="btn-ghost"
+                title="Clear saved conversation"
+                aria-label="Clear conversation"
+              >
+                <History className="h-4 w-4" /> Clear
+              </button>
+              <button onClick={() => { void exportPdf(); }} disabled={pdfBusy} className="btn-ghost" title="Export query log as PDF">
+                {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} {t("assistant.export")}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1021,7 +1131,7 @@ function InsightBody({ insight, onAlt, lang }: { insight: AiInsight; onAlt: (q: 
               <TechItem label="Source"><span className="text-subtle">{SOURCE_LABEL[e.source] || e.source}</span></TechItem>
               <TechItem label="Latency"><span className="font-mono text-subtle">{e.processing_ms} ms</span></TechItem>
               <TechItem label="Records used"><span className="font-mono text-subtle">{e.records_used}</span></TechItem>
-              <TechItem label="Execution"><span className="inline-flex items-center gap-1 text-subtle"><Cpu className="h-3 w-3" /> on-device</span></TechItem>
+              <TechItem label="Execution"><span className="inline-flex items-center gap-1 text-subtle"><Cpu className="h-3 w-3" /> {engineScope(e.source)}</span></TechItem>
               <TechItem label="Audit ID"><span className="font-mono text-subtle">{e.audit_id}</span></TechItem>
             </dl>
 

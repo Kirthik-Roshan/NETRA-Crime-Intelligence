@@ -6,10 +6,8 @@ import { useOfficer } from "@/components/OfficerName";
 /**
  * FIR CSV import.
  *
- * This writes into the database, which requires a live server. In the static
- * Slate build there is no runtime backend, so import is not available here —
- * it runs in the full server deployment (AppSail) or against Catalyst Data
- * Store in production. Shown as an informational panel.
+ * Cloud Scale imports are intentionally performed by the Catalyst CLI so large
+ * CSV files never pass through the browser or expose an administrator token.
  */
 export function DataImport() {
   const user = useOfficer();
@@ -20,14 +18,14 @@ export function DataImport() {
       <PanelHeader
         icon={FileSpreadsheet}
         title="Import real FIR data"
-        sub="Load actual SCRB extracts (CSV) into the official CaseMaster schema — maps to Catalyst Data Store bulk-import in production."
+        sub="Load SCRB CSV extracts into production Catalyst Cloud Scale. NETRA reads imported rows live through the serverless Function."
       />
       <div className="flex items-start gap-2.5 rounded-md border border-border bg-elevated/40 p-3 text-xs leading-relaxed text-muted">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
         <span>
           {isAdmin
-            ? "Data import writes to the live database and isn't available in this static demo build. It runs in the full server deployment / Catalyst Data Store."
-            : "Importing requires the Administrator role, and runs only in the full server deployment."}
+            ? "Use catalyst ds:import <file.csv> --table <TableName> --production. Refresh this page after the Catalyst import job completes."
+            : "Cloud Scale import is restricted to Catalyst project administrators."}
         </span>
       </div>
     </div>

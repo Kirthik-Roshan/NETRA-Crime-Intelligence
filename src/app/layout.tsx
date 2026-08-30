@@ -45,6 +45,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" data-theme="midnight" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <script src="https://static.zohocdn.com/catalyst/sdk/js/4.6.1/catalystWebSDK.js" defer />
+        <script src="/__catalyst/sdk/init.js" defer />
       </head>
       <body>{children}</body>
     </html>

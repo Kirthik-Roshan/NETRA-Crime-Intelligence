@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
-import { FileText, Eye, Inbox, TrendingUp, Users, MapPin } from "lucide-react";
+import { FileDown, FileText, Eye, Inbox, Loader2, TrendingUp, Users, MapPin } from "lucide-react";
 import { PageHeader, Badge, StatusBadge, Segmented } from "@/components/ui";
-import { PrintButton } from "@/components/PrintButton";
 import { cn, formatDate, riskBand, severityColor } from "@/lib/utils";
 import { useT } from "@/lib/i18n-client";
+import { exportConversationPdf } from "@/lib/ai-client";
 
 export interface ReportData {
   generatedOn: string;
@@ -31,12 +31,53 @@ const REPORT_TITLE: Record<ReportType, string> = {
 export function ReportView({ data }: { data: ReportData }) {
   const t = useT();
   const [type, setType] = useState<ReportType>("district");
+  const [pdfBusy, setPdfBusy] = useState(false);
   const { stats, byType, hotspots, topCriminals, recentCases, generatedOn } = data;
+
+  const exportPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const label = REPORTS.find((report) => report.id === type)?.label || "Crime Report";
+      const detail = type === "district"
+        ? hotspots.map((row) => `${row.district}: ${row.cases} FIRs`).join("\n")
+        : type === "trend"
+          ? byType.map((row) => `${row.crime_type}: ${row.count}`).join("\n")
+          : topCriminals.map((row) => `${row.name}: risk ${row.risk_score}, ${row.home_district}, ${row.crime_category}`).join("\n");
+      const generated = await exportConversationPdf([
+        {
+          question: "Executive summary",
+          answer: `Total FIRs: ${stats.totalFirs}\nActive cases: ${stats.activeCases}\nSuspects at large: ${stats.atLarge}\nSolve rate: ${stats.solveRate}%`,
+        },
+        { question: label, answer: detail || "No matching records." },
+        {
+          question: "Recent cases",
+          answer: recentCases.map((row) => `${row.case_number} | ${row.title} | ${row.district} | ${row.status}`).join("\n") || "No recent cases.",
+        },
+      ], label);
+      if (!generated?.pdf) {
+        window.print();
+        return;
+      }
+      const binary = atob(generated.pdf);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      const url = URL.createObjectURL(new Blob([bytes], { type: generated.mime || "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = generated.filename || "netra-report.pdf";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   return (
     <div>
       <PageHeader title={t("reports.title")} subtitle={t("reports.subtitle")}>
-        <PrintButton label={t("reports.branded_pdf")} />
+        <button type="button" onClick={() => { void exportPdf(); }} disabled={pdfBusy} className="btn-ghost">
+          {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} {t("reports.branded_pdf")}
+        </button>
       </PageHeader>
 
       <div className="no-print mb-4 flex flex-wrap items-center gap-3">

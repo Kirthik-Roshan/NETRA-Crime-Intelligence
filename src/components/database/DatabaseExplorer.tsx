@@ -3,11 +3,17 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Table2, Database, Layers, Eye, ScrollText, Loader2, ChevronLeft, ChevronRight, Search, SearchX, X, Rows3, Columns3 } from "lucide-react";
 import { EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { useT } from "@/lib/i18n-client";
-import BAKED from "@/data/db-baked.json";
+import { listRecords } from "@/lib/ai-client";
 
 interface TableInfo { name: string; count: number }
 interface Group { group: string; tables: TableInfo[] }
 interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number }
+
+const CLOUD_GROUPS: Group[] = [
+  { group: "official", tables: ["Firs", "Cases", "Criminals", "FirCriminals", "Arrests", "Victims", "Complainants", "Evidence"].map((name) => ({ name, count: 0 })) },
+  { group: "intel", tables: ["Relationships", "Phones", "Vehicles", "Addresses", "Organizations", "OrgMembers", "PoliceStations", "Chargesheets", "OcrResult"].map((name) => ({ name, count: 0 })) },
+  { group: "audit", tables: ["AuditLogs", "Notifications"].map((name) => ({ name, count: 0 })) },
+];
 
 const GROUP_META: Record<string, { icon: typeof Table2; key: "database.official" | "database.intel" | "database.views" | "admin.audit" }> = {
   official: { icon: Database, key: "database.official" },
@@ -18,34 +24,44 @@ const GROUP_META: Record<string, { icon: typeof Table2; key: "database.official"
 
 export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const t = useT();
-  const groups = (BAKED.groups as unknown as Group[]);
-  const allTables = BAKED.tables as unknown as Record<string, BakedTable>;
+  const [groups, setGroups] = useState<Group[]>(CLOUD_GROUPS);
   const [active, setActive] = useState<string | null>(null);
   const [baked, setBaked] = useState<BakedTable | null>(null);
-  const loading = false;
+  const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState("");
   const [dataQuery, setDataQuery] = useState("");
   const LIMIT = 50;
 
-  const load = useCallback((table: string) => {
+  const load = useCallback(async (table: string) => {
     setActive(table);
     setOffset(0);
-    setBaked(allTables[table] ?? { table, columns: [], rows: [], total: 0 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLoading(true);
+    try {
+      const rows = await listRecords(table, 5000);
+      const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+      setBaked({ table, columns, rows, total: rows.length });
+      setGroups((current) => current.map((group) => ({
+        ...group,
+        tables: group.tables.map((item) => item.name === table ? { ...item, count: rows.length } : item),
+      })));
+    } catch {
+      setBaked({ table, columns: [], rows: [], total: 0 });
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
     const first = initialTable || groups?.[0]?.tables?.[0]?.name;
-    if (first) load(first);
+    if (first) void load(first);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function selectTable(table: string) {
     setDataQuery("");
-    load(table);
+    void load(table);
   }
 
+  // Client-side full-row search over records fetched from Cloud Scale.
   const matched = useMemo(() => {
     if (!baked) return [];
     const q = dataQuery.trim().toLowerCase();

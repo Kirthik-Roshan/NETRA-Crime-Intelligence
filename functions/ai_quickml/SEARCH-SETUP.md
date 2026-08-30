@@ -1,35 +1,41 @@
-# RAG over Cloud Scale Search (replaces QuickML RAG)
+# Catalyst Search setup for NETRA
 
-The assistant's `rag` mode now retrieves **only from Cloud Scale** — Cloud Scale
-Search over your Data Store tables — and the QuickML LLM merely phrases the
-answer from the retrieved rows. Nothing reads the old QuickML RAG knowledge base.
+NETRA already calls Catalyst Search from `platform.js`. Until the columns below
+are indexed, it deliberately uses a bounded Cloud Scale row scan and reports the
+fallback in the response.
 
-## Setup (console + Function env)
+Search Index is a schema constraint. Catalyst currently requires it to be
+enabled in the console; the CLI and public Data Store APIs do not create or edit
+table schemas.
 
-1. **Load your data into Data Store** (you own this) — e.g. tables `Firs`,
-   `Cases`, `Criminals`.
+## Enable in Development and Production
 
-2. **Enable Cloud Scale → Search** and index the columns you want searchable
-   (console → Cloud Scale → Search → add the tables/columns).
+Open **Cloud Scale -> Data Store**, select each table, and use **Schema View ->
+column menu -> Edit -> Search Index -> Update**.
 
-3. **Tell the Function which tables/columns to search** — set on the
-   `ai_quickml` Function config:
-   ```
-   SEARCH_TABLE_COLUMNS = {"Firs":["BriefFacts","CrimeNo","crime_type"],"Cases":["title","summary"]}
-   SEARCH_SELECT_COLUMNS = {"Firs":["CrimeNo","BriefFacts","district"],"Cases":["title","summary"]}   # optional
-   ```
-   `SEARCH_TABLE_COLUMNS` = where to search; `SEARCH_SELECT_COLUMNS` (optional) =
-   which columns to return. JSON, table → column array.
+Enable these columns:
 
-4. **Deploy** the Function.
+- `Firs`: `fir_number`, `crime_type`, `ipc_sections`, `district`, `taluk`,
+  `status`, `severity`, `modus`, `description`
+- `Cases`: `case_number`, `title`, `status`, `case_priority`, `district`,
+  `summary`
+- `Criminals`: `name`, `aliases`, `status`, `crime_category`,
+  `known_locations`, `home_district`, `notes`
+- `Evidence`: `type`, `description`, `storage_ref`
+- `Vehicles` when provisioned: `plate`, `make`, `model`, `color`, `type`
 
-## Behaviour
-- No `SEARCH_TABLE_COLUMNS` set, or Search not indexed yet → the assistant
-  answers "No matching records were found in Cloud Scale" (graceful, honest).
-- Matches found → the LLM answers strictly from those rows; the UI shows each
-  source row under its table name.
+Wait for the Catalyst indexing-complete notification before testing. Repeat the
+same schema change in Production because Catalyst environments have separate
+schemas and indexes.
 
-## Frontend
-Unchanged — `askRag()` in `src/lib/ai-client.ts` still posts `{mode:"rag"}` and
-receives `{answer, sources}`. Only the Function's retrieval backend changed
-(QuickML RAG → Cloud Scale Search).
+## Verify
+
+```bash
+curl -sS "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/" \
+  -H "Content-Type: text/plain" \
+  --data '{"mode":"search:records","query":"burglary Mysuru","max":5}'
+```
+
+The response is complete when `engine` is `catalyst-search` and `warning` is
+empty. `bounded-datastore-fallback` means at least one configured column still
+lacks its Search Index.

@@ -8,7 +8,7 @@ import { getClientUser } from "@/lib/auth-client";
 export default function Home() {
   const router = useRouter();
   useEffect(() => {
-    router.replace(getClientUser() ? "/dashboard" : "/login");
+    void getClientUser().then((user) => router.replace(user ? "/dashboard" : "/login"));
   }, [router]);
   return null;
 }

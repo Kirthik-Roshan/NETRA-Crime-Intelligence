@@ -6,11 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/prepare-slate.mjs",
     "start": "next start",
     "lint": "next lint",
     "bake": "node scripts/bake-db.mjs",
     "cloudscale:export": "node scripts/export-cloudscale-csv.mjs",
+    "evidence:test": "node scripts/test-evidence-workflows.mjs",
     "dossiers": "node scripts/gen-case-dossiers.mjs",
     "seed": "node scripts/seed.mjs",
     "db:reset": "node scripts/seed.mjs --reset",

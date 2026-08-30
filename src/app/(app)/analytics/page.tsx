@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { PageHeader, StatCard, Badge, Avatar, EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { MapPanel } from "@/components/maps/MapPanel";
-import { fetchDashboard, type DashboardData } from "@/lib/cloudscale";
+import { fetchDashboard, fetchIntelligenceDimensions, type DashboardData, type IntelligenceDimensions } from "@/lib/cloudscale";
 import { fetchCriminals } from "@/lib/cloudscale";
 import { fetchCases } from "@/lib/cloudscale";
 import { listOcr } from "@/lib/ai-client";
@@ -30,6 +30,7 @@ export default function AnalyticsPage() {
   const [criminals, setCriminals] = useState<CrimRow[]>([]);
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [ocr, setOcr] = useState(0);
+  const [dimensions, setDimensions] = useState<IntelligenceDimensions | null>(null);
   const [sel, setSel] = useState<number | null>(null);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function AnalyticsPage() {
     fetchCriminals().then(setCriminals).catch(() => setCriminals([]));
     fetchCases().then(setCases).catch(() => setCases([]));
     listOcr().then((r) => setOcr(r.length)).catch(() => setOcr(0));
+    fetchIntelligenceDimensions().then(setDimensions).catch(() => setDimensions(null));
   }, []);
 
   const { stats, byType, hotspots, geo, heat, velocity } = d ?? EMPTY;
@@ -58,12 +60,12 @@ export default function AnalyticsPage() {
         { icon: MapPin, label: "Locations", value: districts.size, cls: "text-info", note: "distinct districts" },
         { icon: Fingerprint, label: "Modus Operandi", value: types.size, cls: "text-warning", note: "distinct crime types" },
         { icon: Users, label: "Associates", value: criminals.length, cls: "text-accent", note: "profiles on record" },
-        { icon: Phone, label: "Phone Numbers", value: 0, cls: "text-muted", note: "needs Data Store link tables" },
-        { icon: Car, label: "Vehicles", value: 0, cls: "text-muted", note: "needs Data Store link tables" },
-        { icon: Landmark, label: "Bank Accounts", value: 0, cls: "text-muted", note: "needs Data Store link tables" },
+        { icon: Phone, label: "Phone Numbers", value: dimensions?.entities.phones || 0, cls: "text-info", note: "Cloud Scale entities" },
+        { icon: Car, label: "Vehicles", value: dimensions?.entities.vehicles || 0, cls: "text-warning", note: "Cloud Scale entities" },
+        { icon: Landmark, label: "Organizations", value: dimensions?.entities.organizations || 0, cls: "text-accent", note: `${dimensions?.entities.relationships || 0} graph links` },
       ],
     };
-  }, [cases, criminals]);
+  }, [cases, criminals, dimensions]);
 
   const heat30 = heat.find((h) => h.key === "30d");
   const summary = [
@@ -111,6 +113,12 @@ export default function AnalyticsPage() {
             <StatCard label="Avg Investigation" value={velocity.avgClosureDays ? `${velocity.avgClosureDays}d` : "—"} icon={Clock} />
           </>
         )}
+      </div>
+
+      {/* Socio-demographic insights from victim and complainant records. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DemographicPanel title="Victim Gender Distribution" rows={dimensions?.victimGender || []} />
+        <DemographicPanel title="Complainant Occupations" rows={(dimensions?.complainantOccupations || []).slice(0, 10)} />
       </div>
 
       {/* AI summary + hotspots + threats */}
@@ -299,6 +307,21 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DemographicPanel({ title, rows }: { title: string; rows: { label: string; count: number }[] }) {
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  return (
+    <div className="card panel-pad">
+      <div className="mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-accent" /><h2 className="font-display text-base font-semibold">{title}</h2><Badge tone="muted">{total}</Badge></div>
+      {rows.length ? <div className="space-y-2.5">{rows.map((row) => (
+        <div key={row.label}>
+          <div className="mb-1 flex items-center justify-between text-xs"><span className="capitalize text-subtle">{row.label}</span><span className="font-mono tabular-nums text-muted">{row.count} · {total ? Math.round(row.count / total * 100) : 0}%</span></div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-elevated"><div className="h-full rounded-full bg-accent" style={{ width: `${total ? row.count / total * 100 : 0}%` }} /></div>
+        </div>
+      ))}</div> : <EmptyState icon={Users} title="No demographic records" hint="Import Victims and Complainants to populate this analysis." />}
     </div>
   );
 }

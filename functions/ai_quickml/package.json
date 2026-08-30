@@ -4,6 +4,6 @@
   "description": "NETRA production LLM proxy → Catalyst QuickML",
   "main": "index.js",
   "dependencies": {
-    "zcatalyst-sdk-node": "^2.0.0"
+    "zcatalyst-sdk-node": "^3.4.0"
   }
 }

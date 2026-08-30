@@ -9,7 +9,11 @@ import { ROLE_LABEL, type Role, type SessionUser } from "@/lib/types";
 /** Reactive access to the client-side officer (null until mounted). */
 export function useOfficer(): SessionUser | null {
   const [u, setU] = useState<SessionUser | null>(null);
-  useEffect(() => setU(getClientUser()), []);
+  useEffect(() => {
+    let active = true;
+    void getClientUser().then((user) => { if (active) setU(user); });
+    return () => { active = false; };
+  }, []);
   return u;
 }
 
@@ -38,10 +42,14 @@ export function RequireRole({ roles, children }: { roles: Role[]; children: Reac
   const router = useRouter();
   const [ok, setOk] = useState(false);
   useEffect(() => {
-    const u = getClientUser();
-    if (!u) router.replace("/login");
-    else if (!roles.includes(u.role)) router.replace("/dashboard");
-    else setOk(true);
+    let active = true;
+    void getClientUser().then((u) => {
+      if (!active) return;
+      if (!u) router.replace("/login");
+      else if (!roles.includes(u.role)) router.replace("/dashboard");
+      else setOk(true);
+    });
+    return () => { active = false; };
   }, [router, roles]);
   if (!ok) return null;
   return <>{children}</>;

@@ -1,10 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Radar, TrendingUp, TrendingDown, Minus, AlertTriangle, UserSearch, ShieldCheck, ScanSearch,
+  Radar, TrendingUp, TrendingDown, Minus, AlertTriangle, UserSearch, ShieldCheck, ScanSearch, Sparkles,
 } from "lucide-react";
-import { hotspotForecasts, repeatOffenderPredictions, escalationWarnings, crimeTypeForecasts } from "@/lib/predict";
+import { fetchCloudPredictions, type CloudPredictionData } from "@/lib/cloud-predict";
 import { PageHeader, PanelHeader, Badge, Avatar, EmptyState } from "@/components/ui";
-import { getT } from "@/lib/i18n-server";
+import { useT } from "@/lib/i18n-client";
 
 
 const TREND_META = {
@@ -18,11 +21,10 @@ const probText = (p: number) => (p >= 0.7 ? "text-danger" : p >= 0.5 ? "text-war
 const probBar = (p: number) => (p >= 0.7 ? "var(--danger)" : p >= 0.5 ? "var(--warning)" : "var(--info)");
 
 export default function PredictionsPage() {
-  const tPage = getT();
-  const hotspots = hotspotForecasts();
-  const repeat = repeatOffenderPredictions(12);
-  const escalations = escalationWarnings();
-  const types = crimeTypeForecasts();
+  const tPage = useT();
+  const [data, setData] = useState<CloudPredictionData>({ hotspots: [], repeat: [], escalations: [], types: [], model: "explainable-baseline" });
+  useEffect(() => { fetchCloudPredictions().then(setData).catch(() => undefined); }, []);
+  const { hotspots, repeat, escalations, types } = data;
 
   const risingDistricts = hotspots.filter((h) => h.trend === "rising");
   const risingTypes = types.filter((t) => t.trend === "rising");
@@ -73,12 +75,8 @@ export default function PredictionsPage() {
           icon={Radar}
           title="Hotspot Forecast"
           count={hotspots.length}
-          sub="30-day outlook · 60-day window vs 8-month district baseline"
-          action={
-            risingDistricts.length
-              ? <Badge tone="danger">{risingDistricts.length} rising</Badge>
-              : <Badge tone="success">all stable</Badge>
-          }
+          sub="Next 30 days · last 60 days measured against an 8-month district baseline"
+          action={<Badge tone="accent"><Sparkles className="h-3 w-3" /> {data.model === "zia-automl" ? "Zia AutoML" : "Explainable baseline"}</Badge>}
         />
         {hotspots.length === 0 ? (
           <EmptyState icon={Radar} title="No forecast yet" hint="District forecasts appear once enough FIRs exist to establish a baseline." />

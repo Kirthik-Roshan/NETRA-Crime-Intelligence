@@ -6,7 +6,7 @@ export type Role =
   | "readonly";
 
 export interface SessionUser {
-  id: number;
+  id: number | string;
   username: string;
   full_name: string;
   role: Role;

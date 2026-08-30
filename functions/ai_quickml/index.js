@@ -18,22 +18,34 @@
  * Body `mode`: "rag" → {answer,sources} · "chat" (default) → {response} · "ping".
  */
 
-const catalyst = require("zcatalyst-sdk-node");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { Blob } = require("buffer");
+const {
+  DATASTORE_TABLES,
+  STRATUS_BUCKET,
+  cacheGet,
+  cacheKey,
+  cachePut,
+  createRequestContext,
+  decodeImage,
+  generatePdf,
+  listAudits,
+  listRows,
+  criminalIntelligence,
+  normalizePlate,
+  plateCandidates,
+  plateIntelligence,
+  persistEvidence,
+  publicUser,
+  searchRecords,
+  writeAudit,
+} = require("./platform");
 
-const OCR_TABLE = process.env.OCR_TABLE || "OcrResult";
-// File Store folder ID (numeric) for scanned evidence — create the folder in
-// the console and set FILESTORE_FOLDER_ID. Empty → file storage is skipped.
-const FILESTORE_FOLDER_ID = process.env.FILESTORE_FOLDER_ID || "";
-
-// base64 (with or without data: prefix) → temp file path.
-function tmpFromBase64(b64, ext) {
-  const clean = String(b64).replace(/^data:[^;]+;base64,/, "");
-  const p = path.join(os.tmpdir(), `netra-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext || "jpg"}`);
-  fs.writeFileSync(p, Buffer.from(clean, "base64"));
+function tmpFromImage(image) {
+  const p = path.join(os.tmpdir(), `netra-${Date.now()}-${Math.random().toString(36).slice(2)}.${image.ext || "jpg"}`);
+  fs.writeFileSync(p, image.buffer);
   return p;
 }
 
@@ -78,7 +90,8 @@ function send(res, code, obj, origin) {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": allowedOrigin(origin),
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
     "Content-Length": bytes.length,
@@ -166,12 +179,28 @@ async function ziaTranscribe(audio, mime, filename, language, token) {
   return { ok: r.ok, status: r.status, json, text };
 }
 
-function readBody(req) {
-  return new Promise((resolve) => {
+function readBody(req, maxBytes = 18 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
     let b = "";
-    req.on("data", (c) => (b += c));
-    req.on("end", () => resolve(b));
-    req.on("error", () => resolve(b));
+    let tooLarge = false;
+    req.on("data", (chunk) => {
+      if (tooLarge) return;
+      b += chunk;
+      if (Buffer.byteLength(b) > maxBytes) {
+        tooLarge = true;
+        b = "";
+      }
+    });
+    req.on("end", () => {
+      if (tooLarge) {
+        const error = new Error("Request body is too large");
+        error.statusCode = 413;
+        reject(error);
+      } else {
+        resolve(b);
+      }
+    });
+    req.on("error", reject);
   });
 }
 
@@ -183,6 +212,52 @@ function parseJsonLoose(raw) {
   const s = body.indexOf("{"), e = body.lastIndexOf("}");
   const slice = s >= 0 && e > s ? body.slice(s, e + 1) : body;
   try { return JSON.parse(slice); } catch { return null; }
+}
+
+function conversationContext(history) {
+  if (!Array.isArray(history)) return "";
+  return history.slice(-12).map((message) => {
+    const role = message && message.role === "assistant" ? "NETRA" : "Officer";
+    const content = String((message && message.content) || "").trim().slice(0, 1200);
+    return content ? `${role}: ${content}` : "";
+  }).filter(Boolean).join("\n");
+}
+
+function aiCacheIdentity(context, mode, payload) {
+  return cacheKey("ai", JSON.stringify({
+    actor: context.officer.id,
+    role: context.officer.role,
+    mode,
+    prompt: payload.query || payload.prompt || "",
+    history: Array.isArray(payload.history) ? payload.history.slice(-12) : [],
+    language: payload.language || "en",
+  }));
+}
+
+function requireRole(context, roles) {
+  if (!roles.includes(context.officer.role)) {
+    const error = new Error("Your Catalyst role is not permitted to perform this operation");
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+function faceMatch(result) {
+  const body = result && typeof result === "object" && result.data && typeof result.data === "object"
+    ? result.data
+    : result || {};
+  const rawMatched = body.matched ?? body.match ?? body.is_matched;
+  const matched = rawMatched === true || String(rawMatched).toLowerCase() === "true";
+  const confidence = Number(body.confidence ?? body.score ?? 0);
+  return { matched, confidence: Number.isFinite(confidence) ? confidence : 0 };
+}
+
+function resolvedFirId(payload, intelligence) {
+  const supplied = Number(payload.fir_id);
+  if (Number.isSafeInteger(supplied) && supplied > 0) return supplied;
+  const first = intelligence && Array.isArray(intelligence.firs) && intelligence.firs[0];
+  const linked = Number(first && first.id);
+  return Number.isSafeInteger(linked) && linked > 0 ? linked : null;
 }
 
 module.exports = async (req, res) => {
@@ -204,31 +279,115 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // Cloud Scale reads use Catalyst's server-side SDK credentials, not
-    // QuickML. Keep these available even while QuickML is being configured.
+    const platformContext = await createRequestContext(req);
+
+    if (mode === "auth:me") {
+      reply(200, {
+        user: platformContext.officer,
+        authenticated: platformContext.authenticated,
+        auth_required: platformContext.auth_required,
+      });
+      return;
+    }
+
+    if (mode === "auth:users") {
+      requireRole(platformContext, ["administrator", "senior_officer"]);
+      const users = await platformContext.app.userManagement().getAllUsers();
+      reply(200, { users: (users || []).map(publicUser) });
+      return;
+    }
+
+    if (mode === "audit:list") {
+      requireRole(platformContext, ["administrator", "senior_officer"]);
+      reply(200, { rows: await listAudits(platformContext.app, payload.max) });
+      return;
+    }
+
+    if (mode === "infra:health") {
+      requireRole(platformContext, ["administrator", "senior_officer"]);
+      const searchHealth = await searchRecords(platformContext, "netra-health-probe", 1);
+      reply(200, {
+        ok: true,
+        environment: platformContext.auth_required ? "production" : "development",
+        services: {
+          authentication: platformContext.authenticated,
+          datastore: true,
+          stratus: { bucket: STRATUS_BUCKET },
+          cache: true,
+          search: searchHealth.engine === "catalyst-search",
+          smartbrowz: true,
+          zia: true,
+          quickml: !!(ORG && PROJECT && process.env.QML_REFRESH_TOKEN),
+          automl: DC_BASE.includes(".zoho.in")
+            ? "unavailable-in-india-dc"
+            : !!(process.env.AUTOML_MODEL_ID || process.env.AUTOML_ENDPOINT_KEY),
+        },
+        tables: DATASTORE_TABLES,
+      });
+      return;
+    }
+
+    // Cloud Scale reads, Search, Cache, and auth do not depend on an LLM token.
     if (mode === "records" || mode === "records:list") {
-      const app = catalyst.initialize(req, { scope: "admin" });
-      const allow = (process.env.DATASTORE_TABLES || `${OCR_TABLE},Cases,Criminals,Firs`).split(",").map((s) => s.trim()).filter(Boolean);
-      const table = mode === "records:list" ? OCR_TABLE : (payload.table || OCR_TABLE);
-      if (!allow.includes(table)) { reply(403, { error: "table not allowed", allowed: allow }); return; }
-      try {
-        const requested = Math.min(1000, Math.max(1, Number(payload.max) || 50));
-        const dsTable = app.datastore().table(table);
-        const rows = [];
-        let nextToken;
-        do {
-          const page = await dsTable.getPagedRows({ nextToken, maxRows: Math.min(200, requested - rows.length) });
-          rows.push(...((page && page.data) || []));
-          nextToken = page && page.next_token;
-        } while (nextToken && rows.length < requested);
-        reply(200, { rows });
-      } catch (e) { reply(200, { rows: [] }); }
+      const table = mode === "records:list" ? "Evidence" : String(payload.table || "");
+      const result = await listRows(platformContext, table, mode === "records:list" ? Math.max(200, Number(payload.max) || 200) : payload.max, !!payload.refresh);
+      const rows = mode === "records:list"
+        ? result.rows.filter((row) => String(row.type || "").toUpperCase().startsWith("ZIA_OCR"))
+        : result.rows;
+      reply(200, { rows, cache: result.cache, table });
+      return;
+    }
+
+    if (mode === "search:records") {
+      const query = String(payload.query || payload.search || "").trim();
+      if (!query) { reply(400, { error: "query required" }); return; }
+      const started = Date.now();
+      const result = await searchRecords(platformContext, query, payload.max);
+      const audit = await writeAudit(platformContext.app, platformContext.officer, {
+        action: "SEARCH_RECORDS",
+        entity: "CloudScale",
+        processing_ms: Date.now() - started,
+        detail: { query: query.slice(0, 1000), engine: result.engine, result_count: result.hits.length },
+      });
+      reply(200, { ...result, audit_id: audit.id });
+      return;
+    }
+
+    if (mode === "report:pdf") {
+      const started = Date.now();
+      const result = await generatePdf(platformContext, payload);
+      const audit = await writeAudit(platformContext.app, platformContext.officer, {
+        action: "EXPORT_PDF",
+        entity: "InvestigationReport",
+        processing_ms: Date.now() - started,
+        detail: { filename: result.filename, turn_count: Array.isArray(payload.turns) ? payload.turns.length : 0, storage_ref: result.storage_ref },
+      });
+      reply(200, { ...result, audit_id: audit.id });
+      return;
+    }
+
+    if (mode === "automl:predict") {
+      requireRole(platformContext, ["administrator", "senior_officer", "analyst"]);
+      if (DC_BASE.includes(".zoho.in")) { reply(503, { error: "Catalyst Zia AutoML is not available in the India data center", unavailable_in_dc: true }); return; }
+      const modelId = process.env.AUTOML_MODEL_ID || process.env.AUTOML_ENDPOINT_KEY;
+      if (!modelId) { reply(503, { error: "AutoML model ID is not configured", setup_required: true }); return; }
+      if (!payload.input || typeof payload.input !== "object" || Array.isArray(payload.input)) { reply(400, { error: "input object required" }); return; }
+      const input = Object.fromEntries(Object.entries(payload.input).map(([key, value]) => [key, String(value == null ? "" : value)]));
+      const started = Date.now();
+      const result = await platformContext.app.zia().automl(modelId, input);
+      const audit = await writeAudit(platformContext.app, platformContext.officer, {
+        action: "AUTOML_PREDICT",
+        entity: "CrimeRisk",
+        processing_ms: Date.now() - started,
+        model: "Catalyst Zia AutoML",
+        detail: { input_fields: Object.keys(input), status: result && result.status },
+      });
+      reply(200, { result, audit_id: audit.id, model: "Catalyst Zia AutoML" });
       return;
     }
 
     if (mode === "notif:list" || mode === "notif:update") {
-      const app = catalyst.initialize(req, { scope: "admin" });
-      const ds = app.datastore().table(process.env.NOTIF_TABLE || "Notifications");
+      const ds = platformContext.app.datastore().table(process.env.NOTIF_TABLE || "Notifications");
       if (mode === "notif:list") {
         try {
           const page = await ds.getPagedRows({ maxRows: Math.min(100, Number(payload.max) || 50) });
@@ -254,8 +413,7 @@ module.exports = async (req, res) => {
       const text = String(payload.text || "").trim().slice(0, 1500);
       if (!text) { reply(400, { error: "text required" }); return; }
       try {
-        const app = catalyst.initialize(req, { scope: "admin" });
-        const analytics = await app.zia().getTextAnalytics([text]);
+        const analytics = await platformContext.app.zia().getTextAnalytics([text]);
         reply(200, { text, analytics });
       } catch (e) {
         reply(502, { error: "Zia Text Analytics error", detail: String((e && e.message) || e).slice(0, 300) });
@@ -263,70 +421,177 @@ module.exports = async (req, res) => {
       return;
     }
 
-    if (!ORG || !PROJECT) { reply(503, { error: "Function not configured (ORG/PROJECT)" }); return; }
-    const token = await accessToken();
-    if (!token) { reply(503, { error: "No credentials: set QML_CLIENT_ID/SECRET/REFRESH_TOKEN" }); return; }
-
-    // ── Zia OCR (SDK) — extract text from an FIR scan, store the original in
-    // Stratus + the result in Data Store. Storage is best-effort so OCR still
-    // returns text before the bucket/table are provisioned. ────────────────
-    if (mode === "ocr") {
+    // Field workflow: read a Karnataka number plate, resolve the vehicle and
+    // owner, then retrieve the owner's linked FIRs from Cloud Scale.
+    if (mode === "plate") {
+      requireRole(platformContext, ["administrator", "senior_officer", "investigation_officer"]);
       if (!payload.image) { reply(400, { error: "image required" }); return; }
-      const app = catalyst.initialize(req, { scope: "admin" });
-      const tmp = tmpFromBase64(payload.image, payload.ext || "jpg");
+      const image = decodeImage(payload.image, payload.mime, payload.name);
+      const tmp = tmpFromImage(image);
       try {
-        const result = await app.zia().extractOpticalCharacters(fs.createReadStream(tmp), {
+        const started = Date.now();
+        const rawResult = await platformContext.app.zia().extractOpticalCharacters(fs.createReadStream(tmp), {
           modelType: "OCR",
           language: payload.language || "eng",
         });
-        const text = ocrText(result);
-
-        let file_id = null;
-        try {
-          if (FILESTORE_FOLDER_ID) {
-            const up = await app.filestore().folder(FILESTORE_FOLDER_ID).uploadFile({
-              code: fs.createReadStream(tmp),
-              name: `ocr-${path.basename(tmp)}`,
-            });
-            file_id = String((up && (up.id || up.file_id)) || "");
-          }
-        } catch (e) { /* folder not provisioned yet — skip file storage */ }
-
-        let record_id = null;
-        try {
-          const row = await app.datastore().table(OCR_TABLE).insertRow({
-            ocr_text: text.slice(0, 60000),
-            language: payload.language || "eng",
-            source_key: file_id || "",
-            source_name: payload.name || "",
-          });
-          record_id = (row && (row.ROWID || row.rowid)) || null;
-        } catch (e) { /* table not provisioned yet — skip persistence */ }
-
-        reply(200, { text, file_id, record_id });
+        const text = ocrText(rawResult);
+        const candidates = plateCandidates(text);
+        const hint = normalizePlate(payload.plate_hint);
+        const plate = hint || candidates[0] || "";
+        const correlation = plate ? await plateIntelligence(platformContext.app, plate) : null;
+        const intelligence = correlation && correlation.intelligence;
+        const firId = resolvedFirId(payload, intelligence);
+        const persisted = await persistEvidence(platformContext.app, {
+          kind: "plate", image, actor: platformContext.officer, firId,
+          description: payload.description,
+          result: {
+            text,
+            candidates,
+            selected_plate: plate || null,
+            correlation_source: correlation && correlation.source,
+            vehicle: correlation && correlation.vehicle,
+            criminal_id: intelligence && intelligence.criminal && intelligence.criminal.id,
+          },
+        });
+        const warnings = [...persisted.warnings];
+        if (!plate) warnings.push("No Karnataka registration number was recognized. Enter a manual plate correction and retry.");
+        else if (!correlation || !correlation.vehicle) warnings.push("The plate was read but is not present in the NETRA vehicle registry.");
+        const audit = await writeAudit(platformContext.app, platformContext.officer, {
+          action: "EVIDENCE_PLATE_LOOKUP", entity: "Vehicle", entity_id: plate || null,
+          processing_ms: Date.now() - started, model: "Catalyst Zia OCR",
+          detail: {
+            source_name: image.name, recognized_plate: plate || null, fir_id: firId,
+            matched: !!(correlation && correlation.vehicle), correlation_source: correlation && correlation.source,
+            storage_ref: persisted.storage_ref,
+          },
+        });
+        reply(200, {
+          workflow: "vehicle-stop", text, candidates, plate, correlation,
+          intelligence, resolved_fir_id: firId, ...persisted, warnings,
+          audit_id: audit.id, model: "Catalyst Zia OCR + Cloud Scale correlation",
+        });
       } finally {
         try { fs.unlinkSync(tmp); } catch { /* temp cleanup */ }
       }
       return;
     }
 
-    // ── Zia image services (SDK) — analysis only, result returned as-is.
-    // face · object · moderate · barcode · compareFace. ────────────────────
+    // Field workflow: detect all visible faces, compare the prominent face to
+    // a selected watchlist reference, and disclose the case file only on match.
+    if (mode === "crowd") {
+      requireRole(platformContext, ["administrator", "senior_officer", "investigation_officer"]);
+      if (!payload.image || !payload.image2) { reply(400, { error: "crowd image and watchlist reference image required" }); return; }
+      const criminalId = Number(payload.criminal_id);
+      if (!Number.isSafeInteger(criminalId) || criminalId <= 0) { reply(400, { error: "valid criminal_id required" }); return; }
+      const crowd = decodeImage(payload.image, payload.mime, payload.name);
+      const reference = decodeImage(payload.image2, payload.mime2, payload.name2 || "watchlist-reference.jpg");
+      const crowdTmp = tmpFromImage(crowd);
+      const referenceTmp = tmpFromImage(reference);
+      try {
+        const started = Date.now();
+        const zia = platformContext.app.zia();
+        const detection = await zia.analyseFace(fs.createReadStream(crowdTmp), {
+          mode: payload.faceMode || "moderate", age: true, emotion: true, gender: true,
+        });
+        const comparison = await zia.compareFace(fs.createReadStream(referenceTmp), fs.createReadStream(crowdTmp));
+        const match = faceMatch(comparison);
+        const intelligence = match.matched ? await criminalIntelligence(platformContext.app, criminalId) : null;
+        const firId = resolvedFirId(payload, intelligence);
+        const persisted = await persistEvidence(platformContext.app, {
+          kind: "crowd-match", image: crowd, additionalImages: [reference], actor: platformContext.officer,
+          firId, description: payload.description,
+          result: { detection, comparison, match, criminal_id: criminalId },
+        });
+        const warnings = [...persisted.warnings];
+        if (!match.matched) warnings.push("No watchlist identity was confirmed. Do not treat face attributes alone as identification.");
+        const audit = await writeAudit(platformContext.app, platformContext.officer, {
+          action: "EVIDENCE_CROWD_WATCH", entity: "Criminal", entity_id: criminalId,
+          processing_ms: Date.now() - started, model: "Catalyst Zia Face Analytics + Facial Comparison",
+          detail: {
+            fir_id: firId, matched: match.matched, confidence: match.confidence,
+            faces_count: Number(detection && (detection.faces_count || (detection.data && detection.data.faces_count))) || 0,
+            storage_ref: persisted.storage_ref,
+          },
+        });
+        reply(200, {
+          workflow: "crowd-watch", result: { detection, comparison }, match,
+          intelligence, resolved_fir_id: firId, ...persisted, warnings,
+          audit_id: audit.id, model: "Catalyst Zia Face Analytics + Facial Comparison",
+        });
+      } finally {
+        try { fs.unlinkSync(crowdTmp); fs.unlinkSync(referenceTmp); } catch { /* temp cleanup */ }
+      }
+      return;
+    }
+
+    // Zia OCR stores both the source and machine result in Stratus and creates
+    // a corresponding row in the existing Evidence table.
+    if (mode === "ocr") {
+      requireRole(platformContext, ["administrator", "senior_officer", "investigation_officer"]);
+      if (!payload.image) { reply(400, { error: "image required" }); return; }
+      const image = decodeImage(payload.image, payload.mime, payload.name);
+      const tmp = tmpFromImage(image);
+      try {
+        const started = Date.now();
+        const rawResult = await platformContext.app.zia().extractOpticalCharacters(fs.createReadStream(tmp), {
+          modelType: "OCR",
+          language: payload.language || "eng",
+        });
+        const text = ocrText(rawResult);
+        const persisted = await persistEvidence(platformContext.app, {
+          kind: "ocr", image, result: { text, raw: rawResult }, actor: platformContext.officer,
+          firId: payload.fir_id, description: payload.description,
+        });
+        const audit = await writeAudit(platformContext.app, platformContext.officer, {
+          action: "ZIA_OCR",
+          entity: "Evidence",
+          entity_id: persisted.record_id || persisted.evidence_id,
+          processing_ms: Date.now() - started,
+          model: "Catalyst Zia OCR",
+          detail: { source_name: image.name, fir_id: payload.fir_id || null, character_count: text.length, storage_ref: persisted.storage_ref },
+        });
+        reply(200, { text, ...persisted, audit_id: audit.id, model: "Catalyst Zia OCR" });
+      } finally {
+        try { fs.unlinkSync(tmp); } catch { /* temp cleanup */ }
+      }
+      return;
+    }
+
+    // Catalyst Zia image services with durable Evidence and Stratus storage.
     if (mode === "face" || mode === "object" || mode === "moderate" || mode === "barcode" || mode === "compareFace") {
-      const app = catalyst.initialize(req, { scope: "admin" });
-      const zia = app.zia();
+      requireRole(platformContext, ["administrator", "senior_officer", "investigation_officer"]);
+      const zia = platformContext.app.zia();
+      const started = Date.now();
       if (mode === "compareFace") {
         if (!payload.image || !payload.image2) { reply(400, { error: "image and image2 required" }); return; }
-        const a = tmpFromBase64(payload.image, "jpg");
-        const b = tmpFromBase64(payload.image2, "jpg");
+        const first = decodeImage(payload.image, payload.mime, payload.name);
+        const second = decodeImage(payload.image2, payload.mime2, payload.name2 || "reference.jpg");
+        const a = tmpFromImage(first);
+        const b = tmpFromImage(second);
         try {
           const result = await zia.compareFace(fs.createReadStream(a), fs.createReadStream(b));
-          reply(200, { result });
+          const match = faceMatch(result);
+          const criminalId = Number(payload.criminal_id);
+          const intelligence = match.matched && Number.isSafeInteger(criminalId) && criminalId > 0
+            ? await criminalIntelligence(platformContext.app, criminalId)
+            : null;
+          const firId = resolvedFirId(payload, intelligence);
+          const persisted = await persistEvidence(platformContext.app, {
+            kind: "compare-face", image: first, additionalImages: [second], result: { comparison: result, match, criminal_id: criminalId || null },
+            actor: platformContext.officer, firId, description: payload.description,
+          });
+          const audit = await writeAudit(platformContext.app, platformContext.officer, {
+            action: "ZIA_COMPARE_FACE", entity: "Evidence", entity_id: persisted.record_id || persisted.evidence_id,
+            processing_ms: Date.now() - started, model: "Catalyst Zia Face Comparison",
+            detail: { fir_id: firId, criminal_id: criminalId || null, matched: match.matched, confidence: match.confidence, storage_ref: persisted.storage_ref },
+          });
+          reply(200, { result, match, intelligence, resolved_fir_id: firId, ...persisted, audit_id: audit.id, model: "Catalyst Zia Face Comparison" });
         } finally { try { fs.unlinkSync(a); fs.unlinkSync(b); } catch { /* cleanup */ } }
         return;
       }
       if (!payload.image) { reply(400, { error: "image required" }); return; }
-      const tmp = tmpFromBase64(payload.image, "jpg");
+      const image = decodeImage(payload.image, payload.mime, payload.name);
+      const tmp = tmpFromImage(image);
       try {
         const stream = fs.createReadStream(tmp);
         let result;
@@ -334,10 +599,24 @@ module.exports = async (req, res) => {
         else if (mode === "object") result = await zia.detectObject(stream);
         else if (mode === "moderate") result = await zia.moderateImage(stream, { mode: payload.modMode || "advanced" });
         else if (mode === "barcode") result = await zia.scanBarcode(stream, { format: payload.format || "all" });
-        reply(200, { result });
+        const persisted = await persistEvidence(platformContext.app, {
+          kind: mode, image, result, actor: platformContext.officer,
+          firId: payload.fir_id, description: payload.description,
+        });
+        const audit = await writeAudit(platformContext.app, platformContext.officer, {
+          action: `ZIA_${mode.toUpperCase()}`, entity: "Evidence", entity_id: persisted.record_id || persisted.evidence_id,
+          processing_ms: Date.now() - started, model: `Catalyst Zia ${mode}`,
+          detail: { fir_id: payload.fir_id || null, source_name: image.name, storage_ref: persisted.storage_ref },
+        });
+        reply(200, { result, ...persisted, audit_id: audit.id, model: `Catalyst Zia ${mode}` });
       } finally { try { fs.unlinkSync(tmp); } catch { /* cleanup */ } }
       return;
     }
+
+    requireRole(platformContext, ["administrator", "senior_officer", "investigation_officer", "analyst"]);
+    if (!ORG || !PROJECT) { reply(503, { error: "Function not configured (ORG/PROJECT)" }); return; }
+    const token = await accessToken();
+    if (!token) { reply(503, { error: "No credentials: set QML_CLIENT_ID/SECRET/REFRESH_TOKEN" }); return; }
 
     if (mode === "tts") {
       if (!payload.text) { reply(400, { error: "text required" }); return; }
@@ -396,7 +675,28 @@ module.exports = async (req, res) => {
     if (mode === "rag") {
       const query = payload.query || payload.prompt;
       if (!query) { reply(400, { error: "query required" }); return; }
-      const up = await quickml(process.env.QML_RAG_PATH || "rag/answer", { query }, token);
+      const started = Date.now();
+      const responseCacheKey = aiCacheIdentity(platformContext, "rag", payload);
+      const cached = await cacheGet(platformContext.app, responseCacheKey);
+      if (cached && cached.answer) {
+        const audit = await writeAudit(platformContext.app, platformContext.officer, {
+          action: "AI_QUERY_CACHE", entity: "rag", model: cached.model,
+          detail: { prompt: String(query).slice(0, 2000), source_count: (cached.sources || []).length },
+        });
+        reply(200, { ...cached, audit_id: audit.id, processing_ms: Date.now() - started, cache: true });
+        return;
+      }
+      const conversation = conversationContext(payload.history);
+      const search = await searchRecords(platformContext, `${conversation}\n${query}`, 24);
+      const records = search.hits;
+      const recordContext = records.length
+        ? `\n\nMatching live Cloud Scale records (use as factual evidence):\n${records.map((hit, i) =>
+            `[${i + 1}] ${hit.table}: ${JSON.stringify(hit.row).slice(0, 1800)}`
+          ).join("\n")}`
+        : "";
+      const contextualQuery = `${conversation ? `Use this conversation context to resolve follow-up references.\n${conversation}\n\n` : ""}` +
+        `Current question: ${query}${recordContext}`;
+      const up = await quickml(process.env.QML_RAG_PATH || "rag/answer", { query: contextualQuery }, token);
       if (!up.ok) { reply(502, { error: "QuickML RAG error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
       const answer = d.response ?? d.answer ?? d.output ?? d.text ?? null;
@@ -405,7 +705,26 @@ module.exports = async (req, res) => {
         snippet: String(node.content || node.text || "").slice(0, 240),
         score: node.score ?? null,
       }));
-      reply(200, { answer, sources });
+      for (const hit of records.slice(0, 6)) {
+        sources.push({
+          title: `${hit.table} · Cloud Scale record`,
+          snippet: JSON.stringify(hit.row).slice(0, 240),
+          score: hit.score,
+        });
+      }
+      const processing_ms = Date.now() - started;
+      const model = "QuickML RAG + Catalyst Search";
+      const audit = await writeAudit(platformContext.app, platformContext.officer, {
+        action: "AI_QUERY", entity: "rag", processing_ms, model,
+        detail: {
+          prompt: String(query).slice(0, 2000), answer: String(answer || "").slice(0, 5000),
+          via_voice: !!payload.via_voice, language: payload.language || "en",
+          source_count: sources.length, search_engine: search.engine,
+        },
+      });
+      const response = { answer, sources, model, search_engine: search.engine, search_warning: search.warning };
+      await cachePut(platformContext.app, responseCacheKey, response, 1);
+      reply(200, { ...response, audit_id: audit.id, processing_ms, cache: false });
       return;
     }
 
@@ -442,25 +761,65 @@ module.exports = async (req, res) => {
       if (!up.ok) { reply(502, { error: "QuickML NLP error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
       const out = d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? "";
-      reply(200, { op, result: parseJsonLoose(out) });
+      const result = parseJsonLoose(out);
+      const audit = await writeAudit(platformContext.app, platformContext.officer, {
+        action: `AI_NLP_${String(op).toUpperCase()}`, entity: "CrimeRecord", model: "QuickML LLM",
+        detail: { input_length: text.length, result_available: !!result },
+      });
+      reply(200, { op, result, audit_id: audit.id, model: "QuickML LLM" });
       return;
     }
 
     // Qwen LLM chat.
     const { prompt, system, temperature, images, guided_prompt } = payload;
     if (!prompt) { reply(400, { error: "prompt required" }); return; }
+    const started = Date.now();
+    const responseCacheKey = aiCacheIdentity(platformContext, "chat", payload);
+    const cached = await cacheGet(platformContext.app, responseCacheKey);
+    if (cached && cached.response) {
+      const audit = await writeAudit(platformContext.app, platformContext.officer, {
+        action: "AI_QUERY_CACHE", entity: "chat", model: cached.model,
+        detail: { prompt: String(prompt).slice(0, 2000), source_count: cached.source_count || 0 },
+      });
+      reply(200, { ...cached, audit_id: audit.id, processing_ms: Date.now() - started, cache: true });
+      return;
+    }
+    const conversation = conversationContext(payload.history);
+    const search = await searchRecords(platformContext, `${conversation}\n${prompt}`, 24);
+    const records = search.hits;
+    const recordContext = records.length
+      ? `\n\nRelevant live Cloud Scale records:\n${records.slice(0, 10).map((hit, i) =>
+          `[${i + 1}] ${hit.table}: ${JSON.stringify(hit.row).slice(0, 1800)}`
+        ).join("\n")}`
+      : "";
+    const languageRule = payload.language === "kn"
+      ? "Reply in natural Kannada, preserving official names, FIR numbers, and legal sections exactly."
+      : "Reply in clear English.";
     const reqBody = {
-      prompt,
+      prompt: `${conversation ? `Conversation so far:\n${conversation}\n\n` : ""}Current officer question: ${prompt}${recordContext}`,
       images: Array.isArray(images) ? images : [],
-      guided_prompt: guided_prompt || system || "",
+      guided_prompt: `${guided_prompt || system || ""}\n${languageRule}`.trim(),
       temperature: temperature ?? 0.2,
       max_tokens: 700,
     };
     const up = await quickml(LLM_PATH, reqBody, token);
     if (!up.ok) { reply(502, { error: "QuickML LLM error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
     const d = up.json || {};
-    reply(200, { response: d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? null });
+    const answer = d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? null;
+    const processing_ms = Date.now() - started;
+    const model = "QuickML LLM + Catalyst Search";
+    const audit = await writeAudit(platformContext.app, platformContext.officer, {
+      action: "AI_QUERY", entity: "chat", processing_ms, model,
+      detail: {
+        prompt: String(prompt).slice(0, 2000), answer: String(answer || "").slice(0, 5000),
+        via_voice: !!payload.via_voice, language: payload.language || "en",
+        source_count: records.length, search_engine: search.engine,
+      },
+    });
+    const response = { response: answer, model, source_count: records.length, search_engine: search.engine, search_warning: search.warning };
+    await cachePut(platformContext.app, responseCacheKey, response, 1);
+    reply(200, { ...response, audit_id: audit.id, processing_ms, cache: false });
   } catch (e) {
-    try { reply(500, { error: String(e && e.message || e) }); } catch { /* res already gone */ }
+    try { reply(Number(e && e.statusCode) || 500, { error: String(e && e.message || e) }); } catch { /* res already gone */ }
   }
 };

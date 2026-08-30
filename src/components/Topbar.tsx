@@ -1,13 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Search, LogOut, Languages, Cpu, CornerDownLeft } from "lucide-react";
+import { Search, LogOut, Languages, Cpu, CornerDownLeft, Loader2 } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { NotificationsBell } from "./NotificationsBell";
 import { useAppStore } from "@/store/useAppStore";
 import type { SessionUser } from "@/lib/types";
 import { useT } from "@/lib/i18n-client";
 import { aiOnline as aiOnlineFn } from "@/lib/ai-client";
-import { logout as clearAuth } from "@/lib/auth-client";
+import { isLocalDevelopment, logout as clearAuth } from "@/lib/auth-client";
 import { useState, useEffect } from "react";
 
 export function Topbar({ user: _user }: { user: SessionUser }) {
@@ -16,6 +16,8 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
   const setLang = useAppStore((s) => s.setLang);
   const t = useT();
   const [aiOnline, setAiOnline] = useState<boolean | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutFailed, setSignOutFailed] = useState(false);
 
   function toggleLang() {
     setLang(lang === "en" ? "kn" : "en");
@@ -25,9 +27,19 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
     setAiOnline(aiOnlineFn());
   }, []);
 
-  function logout() {
-    clearAuth();
-    router.push("/login");
+  async function logout() {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutFailed(false);
+    try {
+      const catalystRedirect = await clearAuth();
+      if (!catalystRedirect) {
+        window.location.replace(isLocalDevelopment() ? "/login/" : "/login/index.html");
+      }
+    } catch {
+      setSignOutFailed(true);
+      setSigningOut(false);
+    }
   }
 
   function goSearch(e: React.FormEvent<HTMLFormElement>) {
@@ -76,12 +88,13 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
         <NotificationsBell />
 
         <button
-          onClick={logout}
-          className="grid h-9 w-9 place-items-center rounded-md border border-border text-muted transition-colors hover:border-danger/40 hover:bg-danger/10 hover:text-danger"
-          aria-label="Sign out"
-          title="Sign out"
+          onClick={() => { void logout(); }}
+          disabled={signingOut}
+          className={`grid h-9 w-9 place-items-center rounded-md border border-border transition-colors disabled:cursor-wait ${signOutFailed ? "border-danger/40 bg-danger/10 text-danger" : "text-muted hover:border-danger/40 hover:bg-danger/10 hover:text-danger"}`}
+          aria-label={signingOut ? "Signing out" : "Sign out"}
+          title={signOutFailed ? "Sign out failed. Try again." : signingOut ? "Signing out" : "Sign out"}
         >
-          <LogOut className="h-[18px] w-[18px]" />
+          {signingOut ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <LogOut className="h-[18px] w-[18px]" />}
         </button>
       </div>
     </header>

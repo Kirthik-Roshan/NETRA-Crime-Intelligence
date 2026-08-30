@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getClientUser } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
+import { can, getClientUser } from "@/lib/auth-client";
 import type { SessionUser } from "@/lib/types";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
@@ -19,18 +19,35 @@ import { Emblem } from "@/components/Emblem";
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const u = getClientUser();
-    if (!u) {
-      router.replace("/login");
-      return;
-    }
-    setUser(u);
-    setReady(true);
+    let active = true;
+    void getClientUser().then((u) => {
+      if (!active) return;
+      if (!u) {
+        router.replace("/login");
+        return;
+      }
+      setUser(u);
+      setReady(true);
+    });
+    return () => { active = false; };
   }, [router]);
+
+  useEffect(() => {
+    if (!user) return;
+    const rules: [string, string][] = [
+      ["/assistant", "ai"], ["/predictions", "predictive"], ["/cases", "cases"],
+      ["/criminals", "criminals"], ["/network", "network"], ["/analytics", "analytics"],
+      ["/maps", "analytics"], ["/database", "search"], ["/evidence", "evidence"], ["/reports", "reports"],
+    ];
+    const required = rules.find(([path]) => pathname.startsWith(path))?.[1];
+    if (required && !can(user.role, required)) router.replace("/dashboard");
+    if (pathname.startsWith("/admin") && !["administrator", "senior_officer"].includes(user.role)) router.replace("/dashboard");
+  }, [pathname, router, user]);
 
   if (!ready || !user) {
     return (
