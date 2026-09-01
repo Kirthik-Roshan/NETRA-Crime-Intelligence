@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, ExternalLink, Loader2, Lock, LogIn, Network, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, ExternalLink, Loader2, Lock, Network, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { Emblem } from "@/components/Emblem";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { beginCatalystSignIn, getClientUser, isDemoAccessMode, loginLocal, mountCatalystSignIn, replaceAppRoute } from "@/lib/auth-client";
+import { beginCatalystSignIn, getClientUser, isDemoAccessMode, mountCatalystSignIn, replaceAppRoute } from "@/lib/auth-client";
 
 const CAPABILITIES = [
   { icon: Sparkles, label: "Natural language", sub: "English and Kannada" },
@@ -22,14 +22,15 @@ export default function LoginPage() {
     let active = true;
     const localMode = isDemoAccessMode();
     setLocal(localMode);
+    if (localMode) {
+      setLoading(false);
+      return () => { active = false; };
+    }
+
     void getClientUser().then(async (user) => {
       if (!active) return;
       if (user) {
         replaceAppRoute("/dashboard");
-        return;
-      }
-      if (localMode) {
-        setLoading(false);
         return;
       }
       try {
@@ -49,12 +50,6 @@ export default function LoginPage() {
     });
     return () => { active = false; };
   }, []);
-
-  const enterLocal = () => {
-    const user = loginLocal();
-    if (user) replaceAppRoute("/dashboard");
-    else setError("Local development access is unavailable.");
-  };
 
   return (
     <div className="relative isolate grid min-h-screen overflow-x-hidden bg-bg lg:grid-cols-[1.15fr_1fr]">
@@ -115,19 +110,14 @@ export default function LoginPage() {
               </span>
               <div>
                 <h2 className="font-display text-2xl font-bold">Secure sign in</h2>
-                <p className="mt-1 text-sm text-muted">{local ? "Catalyst account or isolated local demo" : "Catalyst Authentication and role-based access"}</p>
+                <p className="mt-1 text-sm text-muted">Catalyst Authentication and role-based access</p>
               </div>
             </div>
 
             {local ? (
-              <div className="mt-6 space-y-3">
-                <button type="button" onClick={beginCatalystSignIn} className="btn-accent w-full">
-                  <ExternalLink className="h-4 w-4" /> Sign in with Google via Catalyst
-                </button>
-                <button type="button" onClick={enterLocal} className="btn-ghost w-full">
-                  <LogIn className="h-4 w-4" /> Open isolated local demo
-                </button>
-              </div>
+              <button type="button" onClick={beginCatalystSignIn} className="btn-accent mt-6 w-full">
+                <ExternalLink className="h-4 w-4" /> Sign in with Google via Catalyst
+              </button>
             ) : (
               <div className="relative mt-6 h-[520px] overflow-hidden rounded-md border border-border bg-elevated/30 p-2">
                 <div id="catalyst-login" className="h-[500px]" />
