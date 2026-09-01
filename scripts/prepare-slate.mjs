@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -6,10 +6,14 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const outputDir = path.join(projectRoot, "out");
 const configDir = path.join(projectRoot, "out", ".catalyst");
 const configPath = path.join(configDir, "slate-config.toml");
+const hostingDir = path.join(outputDir, ".openai");
+const hostingSourcePath = path.join(projectRoot, ".openai", "hosting.json");
+const hostingOutputPath = path.join(hostingDir, "hosting.json");
 const clientPackagePath = path.join(outputDir, "client-package.json");
 const clientVersion = process.env.CATALYST_CLIENT_VERSION || `1.0.${Math.floor(Date.now() / 1000)}`;
 
 await mkdir(configDir, { recursive: true });
+await mkdir(hostingDir, { recursive: true });
 await writeFile(
   configPath,
   [
@@ -20,6 +24,8 @@ await writeFile(
   ].join("\n"),
   "utf8",
 );
+
+await writeFile(hostingOutputPath, await readFile(hostingSourcePath, "utf8"), "utf8");
 
 await writeFile(
   clientPackagePath,
