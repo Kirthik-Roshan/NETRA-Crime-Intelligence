@@ -23,8 +23,8 @@ type Row = Record<string, unknown>;
 const str = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) return String(r[x]); return ""; };
 const num = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) { const n = Number(r[x]); if (!Number.isNaN(n)) return n; } return 0; };
 
-export async function fetchCases(): Promise<CaseRow[]> {
-  const rows = await listRecords("Cases", 1000);
+export async function fetchCases(refresh = false): Promise<CaseRow[]> {
+  const rows = await listRecords("Cases", 1000, refresh);
   return rows.map((r, i) => ({
     id: num(r, "id", "ROWID") || i + 1,
     case_number: str(r, "case_number", "CaseNo", "CrimeNo"),
@@ -38,8 +38,8 @@ export async function fetchCases(): Promise<CaseRow[]> {
   }));
 }
 
-export async function fetchCriminals(): Promise<CrimRow[]> {
-  const rows = await listRecords("Criminals", 1000);
+export async function fetchCriminals(refresh = false): Promise<CrimRow[]> {
+  const rows = await listRecords("Criminals", 1000, refresh);
   return rows.map((r, i) => ({
     id: num(r, "id", "ROWID") || i + 1,
     name: str(r, "name", "Name", "AccusedName"),
@@ -55,8 +55,8 @@ export async function fetchCriminals(): Promise<CrimRow[]> {
   })) as CrimRow[];
 }
 
-export async function fetchFirs(): Promise<Row[]> {
-  return listRecords("Firs", 1000);
+export async function fetchFirs(refresh = false): Promise<Row[]> {
+  return listRecords("Firs", 1000, refresh);
 }
 
 export function toGeoPoints(firs: Row[]): FirPoint[] {
@@ -190,9 +190,9 @@ function intelligenceConfidence(firs: Row[]): Confidence {
 }
 
 /** Pull the base tables and derive the dashboard stats client-side. */
-export async function fetchDashboard(): Promise<DashboardData> {
+export async function fetchDashboard(refresh = true): Promise<DashboardData> {
   const [firs, cases, criminals, arrests] = await Promise.all([
-    fetchFirs(), fetchCases(), fetchCriminals(), listRecords("Arrests", 1000),
+    fetchFirs(refresh), fetchCases(refresh), fetchCriminals(refresh), listRecords("Arrests", 1000, refresh),
   ]);
   const active = cases.filter((c) => c.status === "registered" || c.status === "under_investigation");
   const solved = cases.filter((c) => c.status === "charge_sheeted" || c.status === "closed");

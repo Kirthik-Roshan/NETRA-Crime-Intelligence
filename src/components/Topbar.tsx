@@ -1,16 +1,16 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Search, LogOut, Languages, Cpu, CornerDownLeft, Loader2 } from "lucide-react";
+import { Search, LogOut, Languages, ShieldCheck, CornerDownLeft, Loader2, Menu } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { NotificationsBell } from "./NotificationsBell";
 import { useAppStore } from "@/store/useAppStore";
 import type { SessionUser } from "@/lib/types";
 import { useT } from "@/lib/i18n-client";
 import { aiOnline as aiOnlineFn } from "@/lib/ai-client";
-import { isLocalDevelopment, logout as clearAuth } from "@/lib/auth-client";
+import { logout as clearAuth, replaceAppRoute } from "@/lib/auth-client";
 import { useState, useEffect } from "react";
 
-export function Topbar({ user: _user }: { user: SessionUser }) {
+export function Topbar({ user: _user, onMenu }: { user: SessionUser; onMenu?: () => void }) {
   const router = useRouter();
   const lang = useAppStore((s) => s.lang);
   const setLang = useAppStore((s) => s.setLang);
@@ -34,7 +34,7 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
     try {
       const catalystRedirect = await clearAuth();
       if (!catalystRedirect) {
-        window.location.replace(isLocalDevelopment() ? "/login/" : "/login/index.html");
+        replaceAppRoute("/login");
       }
     } catch {
       setSignOutFailed(true);
@@ -49,7 +49,16 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg/90 px-4 backdrop-blur-sm sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface/95 px-3 shadow-[0_1px_3px_rgb(8_34_52/0.05)] backdrop-blur-sm sm:px-5 lg:px-6">
+      <button
+        type="button"
+        onClick={onMenu}
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border text-muted transition-colors hover:border-accent/50 hover:bg-elevated hover:text-fg md:hidden"
+        aria-label="Open navigation"
+        title="Open navigation"
+      >
+        <Menu className="h-[18px] w-[18px]" />
+      </button>
       {/* Global command search — routes into the investigation assistant. */}
       <form onSubmit={goSearch} className="group relative hidden max-w-xl flex-1 sm:block">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted transition-colors group-focus-within:text-accent" />
@@ -65,13 +74,13 @@ export function Topbar({ user: _user }: { user: SessionUser }) {
       </form>
 
       <div className="ml-auto flex items-center gap-1.5">
-        {/* AI backend status */}
+        {/* Operational analysis service status */}
         <div
           className="hidden h-9 items-center gap-1.5 rounded-md border border-border bg-elevated/40 px-2.5 text-xs font-medium text-subtle sm:flex"
-          title={aiOnline ? "Zoho Catalyst QuickML connected" : "Using built-in reasoning engine"}
+          title={aiOnline ? "Catalyst intelligence service connected" : "Local analysis service active"}
         >
-          <Cpu className="h-3.5 w-3.5 text-accent" />
-          <span className="hidden md:inline">AI</span>
+          <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+          <span className="hidden lg:inline">Analysis service</span>
           <span className={`h-1.5 w-1.5 rounded-full ${aiOnline === null ? "bg-muted" : aiOnline ? "bg-success" : "bg-warning"}`} />
         </div>
 

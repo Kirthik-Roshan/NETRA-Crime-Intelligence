@@ -1,6 +1,15 @@
+const catalystWebClient = process.env.CATALYST_WEB_CLIENT === "true";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Catalyst Web Client Hosting serves static resources under /app. Slate and
+  // localhost continue to use root-relative routes.
+  basePath: catalystWebClient ? "/app" : "",
+  env: {
+    NEXT_PUBLIC_CATALYST_WEB_CLIENT: catalystWebClient ? "true" : "false",
+  },
 
   // Keep the dev compiler separate from production/export builds. Running
   // both at once otherwise lets them overwrite the same webpack chunks.

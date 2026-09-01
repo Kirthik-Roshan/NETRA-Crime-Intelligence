@@ -17,6 +17,10 @@
       "ai_quickml"
     ]
   },
+  "client": {
+    "source": "out",
+    "ignore": []
+  },
   "services": {
     "data_store": "Primary relational store (mirrors the SQLite schema in src/lib/schema.sql)",
     "stratus": "Object storage for evidence files / exported PDFs",

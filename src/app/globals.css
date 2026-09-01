@@ -8,11 +8,46 @@
    rgb(var(--x) / <alpha>). Switching [data-theme] re-skins live.
    ============================================================ */
 
-/* ── AXIOM theme engine — 5 signature themes. --glow drives the ambient
-   background lighting so each theme feels like a different OS. ── */
+/* Theme engine. Daylight is the operational default; the darker palettes are
+   retained for night shifts and control-room use. */
 
-/* Midnight Sapphire — deep, calm, focused (default) */
-:root,
+:root {
+  --focus-cyan: 6 182 212;
+  --bg: 242 246 249;
+  --surface: 255 255 255;
+  --elevated: 247 250 252;
+  --border: 205 216 226;
+  --muted: 83 101 117;
+  --subtle: 36 55 70;
+  --fg: 8 34 52;
+  --accent: 8 145 178;
+  --accent-fg: 255 255 255;
+  --glow: 6 182 212;
+  --warning: 217 119 6;
+  --danger: 190 38 51;
+  --success: 4 132 103;
+  --info: 29 78 216;
+}
+
+/* Nightwatch — the high-contrast operational counterpart to Daylight. */
+[data-theme="nightwatch"] {
+  --bg: 3 13 22;
+  --surface: 7 24 36;
+  --elevated: 12 34 48;
+  --border: 32 64 80;
+  --muted: 137 165 181;
+  --subtle: 196 218 229;
+  --fg: 241 249 252;
+  --accent: 34 211 238;
+  --accent-fg: 3 20 28;
+  --glow: 34 211 238;
+  --warning: 251 191 36;
+  --danger: 251 113 133;
+  --success: 52 211 153;
+  --info: 96 165 250;
+}
+
+/* Midnight Sapphire — deep, calm, focused */
 [data-theme="midnight"] {
   --bg: 7 10 18;
   --surface: 14 19 32;
@@ -103,20 +138,20 @@
 }
 
 [data-theme="daylight"] {
-  --bg: 245 247 250;
+  --bg: 242 246 249;
   --surface: 255 255 255;
-  --elevated: 255 255 255;
-  --border: 226 232 240;
-  --muted: 91 100 114;
-  --subtle: 51 65 85;
-  --fg: 15 23 42;
-  --accent: 13 148 136;
+  --elevated: 247 250 252;
+  --border: 205 216 226;
+  --muted: 83 101 117;
+  --subtle: 36 55 70;
+  --fg: 8 34 52;
+  --accent: 8 145 178;
   --accent-fg: 255 255 255;
-  --glow: 13 148 136;
+  --glow: 6 182 212;
   --warning: 217 119 6;
-  --danger: 220 38 38;
-  --success: 5 150 105;
-  --info: 37 99 235;
+  --danger: 190 38 51;
+  --success: 4 132 103;
+  --info: 29 78 216;
 }
 
 /* Warm light theme — recedes into warm paper, terracotta accent. */
@@ -169,18 +204,23 @@
 .react-flow__node:hover { filter: drop-shadow(0 0 8px rgb(var(--accent) / 0.5)); }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--border)) transparent;
   -webkit-tap-highlight-color: transparent;
 }
-[data-theme="daylight"],
-[data-theme="sandstone"] {
-  color-scheme: light;
+[data-theme="midnight"],
+[data-theme="nightwatch"],
+[data-theme="nocturne"],
+[data-theme="carbon"],
+[data-theme="slate"],
+[data-theme="crimson"] {
+  color-scheme: dark;
 }
 
 body {
+  min-height: 100vh;
   background-color: rgb(var(--bg));
   color: rgb(var(--fg));
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -195,9 +235,14 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   line-height: 1.12;
   text-wrap: balance;
+}
+
+/* Typography stays neutral and official across data-heavy screens. */
+body * {
+  letter-spacing: 0 !important;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────── */
@@ -228,18 +273,25 @@ h1, h2, h3, h4, h5, h6 {
     @apply relative rounded-lg border;
     background: rgb(var(--surface));
     border-color: rgb(var(--border));
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.16);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 3px 0 rgb(8 34 52 / 0.08), 0 1px 1px rgb(8 34 52 / 0.04);
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
   }
   .card:hover {
-    border-color: rgb(var(--muted) / 0.32);
+    border-color: rgb(var(--focus-cyan) / 0.72);
+    box-shadow: 0 0 0 1px rgb(var(--focus-cyan) / 0.3), 0 10px 24px -14px rgb(8 34 52 / 0.42);
+    transform: translateY(-2px);
   }
   /* Opt-out hover for static (non-interactive) panels. */
-  .card-static:hover { border-color: rgb(var(--border)); }
+  .card-static:hover {
+    border-color: rgb(var(--border));
+    box-shadow: 0 1px 3px 0 rgb(8 34 52 / 0.08), 0 1px 1px rgb(8 34 52 / 0.04);
+    transform: none;
+  }
   .card-elevated {
     @apply rounded-lg border;
     background: rgb(var(--elevated));
     border-color: rgb(var(--border));
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
   }
   /* Kept for the login/emblem chrome — a lightly frosted surface. */
   .glass {
@@ -259,7 +311,7 @@ h1, h2, h3, h4, h5, h6 {
     @apply inline-flex items-center gap-1 rounded border border-border/80 bg-elevated/50 px-1.5 py-0.5 text-[11px] font-medium text-muted;
   }
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium tracking-[-0.01em] transition duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-accent {
     @apply btn bg-accent text-accent-fg hover:brightness-110;
@@ -300,12 +352,17 @@ h1, h2, h3, h4, h5, h6 {
   /* Navigation rows — inactive recede; the active row is marked by a solid
      accent edge and an elevated ground (no glow, no gradient). */
   .link-row {
-    @apply relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated/60 hover:text-fg;
+    @apply relative flex items-center gap-3 rounded-md border border-transparent px-2.5 py-2 text-sm font-medium text-muted hover:bg-elevated/80 hover:text-fg;
+    transition: transform 180ms ease, color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
   }
   .link-row-active {
     @apply font-semibold text-fg;
     background: rgb(var(--elevated));
-    box-shadow: inset 2px 0 0 0 rgb(var(--accent));
+    border-color: rgb(var(--accent) / 0.28);
+    box-shadow: inset 3px 0 0 0 rgb(var(--accent));
+  }
+  .lift-row {
+    transition: transform 160ms ease, color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
   }
   /* Skeleton shimmer for loading states */
   .skeleton {
@@ -321,6 +378,46 @@ h1, h2, h3, h4, h5, h6 {
       transparent
     );
     animation: shimmer 1.4s infinite;
+  }
+}
+
+/* Shared operational hover language. Rows rise by a single pixel and receive
+   a crisp cyan edge, making dense data easy to track without playful motion. */
+@media (hover: hover) and (pointer: fine) {
+  .link-row:hover {
+    border-color: rgb(var(--focus-cyan) / 0.55);
+    box-shadow: 0 0 0 1px rgb(var(--focus-cyan) / 0.18), 0 7px 16px -12px rgb(8 34 52 / 0.7);
+    transform: translateX(3px);
+  }
+
+  .lift-row:hover {
+    border-color: rgb(var(--focus-cyan) / 0.58);
+    box-shadow: 0 0 0 1px rgb(var(--focus-cyan) / 0.18), 0 7px 16px -12px rgb(8 34 52 / 0.65);
+    transform: translateX(2px) translateY(-1px);
+  }
+
+  .card-elevated:hover,
+  main :where(a, button):not(:disabled):not(.link-row):hover {
+    border-color: rgb(var(--focus-cyan) / 0.58);
+  }
+
+  main tbody tr {
+    position: relative;
+    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  main tbody tr:hover {
+    z-index: 1;
+    background: rgb(var(--focus-cyan) / 0.07) !important;
+    box-shadow: inset 3px 0 0 rgb(var(--focus-cyan) / 0.9), 0 6px 18px -14px rgb(8 34 52 / 0.7);
+    transform: translateY(-1px);
+  }
+
+  .btn:hover,
+  .btn-accent:hover,
+  .btn-ghost:hover {
+    box-shadow: 0 0 0 1px rgb(var(--focus-cyan) / 0.45), 0 7px 16px -12px rgb(8 34 52 / 0.72);
+    transform: translateY(-1px);
   }
 }
 
@@ -378,7 +475,7 @@ h1, h2, h3, h4, h5, h6 {
    zero specificity so page-level utilities always win, and it only shows for
    keyboard users (:focus-visible), never on mouse click. */
 :where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid rgb(var(--accent) / 0.7);
+  outline: 2px solid rgb(var(--focus-cyan) / 0.9);
   outline-offset: 2px;
 }
 

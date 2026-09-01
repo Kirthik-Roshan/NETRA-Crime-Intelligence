@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { AlertTriangle, Loader2, Lock, LogIn, Network, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, ExternalLink, Loader2, Lock, LogIn, Network, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
+import { AmbientBackground } from "@/components/AmbientBackground";
 import { Emblem } from "@/components/Emblem";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { getClientUser, isDemoAccessMode, loginLocal, mountCatalystSignIn } from "@/lib/auth-client";
+import { beginCatalystSignIn, getClientUser, isDemoAccessMode, loginLocal, mountCatalystSignIn, replaceAppRoute } from "@/lib/auth-client";
 
 const CAPABILITIES = [
   { icon: Sparkles, label: "Natural language", sub: "English and Kannada" },
@@ -14,7 +14,6 @@ const CAPABILITIES = [
 ];
 
 export default function LoginPage() {
-  const router = useRouter();
   const [local, setLocal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,7 +25,7 @@ export default function LoginPage() {
     void getClientUser().then(async (user) => {
       if (!active) return;
       if (user) {
-        router.replace("/dashboard");
+        replaceAppRoute("/dashboard");
         return;
       }
       if (localMode) {
@@ -37,34 +36,29 @@ export default function LoginPage() {
         const mounted = await mountCatalystSignIn("catalyst-login");
         if (!active) return;
         setLoading(false);
-        if (!mounted) setError("Catalyst Authentication is not enabled for this hosted environment.");
+        if (!mounted) setError("Catalyst Authentication is unavailable in this environment.");
       } catch {
         if (!active) return;
         setLoading(false);
         setError("Catalyst could not initialize the secure sign-in panel.");
       }
+    }).catch(() => {
+      if (!active) return;
+      setLoading(false);
+      setError("Catalyst could not check the current officer session.");
     });
     return () => { active = false; };
-  }, [router]);
+  }, []);
 
   const enterLocal = () => {
     const user = loginLocal();
-    if (user) router.replace("/dashboard");
+    if (user) replaceAppRoute("/dashboard");
     else setError("Local development access is unavailable.");
   };
 
   return (
-    <div className="relative grid min-h-screen overflow-hidden bg-bg lg:grid-cols-[1.15fr_1fr]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage: "linear-gradient(rgb(var(--border) / 0.5) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--border) / 0.5) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-          maskImage: "radial-gradient(ellipse at 40% 40%, #000 30%, transparent 90%)",
-          WebkitMaskImage: "radial-gradient(ellipse at 40% 40%, #000 30%, transparent 90%)",
-        }}
-      />
+    <div className="relative isolate grid min-h-screen overflow-x-hidden bg-bg lg:grid-cols-[1.15fr_1fr]">
+      <AmbientBackground intensity="active" />
 
       <section className="relative hidden min-h-screen flex-col justify-between border-r border-border p-12 lg:flex xl:p-16">
         <div className="flex items-start justify-between gap-6">
@@ -121,19 +115,24 @@ export default function LoginPage() {
               </span>
               <div>
                 <h2 className="font-display text-2xl font-bold">Secure sign in</h2>
-                <p className="mt-1 text-sm text-muted">{local ? "Local development workspace" : "Catalyst Authentication and role-based access"}</p>
+                <p className="mt-1 text-sm text-muted">{local ? "Catalyst account or isolated local demo" : "Catalyst Authentication and role-based access"}</p>
               </div>
             </div>
 
             {local ? (
-              <button type="button" onClick={enterLocal} className="btn-accent mt-6 w-full">
-                <LogIn className="h-4 w-4" /> Continue to local workspace
-              </button>
+              <div className="mt-6 space-y-3">
+                <button type="button" onClick={beginCatalystSignIn} className="btn-accent w-full">
+                  <ExternalLink className="h-4 w-4" /> Sign in with Google via Catalyst
+                </button>
+                <button type="button" onClick={enterLocal} className="btn-ghost w-full">
+                  <LogIn className="h-4 w-4" /> Open isolated local demo
+                </button>
+              </div>
             ) : (
-              <div className="relative mt-6 min-h-[260px] overflow-hidden rounded-md border border-border bg-elevated/30 p-2">
-                <div id="catalyst-login" className="min-h-[240px]" />
+              <div className="relative mt-6 h-[520px] overflow-hidden rounded-md border border-border bg-elevated/30 p-2">
+                <div id="catalyst-login" className="h-[500px]" />
                 {loading && (
-                  <div className="absolute inset-2 grid min-h-[240px] place-items-center bg-elevated text-sm text-muted">
+                  <div className="absolute inset-2 grid h-[500px] place-items-center bg-elevated text-sm text-muted">
                     <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin text-accent" /> Loading secure sign in...</span>
                   </div>
                 )}

@@ -1,4 +1,4 @@
-import { cn, initials, hueFromString, riskBand } from "@/lib/utils";
+import { cn, initials, riskBand } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
 type Tone = "default" | "accent" | "danger" | "warning" | "success" | "info";
@@ -43,7 +43,7 @@ export function StatCard({
   tone?: Tone;
 }) {
   return (
-    <div className="card panel-pad group relative overflow-hidden">
+    <div className="card panel-pad group relative min-h-[126px] overflow-hidden">
       <span aria-hidden className={cn("absolute inset-y-0 left-0 w-[3px]", ACCENT_BAR[tone])} />
       <div className="flex items-start justify-between gap-3">
         <span className="stat-label">{label}</span>
@@ -105,7 +105,6 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
-  const hue = hueFromString(name);
   return (
     <div
       className="grid shrink-0 select-none place-items-center rounded-md font-mono font-semibold"
@@ -113,9 +112,9 @@ export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
         width: size,
         height: size,
         fontSize: size * 0.36,
-        background: `linear-gradient(140deg, hsl(${hue} 40% 24%), hsl(${hue} 42% 16%))`,
-        color: `hsl(${hue} 70% 74%)`,
-        boxShadow: `inset 0 0 0 1px hsl(${hue} 45% 42% / 0.4)`,
+        background: "rgb(var(--accent) / 0.1)",
+        color: "rgb(var(--accent))",
+        boxShadow: "inset 0 0 0 1px rgb(var(--accent) / 0.24)",
       }}
     >
       {initials(name)}
@@ -181,7 +180,7 @@ export function PanelHeader({
   tone?: Tone;
 }) {
   return (
-    <div className="mb-3 flex items-start gap-2.5">
+    <div className="mb-4 flex items-start gap-2.5">
       {Icon && (
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-border bg-elevated/60">
           <Icon className={cn("h-3.5 w-3.5", TONE_ICON[tone])} />
@@ -194,7 +193,7 @@ export function PanelHeader({
             <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">{count}</span>
           )}
         </div>
-        {sub && <p className="mt-0.5 truncate text-[11px] text-muted">{sub}</p>}
+        {sub && <p className="mt-0.5 text-[11px] leading-relaxed text-muted">{sub}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
@@ -233,7 +232,7 @@ export function Segmented<T extends string>({
 
 export function EmptyState({ icon: Icon, title, hint }: { icon: LucideIcon; title: string; hint?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-elevated/20 py-12 text-center">
+    <div className="flex min-h-[180px] flex-col items-center justify-center rounded-lg border border-border bg-elevated/35 px-5 py-10 text-center">
       <div className="mb-3 grid h-11 w-11 place-items-center rounded-md border border-border bg-elevated/70">
         <Icon className="h-5 w-5 text-muted" />
       </div>
@@ -246,12 +245,13 @@ export function EmptyState({ icon: Icon, title, hint }: { icon: LucideIcon; titl
 /** Page header — a compact command title with a thin accent edge. */
 export function PageHeader({ title, subtitle, children }: { title: React.ReactNode; subtitle?: string; children?: React.ReactNode }) {
   return (
-    <div className="mb-6 border-b border-border/60 pb-4">
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+    <div className="mb-5 border-b border-border pb-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
         <div className="flex min-w-0 items-stretch gap-3">
-          <span aria-hidden className="w-[3px] shrink-0 self-stretch rounded-full bg-accent" />
+          <span aria-hidden className="w-1 shrink-0 self-stretch rounded-sm bg-accent" />
           <div className="min-w-0">
-            <h1 className="font-display text-[1.5rem] font-bold leading-[1.08] tracking-[-0.03em] md:text-[1.7rem]">{title}</h1>
+            <div className="mb-1 font-mono text-[10px] font-semibold uppercase text-accent">KSP operational workspace</div>
+            <h1 className="font-display text-[1.45rem] font-bold leading-tight md:text-[1.65rem]">{title}</h1>
             {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
           </div>
         </div>

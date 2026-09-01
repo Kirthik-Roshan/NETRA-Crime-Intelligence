@@ -2,18 +2,20 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type ThemeName = "midnight" | "nocturne" | "carbon" | "slate" | "crimson" | "daylight" | "sandstone";
+export type ThemeName = "daylight" | "nightwatch" | "midnight" | "nocturne" | "carbon" | "slate" | "crimson" | "sandstone";
 export type Lang = "en" | "kn";
 
-// AXIOM signature themes (id kept stable for persistence; label = AXIOM identity).
+// Daylight is the operational default. Dark palettes remain available for
+// control rooms and night shifts without defining the product's first view.
 export const THEMES: { id: ThemeName; label: string; swatch: string; desc: string }[] = [
+  { id: "daylight", label: "Daylight", swatch: "#0891B2", desc: "Bright · Official · Operational" },
+  { id: "nightwatch", label: "Nightwatch", swatch: "#22D3EE", desc: "High contrast · Night operations" },
   { id: "midnight", label: "Midnight Sapphire", swatch: "#38A0FF", desc: "Deep · Calm · Focused" },
   { id: "carbon", label: "Sunset Ember", swatch: "#F97316", desc: "Warm · Professional · Powerful" },
   { id: "slate", label: "Forest Sage", swatch: "#34D399", desc: "Natural · Tactical · Calm" },
   { id: "crimson", label: "Crimson Command", swatch: "#F43F5E", desc: "Alert · Intense · Critical" },
   { id: "nocturne", label: "Arctic Aurora", swatch: "#A882FF", desc: "Futuristic · Cool · AI-driven" },
   { id: "sandstone", label: "Sandstone", swatch: "#C4703B", desc: "Warm · Light · Editorial" },
-  { id: "daylight", label: "Daylight", swatch: "#0D9488", desc: "Bright · Clean · Daytime" },
 ];
 
 interface AppState {
@@ -49,7 +51,7 @@ function applyPrefs(reducedMotion: boolean, compact: boolean) {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      theme: "midnight",
+      theme: "daylight",
       lang: "en",
       sidebarCollapsed: false,
       activeInvestigation: null,
@@ -81,6 +83,17 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "netra-prefs",
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<AppState>;
+        // Version 1 shipped with Midnight as an implicit default. Move those
+        // workspaces to the new operational default once; explicit alternatives
+        // such as Sandstone or Crimson are preserved.
+        if (version < 2 && (!state.theme || state.theme === "midnight")) {
+          return { ...state, theme: "daylight" } as AppState;
+        }
+        return state as AppState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           applyTheme(state.theme);

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { CatalystSdkLoader } from "@/components/CatalystSdkLoader";
 import "./globals.css";
 
 // Self-hosted fonts — no external font CDN (Google Fonts) is contacted at
@@ -38,17 +39,18 @@ export const metadata: Metadata = {
 };
 
 // Set the theme before first paint to avoid a flash of the wrong palette.
-const themeInit = `(function(){try{var p=JSON.parse(localStorage.getItem('netra-prefs'));var t=p&&p.state&&p.state.theme;document.documentElement.setAttribute('data-theme',t||'midnight');}catch(e){document.documentElement.setAttribute('data-theme','midnight');}})();`;
+const themeInit = `(function(){try{var p=JSON.parse(localStorage.getItem('netra-prefs'));var t=p&&p.state&&p.state.theme;var v=p&&p.version;if((v==null||v<2)&&(!t||t==='midnight'))t='daylight';document.documentElement.setAttribute('data-theme',t||'daylight');}catch(e){document.documentElement.setAttribute('data-theme','daylight');}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="midnight" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
+    <html lang="en" data-theme="daylight" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
-        <script src="https://static.zohocdn.com/catalyst/sdk/js/4.6.1/catalystWebSDK.js" defer />
-        <script src="/__catalyst/sdk/init.js" defer />
       </head>
-      <body>{children}</body>
+      <body>
+        <CatalystSdkLoader />
+        {children}
+      </body>
     </html>
   );
 }

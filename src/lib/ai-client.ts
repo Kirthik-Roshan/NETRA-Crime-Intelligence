@@ -18,7 +18,6 @@ import type { SessionUser } from "./types";
 const PROD_FN_URL = "https://ksphacks-60080085094.catalystserverless.in/server/ai_quickml/";
 const DEV_FN_URL = "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/";
 const EXPLICIT_FN_URL = process.env.NEXT_PUBLIC_AI_FN_URL || "";
-const CATALYST_AUTH_ENABLED = process.env.NEXT_PUBLIC_CATALYST_AUTH_ENABLED === "true";
 
 function functionUrls(): string[] {
   if (EXPLICIT_FN_URL) return [EXPLICIT_FN_URL];
@@ -41,12 +40,18 @@ export function clearCachedCatalystAccessToken(): void {
 }
 
 async function catalystAccessToken(): Promise<string> {
-  if (!CATALYST_AUTH_ENABLED || typeof window === "undefined") return "";
+  if (typeof window === "undefined") return "";
   if (cachedCatalystToken && Date.now() < cachedCatalystTokenUntil) return cachedCatalystToken;
   const auth = (window as Window & { catalyst?: { auth?: CatalystTokenAuth } }).catalyst?.auth;
   if (!auth?.generateAuthToken) return "";
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    const response = await auth.generateAuthToken();
+    const response = await Promise.race([
+      auth.generateAuthToken(),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("Catalyst token timed out")), 7000);
+      }),
+    ]);
     const token = typeof response === "string" ? response : String(response?.access_token || "");
     if (token) {
       cachedCatalystToken = token;
@@ -55,6 +60,8 @@ async function catalystAccessToken(): Promise<string> {
     return token;
   } catch {
     return "";
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 

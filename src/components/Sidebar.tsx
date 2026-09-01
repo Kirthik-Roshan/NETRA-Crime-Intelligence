@@ -20,6 +20,7 @@ import {
   Search,
   BrainCircuit,
   Archive,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
@@ -84,9 +85,10 @@ const ROLE_KEY: Record<string, TransKey> = {
   readonly: "role.readonly",
 };
 
-export function Sidebar({ user }: { user: SessionUser }) {
+export function Sidebar({ user, mobile = false, onClose }: { user: SessionUser; mobile?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const collapsed = useAppStore((s) => s.sidebarCollapsed);
+  const storedCollapsed = useAppStore((s) => s.sidebarCollapsed);
+  const collapsed = mobile ? false : storedCollapsed;
   const toggle = useAppStore((s) => s.toggleSidebar);
   const t = useT();
 
@@ -97,6 +99,7 @@ export function Sidebar({ user }: { user: SessionUser }) {
     return (
       <Link
         href={item.href}
+        onClick={onClose}
         className={cn("link-row", active && "link-row-active", collapsed && "justify-center px-0")}
         title={collapsed ? t(item.key) : undefined}
         aria-current={active ? "page" : undefined}
@@ -110,8 +113,9 @@ export function Sidebar({ user }: { user: SessionUser }) {
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 md:flex",
-        collapsed ? "w-[68px]" : "w-[248px]"
+        "top-0 h-screen shrink-0 flex-col border-r border-border bg-surface shadow-[4px_0_24px_-22px_rgb(8_34_52/0.8)] transition-[width] duration-200",
+        mobile ? "fixed left-0 z-10 flex w-[min(86vw,296px)]" : "sticky hidden md:flex",
+        !mobile && (collapsed ? "w-[72px]" : "w-[272px]")
       )}
     >
       {/* Brand */}
@@ -126,15 +130,15 @@ export function Sidebar({ user }: { user: SessionUser }) {
           </div>
         )}
         <button
-          onClick={toggle}
+          onClick={mobile ? onClose : toggle}
           className={cn(
             "grid h-7 w-7 place-items-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-fg",
             collapsed ? "mt-1" : "ml-auto"
           )}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand menu" : "Collapse menu"}
+          aria-label={mobile ? "Close navigation" : collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={mobile ? "Close navigation" : collapsed ? "Expand menu" : "Collapse menu"}
         >
-          <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+          {mobile ? <X className="h-4 w-4" /> : <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />}
         </button>
       </div>
 
@@ -162,7 +166,7 @@ export function Sidebar({ user }: { user: SessionUser }) {
       </nav>
 
       {/* Officer */}
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border bg-elevated/45 p-3">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-elevated font-mono text-xs font-semibold text-accent ring-1 ring-inset ring-border">
             {initials(user.full_name)}

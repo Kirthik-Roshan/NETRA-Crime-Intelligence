@@ -3,10 +3,14 @@
 import { clearCachedCatalystAccessToken, fetchAuthenticatedOfficer } from "./ai-client";
 import type { Role, SessionUser } from "./types";
 
-const KEY = "netra_user";
+const KEY = "netra_session_user_v2";
+const LEGACY_KEY = "netra_user";
 const LOCAL_SIGNED_OUT_KEY = "netra_local_signed_out";
 const LOCAL_PASSWORD = "police123";
 const HOSTED_DEMO_ACCESS_ENABLED = process.env.NEXT_PUBLIC_DEMO_ACCESS_ENABLED === "true";
+const CATALYST_WEB_CLIENT = process.env.NEXT_PUBLIC_CATALYST_WEB_CLIENT === "true";
+const CATALYST_DEVELOPMENT_ORIGIN = "https://ksphacks-60080085094.development.catalystserverless.in";
+const CATALYST_PROJECT_ID = "56798000000013049";
 
 export const DEMO_USERS: (SessionUser & { label: string })[] = [
   { id: 1, username: "admin", full_name: "System Administrator", role: "administrator", rank: "System", label: "Administrator" },
@@ -37,10 +41,46 @@ export function isDemoAccessMode(): boolean {
   return isLocalDevelopment() || HOSTED_DEMO_ACCESS_ENABLED;
 }
 
+/** Resolve a statically exported page on Slate or Catalyst Web Client Hosting. */
+export function appDocumentPath(route: string): string {
+  const match = route.match(/^([^?#]*)(.*)$/);
+  const pathname = `/${String(match?.[1] || "/").replace(/^\/+|\/+$/g, "")}`;
+  const suffix = match?.[2] || "";
+  const base = CATALYST_WEB_CLIENT ? "/app" : "";
+
+  if (isLocalDevelopment()) return `${base}${pathname === "/" ? "/" : `${pathname}/`}${suffix}`;
+  if (pathname === "/") return `${base}/index.html${suffix}`;
+  if (/\.[a-z0-9]+$/i.test(pathname)) return `${base}${pathname}${suffix}`;
+  return `${base}${pathname}/index.html${suffix}`;
+}
+
+export function replaceAppRoute(route: string): void {
+  if (typeof window !== "undefined") window.location.replace(appDocumentPath(route));
+}
+
+export function catalystHostedSignInUrl(): string {
+  if (typeof window === "undefined") return `${CATALYST_DEVELOPMENT_ORIGIN}/__catalyst/auth/login`;
+  const catalystHost = window.location.hostname.endsWith(".catalystserverless.in");
+  const origin = catalystHost ? window.location.origin : CATALYST_DEVELOPMENT_ORIGIN;
+  return `${origin}/__catalyst/auth/login`;
+}
+
+export function beginCatalystSignIn(): void {
+  if (typeof window === "undefined") return;
+  if (isLocalDevelopment()) {
+    window.location.assign(`${CATALYST_DEVELOPMENT_ORIGIN}/app/login/index.html`);
+    return;
+  }
+  window.location.assign(catalystHostedSignInUrl());
+}
+
 function remember(user: SessionUser | null) {
   if (typeof localStorage === "undefined") return;
   if (user) localStorage.setItem(KEY, JSON.stringify(user));
-  else localStorage.removeItem(KEY);
+  else {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(LEGACY_KEY);
+  }
 }
 
 function localSignedOut(): boolean {
@@ -67,7 +107,7 @@ function normalizeRole(value: unknown): Role {
   const role = String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
   if (["administrator", "app_administrator", "admin", "system_administrator"].includes(role)) return "administrator";
   if (["senior_officer", "seniorofficer", "supervisor"].includes(role)) return "senior_officer";
-  if (["investigation_officer", "investigating_officer", "officer"].includes(role)) return "investigation_officer";
+  if (["investigation_officer", "investigating_officer", "officer", "app_user", "user"].includes(role)) return "investigation_officer";
   if (["analyst", "scrb_analyst"].includes(role)) return "analyst";
   return "readonly";
 }
@@ -112,6 +152,20 @@ async function waitForAuthSdk(timeoutMs = 10000): Promise<CatalystAuth | null> {
   return null;
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("Catalyst Authentication timed out")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 /** Resolve and verify the current user server-side before opening the app. */
 export async function getClientUser(): Promise<SessionUser | null> {
   if (isDemoAccessMode()) {
@@ -119,15 +173,15 @@ export async function getClientUser(): Promise<SessionUser | null> {
       remember(null);
       return null;
     }
-    return getCachedUser() || loginLocal();
+    return getCachedUser();
   }
 
   const sdk = await waitForAuthSdk();
   if (sdk) {
     try {
-      const user = mapSdkUser(await sdk.isUserAuthenticated());
+      const user = mapSdkUser(await withTimeout(sdk.isUserAuthenticated(), 7000));
       if (user) {
-        const verified = await fetchAuthenticatedOfficer();
+        const verified = await withTimeout(fetchAuthenticatedOfficer(), 7000).catch(() => null);
         const resolved = verified?.authenticated && verified.user ? verified.user : user;
         remember(resolved);
         return resolved;
@@ -141,12 +195,12 @@ export async function getClientUser(): Promise<SessionUser | null> {
   return null;
 }
 
-/** Mount Catalyst's hosted sign-in widget into the supplied element. */
+/** Mount Catalyst's embedded sign-in widget into the supplied element. */
 export async function mountCatalystSignIn(elementId: string): Promise<boolean> {
   const sdk = await waitForAuthSdk();
   if (!sdk) return false;
-  const redirect = `${window.location.origin}${isLocalDevelopment() ? "/dashboard/" : "/dashboard/index.html"}`;
-  await Promise.resolve(sdk.signIn(elementId, { redirect_url: redirect }));
+  const redirect = new URL(appDocumentPath("/dashboard"), window.location.origin).toString();
+  await withTimeout(Promise.resolve(sdk.signIn(elementId, { service_url: redirect })), 7000);
   return true;
 }
 
@@ -170,9 +224,32 @@ export async function logout(): Promise<boolean> {
     return false;
   }
 
-  const sdk = await waitForAuthSdk();
-  if (!sdk) throw new Error("Catalyst Authentication SDK is unavailable");
-  sdk.signOut(`${window.location.origin}/login/index.html`);
+  const redirect = new URL(appDocumentPath("/login"), window.location.origin).toString();
+  const logoutUrl = `${window.location.origin}/baas/logout?logout=true&PROJECT_ID=${CATALYST_PROJECT_ID}`;
+  let fallbackStarted = false;
+  const fallback = () => {
+    if (fallbackStarted) return;
+    fallbackStarted = true;
+    const redirectTimer = window.setTimeout(() => window.location.replace(redirect), 1500);
+    void fetch(logoutUrl, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      keepalive: true,
+    }).catch(() => undefined).finally(() => {
+      window.clearTimeout(redirectTimer);
+      window.location.replace(redirect);
+    });
+  };
+
+  const sdk = await waitForAuthSdk(3000);
+  if (!sdk) {
+    fallback();
+    return true;
+  }
+
+  window.setTimeout(fallback, 2500);
+  sdk.signOut(redirect);
   return true;
 }
 

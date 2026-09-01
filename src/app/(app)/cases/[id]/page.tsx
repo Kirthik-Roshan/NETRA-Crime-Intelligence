@@ -13,9 +13,16 @@ import { ReadAloud } from "@/components/ReadAloud";
 import { Translated } from "@/components/Translated";
 import { cn, formatDate } from "@/lib/utils";
 
-// Prerender every case page at build (static export — no runtime server).
+// Web Client Hosting caps ZIP entries, so that build carries the 40 most
+// recently updated dossiers; Slate keeps the complete synthetic record set.
 export function generateStaticParams() {
-  return all<{ id: number }>("SELECT id FROM cases").map((r) => ({ id: String(r.id) }));
+  const catalystClient = process.env.CATALYST_WEB_CLIENT === "true";
+  const rows = all<{ id: number }>(
+    catalystClient
+      ? "SELECT id FROM cases ORDER BY updated_at DESC LIMIT 40"
+      : "SELECT id FROM cases"
+  );
+  return rows.map((r) => ({ id: String(r.id) }));
 }
 
 export default function CaseWorkspace({ params }: { params: { id: string } }) {

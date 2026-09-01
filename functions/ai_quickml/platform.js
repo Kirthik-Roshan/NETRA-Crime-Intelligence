@@ -62,7 +62,7 @@ function normalizeRole(name) {
   const value = String(name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
   if (["administrator", "app_administrator", "admin", "system_administrator"].includes(value)) return "administrator";
   if (["senior_officer", "seniorofficer", "supervisor"].includes(value)) return "senior_officer";
-  if (["investigation_officer", "investigating_officer", "officer"].includes(value)) return "investigation_officer";
+  if (["investigation_officer", "investigating_officer", "officer", "app_user", "user"].includes(value)) return "investigation_officer";
   if (["analyst", "scrb_analyst"].includes(value)) return "analyst";
   return "readonly";
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { can, getClientUser } from "@/lib/auth-client";
+import { usePathname } from "next/navigation";
+import { can, getClientUser, replaceAppRoute } from "@/lib/auth-client";
 import type { SessionUser } from "@/lib/types";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
@@ -18,24 +18,24 @@ import { Emblem } from "@/components/Emblem";
  * renders the workspace around the already-built page `children`.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
     void getClientUser().then((u) => {
       if (!active) return;
       if (!u) {
-        router.replace("/login");
+        replaceAppRoute("/login");
         return;
       }
       setUser(u);
       setReady(true);
     });
     return () => { active = false; };
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -44,10 +44,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ["/criminals", "criminals"], ["/network", "network"], ["/analytics", "analytics"],
       ["/maps", "analytics"], ["/database", "search"], ["/evidence", "evidence"], ["/reports", "reports"],
     ];
-    const required = rules.find(([path]) => pathname.startsWith(path))?.[1];
-    if (required && !can(user.role, required)) router.replace("/dashboard");
-    if (pathname.startsWith("/admin") && !["administrator", "senior_officer"].includes(user.role)) router.replace("/dashboard");
-  }, [pathname, router, user]);
+    const routePath = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
+    const required = rules.find(([path]) => routePath.startsWith(path))?.[1];
+    if (required && !can(user.role, required)) replaceAppRoute("/dashboard");
+    if (routePath.startsWith("/admin") && !["administrator", "senior_officer"].includes(user.role)) replaceAppRoute("/dashboard");
+  }, [pathname, user]);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   if (!ready || !user) {
     return (
@@ -66,10 +71,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <AmbientBackground />
       <Sidebar user={user} />
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-fg/20 backdrop-blur-[2px]"
+            onClick={() => setMobileNavOpen(false)}
+            aria-label="Close navigation"
+          />
+          <Sidebar user={user} mobile onClose={() => setMobileNavOpen(false)} />
+        </div>
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar user={user} />
-        <main className="flex-1 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-workspace px-5 py-6 sm:px-8">{children}</div>
+        <Topbar user={user} onMenu={() => setMobileNavOpen(true)} />
+        <main id="main-content" className="relative flex-1 overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[1760px] px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+            <div className="min-h-[calc(100vh-8.5rem)]">{children}</div>
+          </div>
         </main>
         <StatusBar user={user} />
       </div>

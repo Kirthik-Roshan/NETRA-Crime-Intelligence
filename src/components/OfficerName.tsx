@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
-import { getClientUser } from "@/lib/auth-client";
+import { getClientUser, replaceAppRoute } from "@/lib/auth-client";
 import { Badge } from "@/components/ui";
 import { ROLE_LABEL, type Role, type SessionUser } from "@/lib/types";
 
@@ -39,18 +38,17 @@ export function RoleBadge() {
  * allowed. Renders nothing until the check passes (avoids flashing gated data).
  */
 export function RequireRole({ roles, children }: { roles: Role[]; children: React.ReactNode }) {
-  const router = useRouter();
   const [ok, setOk] = useState(false);
   useEffect(() => {
     let active = true;
     void getClientUser().then((u) => {
       if (!active) return;
-      if (!u) router.replace("/login");
-      else if (!roles.includes(u.role)) router.replace("/dashboard");
+      if (!u) replaceAppRoute("/login");
+      else if (!roles.includes(u.role)) replaceAppRoute("/dashboard");
       else setOk(true);
     });
     return () => { active = false; };
-  }, [router, roles]);
+  }, [roles]);
   if (!ok) return null;
   return <>{children}</>;
 }

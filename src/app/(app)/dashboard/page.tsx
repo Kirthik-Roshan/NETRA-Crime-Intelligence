@@ -33,10 +33,12 @@ export default function DashboardPage() {
   const alerts: { icon: typeof Flame; title: string; detail: string }[] = [];
   if (hotspots[0]) alerts.push({ icon: Flame, title: "Top hotspot", detail: `${hotspots[0].district} leads with ${hotspots[0].cases} FIRs.` });
   if (byType[0]) alerts.push({ icon: TrendingUp, title: "Leading offence", detail: `${byType[0].crime_type} is the most frequent (${byType[0].count}).` });
+  if (stats.activeCases > 0) alerts.push({ icon: FolderKanban, title: "Active workload", detail: `${stats.activeCases} cases currently require investigation follow-up.` });
+  if (stats.arrests30 > 0) alerts.push({ icon: Fingerprint, title: "Custody activity", detail: `${stats.arrests30} arrests were recorded in the latest 30-day window.` });
 
   const overallPct = Math.round(confidence.overall * 100);
   const quickActions = [
-    { href: "/assistant", icon: ScanSearch, label: "AI Assistant", desc: "Natural-language case intelligence" },
+    { href: "/assistant", icon: ScanSearch, label: "Investigation Assistant", desc: "Natural-language record search" },
     { href: "/cases", icon: FolderKanban, label: "Case Registry", desc: "Open & active investigations" },
     { href: "/network", icon: Network, label: "Link Analysis", desc: "Suspect & entity network graph" },
     { href: "/maps", icon: MapPin, label: "Crime Map", desc: "Geospatial hotspot explorer" },
@@ -89,7 +91,7 @@ export default function DashboardPage() {
               {(heat.length ? heat : [{ key: "24h", label: "24 hours", count: 0, delta: 0 }, { key: "7d", label: "7 days", count: 0, delta: 0 }, { key: "30d", label: "30 days", count: 0, delta: 0 }, { key: "6mo", label: "6 months", count: 0, delta: 0 }]).map((w) => {
                 const up = w.delta > 0, flat = w.delta === 0;
                 return (
-                  <div key={w.key} className="rounded-md border border-border bg-elevated/40 p-3 transition-colors hover:border-border">
+                  <div key={w.key} className="lift-row rounded-md border border-border bg-elevated/40 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="stat-label">{w.label}</div>
                       <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${flat ? "bg-muted" : up ? "bg-danger" : "bg-success"}`} />
@@ -118,8 +120,8 @@ export default function DashboardPage() {
             <PanelHeader icon={Radar} title={t("dash.ai_briefings")} count={alerts.length} sub="Derived from live Cloud Scale records" />
             {alerts.length ? (
               <div className="space-y-2">
-                {alerts.map((a, i) => (
-                  <div key={i} className="flex gap-3 rounded-md border border-border bg-elevated/40 p-3 animate-fade-in">
+                {alerts.slice(0, 4).map((a, i) => (
+                  <div key={i} className="lift-row flex gap-3 rounded-md border border-border bg-elevated/40 p-3 animate-fade-in">
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-warning/30 bg-warning/10">
                       <a.icon className="h-4 w-4 text-warning" />
                     </span>
@@ -149,7 +151,7 @@ export default function DashboardPage() {
             <PanelHeader icon={Crosshair} title="Quick Actions" sub="Jump into an investigation surface" />
             <div className="space-y-2">
               {quickActions.map((a) => (
-                <Link key={a.href} href={a.href} className="group flex items-center gap-3 rounded-md border border-border bg-elevated/40 px-3 py-2.5 transition-colors hover:border-accent/40 hover:bg-elevated">
+                <Link key={a.href} href={a.href} className="lift-row group flex items-center gap-3 rounded-md border border-border bg-elevated/40 px-3 py-2.5 hover:bg-elevated">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border bg-surface">
                     <a.icon className="h-4 w-4 text-accent" />
                   </span>
@@ -216,7 +218,7 @@ function VelocityTile({ label, value, tone }: { label: string; value: string | n
   const color = tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-fg";
   const edge = tone === "success" ? "bg-success" : tone === "danger" ? "bg-danger" : tone === "warning" ? "bg-warning" : "bg-border";
   return (
-    <div className="relative overflow-hidden rounded-md border border-border bg-elevated/40 p-3 transition-colors hover:border-border">
+    <div className="lift-row relative overflow-hidden rounded-md border border-border bg-elevated/40 p-3">
       <span aria-hidden className={`absolute inset-x-0 top-0 h-[2px] ${edge}`} />
       <div className="stat-label">{label}</div>
       <div className={`mt-1 font-display text-2xl font-bold tabular-nums ${color}`}>{value}</div>

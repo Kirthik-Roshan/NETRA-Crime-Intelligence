@@ -598,8 +598,8 @@ export function AssistantClient() {
           </div>
         </div>
         <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto print:hidden">
-          <span className="chip border-success/30 bg-success/10 text-success" title="Catalyst QuickML RAG with Cloud Scale search fallback">
-            <Cpu className="h-3 w-3" /> Catalyst AI
+          <span className="chip border-success/30 bg-success/10 text-success" title="Catalyst QuickML with Cloud Scale record retrieval">
+            <Cpu className="h-3 w-3" /> Catalyst Intelligence
           </span>
           {!empty && (
             <>
@@ -763,12 +763,12 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
           against the case-file knowledge base and returns a structured, sourced result with a
           verifiable audit trail. Pick a starting point:
         </p>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
           {EXAMPLES.map((ex) => (
             <button
               key={ex.q}
               onClick={() => onPick(ex.q)}
-              className="group flex items-center gap-3 rounded-lg border border-border/70 bg-elevated/40 px-3.5 py-3 text-left transition-colors hover:border-accent/50 hover:bg-elevated/70"
+              className="lift-row group flex min-w-0 items-center gap-3 rounded-lg border border-border/70 bg-elevated/40 px-3.5 py-3 text-left hover:bg-elevated/70"
             >
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border/60 bg-surface/60 transition-colors group-hover:border-accent/40">
                 <ex.icon className="h-4 w-4 text-accent" />
@@ -785,8 +785,8 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
       <div className="flex items-start gap-2.5 rounded-lg border border-border/70 bg-elevated/40 p-3.5 text-xs leading-relaxed text-muted">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
         <span>
-          NETRA never sends raw records to a black box. Queries run through intent detection →
-          permission checks → validated SQL → evidence verification → audit log. The officer stays in command.
+          Every query follows role checks, validated retrieval, evidence verification, and immutable audit logging.
+          The investigating officer remains responsible for every operational decision.
         </span>
       </div>
     </div>

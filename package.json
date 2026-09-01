@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && node scripts/prepare-slate.mjs",
+    "build:catalyst": "CATALYST_WEB_CLIENT=true next build && node scripts/prepare-slate.mjs",
+    "deploy:catalyst": "npm run build:catalyst && catalyst deploy --only client",
     "start": "next start",
     "lint": "next lint",
     "bake": "node scripts/bake-db.mjs",

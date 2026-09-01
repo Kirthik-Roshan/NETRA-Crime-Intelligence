@@ -1,10 +1,9 @@
-import { EMBLEM_DATA_URI } from "@/data/emblem";
+const PUBLIC_BASE_PATH = process.env.NEXT_PUBLIC_CATALYST_WEB_CLIENT === "true" ? "/app" : "";
 
 /**
  * Official State Emblem of Karnataka — government-grade identity mark used
- * across NETRA (login, sidebar, splash, reports). Bundled as a data URI
- * (Slate does not serve /public). Optional glass ring so the colour emblem
- * reads cleanly on the dark theme.
+ * across NETRA (login, sidebar, splash, reports). The shared public asset keeps
+ * hundreds of statically exported record pages from embedding duplicate SVG.
  */
 export function Emblem({
   size = 44,
@@ -22,7 +21,7 @@ export function Emblem({
       style={{ width: size, height: size, padding: glass ? pad : 0 }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={EMBLEM_DATA_URI} alt="Karnataka State Police emblem" width={size} height={size} className="h-full w-full object-contain" draggable={false} />
+      <img src={`${PUBLIC_BASE_PATH}/icon.svg`} alt="Karnataka State Police emblem" width={size} height={size} className="h-full w-full object-contain" draggable={false} />
     </span>
   );
 }

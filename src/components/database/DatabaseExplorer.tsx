@@ -4,14 +4,52 @@ import { Table2, Database, Layers, Eye, ScrollText, Loader2, ChevronLeft, Chevro
 import { EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { useT } from "@/lib/i18n-client";
 import { listRecordCounts, listRecords } from "@/lib/ai-client";
+import { isLocalDevelopment } from "@/lib/auth-client";
+import LOCAL_DB from "@/data/db-baked.json";
 
-interface TableInfo { name: string; count: number | null | undefined }
+type DataSource = "cloud" | "local";
+interface TableInfo { name: string; count: number | null | undefined; source?: DataSource }
 interface Group { group: string; tables: TableInfo[] }
-interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number }
+interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number; source: DataSource; unavailable?: boolean }
+
+interface LocalTable {
+  table: string;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  total: number;
+}
+
+const LOCAL_TABLE_ALIASES: Record<string, string> = {
+  Firs: "firs",
+  Cases: "cases",
+  Criminals: "criminals",
+  FirCriminals: "intel_accused_link",
+  Arrests: "arrests",
+  Victims: "victims",
+  Complainants: "complainants",
+  Evidence: "evidence",
+  Relationships: "relationships",
+  Phones: "phones",
+  Vehicles: "vehicles",
+  Addresses: "addresses",
+  Weapons: "weapons",
+  Organizations: "organizations",
+  OrgMembers: "org_members",
+  PoliceStations: "police_stations",
+  Chargesheets: "ChargesheetDetails",
+  AuditLogs: "audit_logs",
+};
+
+const LOCAL_TABLES = LOCAL_DB.tables as unknown as Record<string, LocalTable>;
+
+function localFallback(table: string): BakedTable | null {
+  const local = LOCAL_TABLES[LOCAL_TABLE_ALIASES[table]];
+  return local ? { ...local, table, source: "local" } : null;
+}
 
 const CLOUD_GROUPS: Group[] = [
   { group: "official", tables: ["Firs", "Cases", "Criminals", "FirCriminals", "Arrests", "Victims", "Complainants", "Evidence"].map((name) => ({ name, count: undefined })) },
-  { group: "intel", tables: ["Relationships", "Phones", "Vehicles", "Addresses", "Organizations", "OrgMembers", "PoliceStations", "Chargesheets", "OcrResult"].map((name) => ({ name, count: undefined })) },
+  { group: "intel", tables: ["Relationships", "Phones", "Vehicles", "Addresses", "Weapons", "Organizations", "OrgMembers", "PoliceStations", "Chargesheets", "OcrResult"].map((name) => ({ name, count: undefined })) },
   { group: "audit", tables: ["AuditLogs", "Notifications"].map((name) => ({ name, count: undefined })) },
 ];
 
@@ -39,18 +77,33 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
     setActive(table);
     setOffset(0);
     setLoading(true);
+    const fallback = isLocalDevelopment() ? localFallback(table) : null;
     try {
-      const rows = await listRecords(table, 5000);
+      const rows = await listRecords(table, 5000, true);
+      if (rows.length === 0 && fallback && fallback.total > 0) {
+        setBaked(fallback);
+        setGroups((current) => current.map((group) => ({
+          ...group,
+          tables: group.tables.map((item) => item.name === table
+            ? { ...item, count: fallback.total, source: "local" }
+            : item),
+        })));
+        return;
+      }
       const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
-      setBaked({ table, columns, rows, total: rows.length });
+      setBaked({ table, columns, rows, total: rows.length, source: "cloud" });
       setGroups((current) => current.map((group) => ({
         ...group,
         tables: group.tables.map((item) => (
-          item.name === table && item.count == null ? { ...item, count: rows.length } : item
+          item.name === table ? { ...item, count: Math.max(item.count || 0, rows.length), source: "cloud" } : item
         )),
       })));
     } catch {
-      setBaked({ table, columns: [], rows: [], total: 0 });
+      if (fallback) {
+        setBaked(fallback);
+      } else {
+        setBaked({ table, columns: [], rows: [], total: 0, source: "cloud", unavailable: true });
+      }
     } finally { setLoading(false); }
   }, []);
 
@@ -62,11 +115,19 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
 
   useEffect(() => {
     let active = true;
-    void listRecordCounts(CLOUD_TABLES).then((counts) => {
+    const localMode = isLocalDevelopment();
+    void listRecordCounts(CLOUD_TABLES, true).then((counts) => {
       if (!active) return;
       setGroups((current) => current.map((group) => ({
         ...group,
-        tables: group.tables.map((item) => ({ ...item, count: counts[item.name] ?? null })),
+        tables: group.tables.map((item) => {
+          const cloudCount = counts[item.name] ?? null;
+          const fallback = localMode ? localFallback(item.name) : null;
+          if ((cloudCount === null || cloudCount === 0) && fallback && fallback.total > 0) {
+            return { ...item, count: fallback.total, source: "local" };
+          }
+          return { ...item, count: cloudCount, source: cloudCount === null ? undefined : "cloud" };
+        }),
       })));
     });
     return () => { active = false; };
@@ -88,7 +149,16 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   useEffect(() => { setOffset(0); }, [dataQuery]);
 
   const data = baked
-    ? { table: baked.table, columns: baked.columns, rows: matched.slice(offset, offset + LIMIT), total: matched.length, q: dataQuery.trim() || undefined }
+    ? {
+        table: baked.table,
+        columns: baked.columns,
+        rows: matched.slice(offset, offset + LIMIT),
+        total: matched.length,
+        storedTotal: dataQuery.trim() ? matched.length : baked.total,
+        source: baked.source,
+        q: dataQuery.trim() || undefined,
+        unavailable: baked.unavailable,
+      }
     : null;
 
   const tableCount = useMemo(() => groups.reduce((n, g) => n + g.tables.length, 0), [groups]);
@@ -103,9 +173,9 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const pages = data ? Math.max(1, Math.ceil(data.total / LIMIT)) : 1;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[264px_1fr]">
+    <div className="grid min-h-[560px] items-stretch gap-4 lg:min-h-[calc(100vh-13rem)] lg:grid-cols-[280px_1fr]">
       {/* Table list */}
-      <aside className="card flex max-h-[calc(100vh-12rem)] flex-col">
+      <aside className="card flex max-h-[660px] flex-col lg:max-h-none">
         <div className="shrink-0 border-b border-border p-3">
           <div className="mb-2.5 flex items-baseline justify-between gap-2">
             <h2 className="truncate font-display text-sm font-semibold tracking-[-0.01em]">{t("database.tables")}</h2>
@@ -157,8 +227,8 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                           onClick={() => selectTable(tb.name)}
                           title={tb.name}
                           aria-current={on ? "true" : undefined}
-                          className={`group relative flex w-full items-center gap-2 rounded-md py-1.5 pl-2 pr-2 text-left text-xs transition-colors ${
-                            on ? "bg-elevated text-fg" : "text-muted hover:bg-elevated/60 hover:text-subtle"
+                          className={`lift-row group relative flex w-full items-center gap-2 rounded-md border py-1.5 pl-2 pr-2 text-left text-xs ${
+                            on ? "border-accent/30 bg-elevated text-fg" : "border-transparent text-muted hover:bg-elevated/60 hover:text-subtle"
                           }`}
                         >
                           {on && <span aria-hidden className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-accent" />}
@@ -179,7 +249,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
       </aside>
 
       {/* Data view */}
-      <section className="card panel-pad min-w-0">
+      <section className="card card-static panel-pad min-h-[560px] min-w-0">
         {!data ? (
           loading ? (
             <div className="flex h-64 flex-col items-center justify-center gap-2 text-muted">
@@ -194,7 +264,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
             <PanelHeader
               icon={Table2}
               title={<span className="font-mono">{data.table}</span>}
-              sub={`${data.total.toLocaleString()} rows · ${data.columns.length} columns`}
+              sub={`${data.storedTotal.toLocaleString()} records · ${data.total.toLocaleString()} loaded · ${data.columns.length} columns`}
               action={
                 <div className="relative w-full sm:w-64">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
@@ -218,6 +288,13 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
               }
             />
 
+            {data.unavailable ? (
+              <EmptyState
+                icon={Database}
+                title="Table not provisioned in this environment"
+                hint="Create this Catalyst Cloud Scale table and import its CSV before browsing rows."
+              />
+            ) : <>
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
               <Tag mono><Rows3 className="h-3 w-3 text-muted" />{data.total.toLocaleString()} {t("common.rows")}</Tag>
               <Tag mono><Columns3 className="h-3 w-3 text-muted" />{data.columns.length} cols</Tag>
@@ -302,6 +379,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                 </div>
               </div>
             )}
+            </>}
           </>
         )}
       </section>
