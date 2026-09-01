@@ -5,7 +5,7 @@ import { AlertTriangle, ExternalLink, Loader2, Lock, Network, ShieldAlert, Shiel
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { Emblem } from "@/components/Emblem";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { beginCatalystSignIn, getClientUser, isDemoAccessMode, mountCatalystSignIn, replaceAppRoute } from "@/lib/auth-client";
+import { beginCatalystSignIn, getClientUser, isCatalystHosted, mountCatalystSignIn, replaceAppRoute } from "@/lib/auth-client";
 
 const CAPABILITIES = [
   { icon: Sparkles, label: "Natural language", sub: "English and Kannada" },
@@ -14,15 +14,15 @@ const CAPABILITIES = [
 ];
 
 export default function LoginPage() {
-  const [local, setLocal] = useState(false);
+  const [embedded, setEmbedded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-    const localMode = isDemoAccessMode();
-    setLocal(localMode);
-    if (localMode) {
+    const canEmbed = isCatalystHosted();
+    setEmbedded(canEmbed);
+    if (!canEmbed) {
       setLoading(false);
       return () => { active = false; };
     }
@@ -114,7 +114,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {local ? (
+            {!embedded ? (
               <button type="button" onClick={beginCatalystSignIn} className="btn-accent mt-6 w-full">
                 <ExternalLink className="h-4 w-4" /> Sign in with Google via Catalyst
               </button>

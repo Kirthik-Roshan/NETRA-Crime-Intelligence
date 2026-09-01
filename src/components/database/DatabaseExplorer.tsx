@@ -4,47 +4,16 @@ import { Table2, Database, Layers, Eye, ScrollText, Loader2, ChevronLeft, Chevro
 import { EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { useT } from "@/lib/i18n-client";
 import { listRecordCounts, listRecords } from "@/lib/ai-client";
-import { isLocalDevelopment } from "@/lib/auth-client";
-import LOCAL_DB from "@/data/db-baked.json";
+import { getRecordSnapshot } from "@/lib/record-snapshot";
 
-type DataSource = "cloud" | "local";
+type DataSource = "cloud" | "snapshot";
 interface TableInfo { name: string; count: number | null | undefined; source?: DataSource }
 interface Group { group: string; tables: TableInfo[] }
 interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number; source: DataSource; unavailable?: boolean }
 
-interface LocalTable {
-  table: string;
-  columns: string[];
-  rows: Record<string, unknown>[];
-  total: number;
-}
-
-const LOCAL_TABLE_ALIASES: Record<string, string> = {
-  Firs: "firs",
-  Cases: "cases",
-  Criminals: "criminals",
-  FirCriminals: "intel_accused_link",
-  Arrests: "arrests",
-  Victims: "victims",
-  Complainants: "complainants",
-  Evidence: "evidence",
-  Relationships: "relationships",
-  Phones: "phones",
-  Vehicles: "vehicles",
-  Addresses: "addresses",
-  Weapons: "weapons",
-  Organizations: "organizations",
-  OrgMembers: "org_members",
-  PoliceStations: "police_stations",
-  Chargesheets: "ChargesheetDetails",
-  AuditLogs: "audit_logs",
-};
-
-const LOCAL_TABLES = LOCAL_DB.tables as unknown as Record<string, LocalTable>;
-
-function localFallback(table: string): BakedTable | null {
-  const local = LOCAL_TABLES[LOCAL_TABLE_ALIASES[table]];
-  return local ? { ...local, table, source: "local" } : null;
+function snapshotFallback(table: string): BakedTable | null {
+  const snapshot = getRecordSnapshot(table);
+  return snapshot ? { ...snapshot, source: "snapshot" } : null;
 }
 
 const CLOUD_GROUPS: Group[] = [
@@ -77,25 +46,29 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
     setActive(table);
     setOffset(0);
     setLoading(true);
-    const fallback = isLocalDevelopment() ? localFallback(table) : null;
+    const fallback = snapshotFallback(table);
     try {
-      const rows = await listRecords(table, 5000, true);
+      const [rows, counts] = await Promise.all([
+        listRecords(table, 5000, true),
+        listRecordCounts([table], true),
+      ]);
       if (rows.length === 0 && fallback && fallback.total > 0) {
         setBaked(fallback);
         setGroups((current) => current.map((group) => ({
           ...group,
           tables: group.tables.map((item) => item.name === table
-            ? { ...item, count: fallback.total, source: "local" }
+            ? { ...item, count: fallback.total, source: "snapshot" }
             : item),
         })));
         return;
       }
       const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
-      setBaked({ table, columns, rows, total: rows.length, source: "cloud" });
+      const storedTotal = Math.max(rows.length, counts[table] || 0);
+      setBaked({ table, columns, rows, total: storedTotal, source: "cloud" });
       setGroups((current) => current.map((group) => ({
         ...group,
         tables: group.tables.map((item) => (
-          item.name === table ? { ...item, count: Math.max(item.count || 0, rows.length), source: "cloud" } : item
+          item.name === table ? { ...item, count: Math.max(item.count || 0, storedTotal), source: "cloud" } : item
         )),
       })));
     } catch {
@@ -115,16 +88,15 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
 
   useEffect(() => {
     let active = true;
-    const localMode = isLocalDevelopment();
     void listRecordCounts(CLOUD_TABLES, true).then((counts) => {
       if (!active) return;
       setGroups((current) => current.map((group) => ({
         ...group,
         tables: group.tables.map((item) => {
           const cloudCount = counts[item.name] ?? null;
-          const fallback = localMode ? localFallback(item.name) : null;
+          const fallback = snapshotFallback(item.name);
           if ((cloudCount === null || cloudCount === 0) && fallback && fallback.total > 0) {
-            return { ...item, count: fallback.total, source: "local" };
+            return { ...item, count: fallback.total, source: "snapshot" };
           }
           return { ...item, count: cloudCount, source: cloudCount === null ? undefined : "cloud" };
         }),

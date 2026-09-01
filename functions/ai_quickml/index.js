@@ -79,7 +79,8 @@ function allowedOrigin(origin) {
       const { protocol, hostname } = new URL(origin);
       const local = (hostname === "localhost" || hostname === "127.0.0.1") && (protocol === "http:" || protocol === "https:");
       const catalyst = protocol === "https:" && (hostname.endsWith(".onslate.in") || hostname.endsWith(".catalystserverless.in"));
-      if (local || catalyst) return origin;
+      const publicNetra = protocol === "https:" && hostname === "netra-crime-intelligence.kirthikroshanp-cse20.chatgpt.site";
+      if (local || catalyst || publicNetra) return origin;
     } catch { /* invalid Origin; use the configured fallback */ }
   }
   return process.env.CORS_ALLOW_ORIGIN || "https://netra-crime-intellig-tivoagho.onslate.in";
@@ -132,15 +133,84 @@ async function accessToken() {
   return _token;
 }
 
-async function quickml(path, body, token) {
+async function quickml(path, body, token, extraHeaders = {}) {
   const r = await tfetch(`${DC_BASE}/quickml/v1/project/${PROJECT}/${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `${SCHEME} ${token}`, "CATALYST-ORG": ORG },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `${SCHEME} ${token}`,
+      "CATALYST-ORG": ORG,
+      ...extraHeaders,
+    },
     body: JSON.stringify(body),
   }, 18000, `quickml:${path}`);
   const text = await r.text();
   let json = null; try { json = JSON.parse(text); } catch { /* non-JSON */ }
   return { ok: r.ok, status: r.status, json, text };
+}
+
+function quickmlText(payload) {
+  const body = payload && payload.data && typeof payload.data === "object" ? payload.data : payload || {};
+  const choice = Array.isArray(body.choices) ? body.choices[0] : null;
+  const content = choice && choice.message && choice.message.content;
+  if (typeof content === "string") return content.trim();
+  if (Array.isArray(content)) {
+    return content.map((part) => typeof part === "string" ? part : part && part.text).filter(Boolean).join("\n").trim();
+  }
+  const direct = body.response ?? body.answer ?? body.output ?? body.text ?? body.generated_text;
+  return typeof direct === "string" ? direct.trim() : "";
+}
+
+async function quickmlLlm(prompt, system, options, token) {
+  const temperature = options && options.temperature != null ? options.temperature : 0.2;
+  const maxTokens = Math.min(1200, Math.max(64, Number(options && options.max_tokens) || 700));
+  const messages = [
+    ...(system ? [{ role: "system", content: String(system).slice(0, 5000) }] : []),
+    { role: "user", content: String(prompt).slice(0, 30000) },
+  ];
+  const modernBody = {
+    model: process.env.QML_LLM_MODEL || "glm-4.7-flash",
+    messages,
+    temperature,
+    top_p: 0.9,
+    max_tokens: maxTokens,
+  };
+
+  const attempts = [];
+  const endpointKey = process.env.QML_LLM_ENDPOINT_KEY;
+  if (endpointKey) {
+    attempts.push(() => quickml(
+      process.env.QML_LLM_ENDPOINT_PATH || "endpoints/predict",
+      { data: modernBody },
+      token,
+      { "X-QUICKML-ENDPOINT-KEY": endpointKey },
+    ));
+  }
+  // `llm/chat` was the pre-endpoint API. Keep both payloads during migration:
+  // current deployments use OpenAI-style messages; older ones accept prompt.
+  attempts.push(() => quickml(LLM_PATH, modernBody, token));
+  attempts.push(() => quickml(LLM_PATH, {
+    prompt: String(prompt).slice(0, 12000),
+    guided_prompt: String(system || "").slice(0, 3000),
+    temperature,
+    max_tokens: maxTokens,
+  }, token));
+
+  let last = { ok: false, status: 502, json: null, text: "QuickML did not return a response" };
+  for (const attempt of attempts) {
+    try {
+      const result = await attempt();
+      const answer = quickmlText(result.json);
+      if (result.ok && answer) return { ...result, answer };
+      last = result;
+      // Authentication and quota errors will be identical for every schema.
+      if ([401, 403, 429].includes(result.status)) break;
+    } catch (error) {
+      last = { ok: false, status: 502, json: null, text: String(error && error.message || error) };
+      break;
+    }
+  }
+  return { ...last, answer: "" };
 }
 
 // Zia model endpoints (TTS / translate / transcribe) — same token + org.
@@ -213,6 +283,102 @@ function parseJsonLoose(raw) {
   const s = body.indexOf("{"), e = body.lastIndexOf("}");
   const slice = s >= 0 && e > s ? body.slice(s, e + 1) : body;
   try { return JSON.parse(slice); } catch { return null; }
+}
+
+function recordValue(row, ...keys) {
+  for (const key of keys) {
+    const value = row && row[key];
+    if (value != null && String(value).trim()) return String(value).trim();
+  }
+  return "";
+}
+
+function groundedSources(records) {
+  return records.slice(0, 8).map((hit, index) => {
+    const row = hit.row || {};
+    const identity = recordValue(row, "fir_number", "case_number", "name", "full_name", "vehicle_number", "plate", "id", "ROWID") || `record ${index + 1}`;
+    return {
+      title: `${hit.table} · ${identity}`,
+      snippet: JSON.stringify(row).slice(0, 320),
+      score: hit.score ?? null,
+    };
+  });
+}
+
+function groundedAnswer(query, records, language) {
+  if (!records.length) {
+    return language === "kn"
+      ? `"${query}" ಗೆ ಹೊಂದುವ ದಾಖಲೆಗಳು Catalyst Cloud Scale ನಲ್ಲಿ ಸಿಗಲಿಲ್ಲ. FIR ಸಂಖ್ಯೆ, ಜಿಲ್ಲೆ, ಅಪರಾಧದ ಪ್ರಕಾರ, ಶಂಕಿತ ವ್ಯಕ್ತಿ, ವಾಹನ ಅಥವಾ ಸಾಕ್ಷ್ಯದ ಪದವನ್ನು ಬಳಸಿ ಮತ್ತೆ ಹುಡುಕಿ.`
+      : `No Catalyst Cloud Scale records matched "${query}". Try an FIR number, district, offence type, suspect, vehicle, or evidence term.`;
+  }
+  const rows = records.slice(0, 6).map((hit, index) => {
+    const row = hit.row || {};
+    const identity = recordValue(row, "fir_number", "case_number", "name", "full_name", "vehicle_number", "plate", "id", "ROWID") || "record";
+    const details = [
+      recordValue(row, "crime_type", "offence_type", "type", "status"),
+      recordValue(row, "district", "station_name", "location"),
+      recordValue(row, "occurred_at", "registered_at", "arrested_at", "collected_at"),
+      recordValue(row, "description", "summary", "modus_operandi", "notes").slice(0, 130),
+    ].filter(Boolean).join(" · ");
+    return `${index + 1}. ${hit.table} — ${identity}${details ? ` — ${details}` : ""}`;
+  });
+  const tableCounts = records.reduce((counts, hit) => {
+    counts[hit.table] = (counts[hit.table] || 0) + 1;
+    return counts;
+  }, {});
+  const coverage = Object.entries(tableCounts).map(([table, count]) => `${table}: ${count}`).join(", ");
+  const topValues = (keys) => {
+    const counts = new Map();
+    for (const hit of records) {
+      const value = recordValue(hit.row || {}, ...keys);
+      if (value) counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([value, count]) => `${value} (${count})`).join(", ");
+  };
+  const offences = topValues(["crime_type", "offence_type", "type"]);
+  const districts = topValues(["district", "station_name", "location"]);
+  const intro = language === "kn"
+    ? `Catalyst Cloud Scale ನಲ್ಲಿ ${records.length} ಸಂಬಂಧಿತ ದಾಖಲೆಗಳು ಕಂಡುಬಂದಿವೆ (${coverage}).`
+    : `I found ${records.length} relevant Catalyst Cloud Scale record${records.length === 1 ? "" : "s"} (${coverage}).`;
+  const patterns = [offences && `offences: ${offences}`, districts && `locations: ${districts}`].filter(Boolean).join("; ");
+  const snapshot = patterns ? `\n\nPattern snapshot — ${patterns}.` : "";
+  const note = language === "kn"
+    ? "\n\nಕಾರ್ಯಾಚರಣೆಯ ಮೊದಲು ಮೂಲ FIR ಮತ್ತು ಸಾಕ್ಷ್ಯ ದಾಖಲೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ."
+    : "\n\nVerify the cited FIR and evidence records before operational action.";
+  return `${intro}${snapshot}\n\n${rows.join("\n")}${note}`;
+}
+
+async function ensureGrounding(context, query, search, max = 8) {
+  const text = String(query || "").toLowerCase();
+  const table = /evidence|proof|ಸಾಕ್ಷ/.test(text) ? "Evidence"
+    : /criminal|suspect|accused|offender|ಆರೋಪ|ಶಂಕಿತ/.test(text) ? "Criminals"
+      : /arrest|ಬಂಧನ/.test(text) ? "Arrests"
+        : /vehicle|theft|plate|car|bike|ವಾಹನ/.test(text) ? "Firs"
+          : /case|investigation|ಪ್ರಕರಣ/.test(text) ? "Cases"
+            : "Firs";
+  try {
+    const result = await listRows(context, table, 300, false);
+    const ignored = new Set([
+      "what", "which", "where", "when", "about", "with", "from", "have", "show", "tell", "give", "please",
+      "summarise", "summarize", "record", "records", "case", "cases", "crime", "crimes", "file", "files", "one", "sentence",
+      "evidence", "collected", "investigation", "related", "find", "list", "all", "these", "those",
+    ]);
+    const terms = [...new Set((text.match(/[\p{L}\p{N}-]{3,}/gu) || []).filter((term) => !ignored.has(term)))].slice(0, 10);
+    const scored = result.rows.map((row) => {
+      const haystack = Object.values(row).map((value) => String(value == null ? "" : value)).join(" ").toLowerCase();
+      const score = terms.reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0);
+      return { table, score: Math.max(0.1, score), row };
+    }).filter((hit) => !terms.length || hit.score > 0.1).sort((a, b) => b.score - a.score);
+    const preferredSearchHits = search.hits.filter((hit) => hit.table === table);
+    const chosen = scored.length ? scored : preferredSearchHits.length ? preferredSearchHits : !terms.length ? result.rows.map((row) => ({ table, score: 0.1, row })) : search.hits;
+    return {
+      ...search,
+      hits: chosen.slice(0, max),
+      engine: `${search.engine}+cloudscale-sample`,
+    };
+  } catch {
+    return search;
+  }
 }
 
 function conversationContext(history) {
@@ -694,19 +860,35 @@ module.exports = async (req, res) => {
         return;
       }
       const conversation = conversationContext(payload.history);
-      const search = await searchRecords(platformContext, `${conversation}\n${query}`, 24);
+      const initialSearch = await searchRecords(platformContext, `${conversation}\n${query}`, 24);
+      const search = await ensureGrounding(platformContext, query, initialSearch, 8);
       const records = search.hits;
       const recordContext = records.length
         ? `\n\nMatching live Cloud Scale records (use as factual evidence):\n${records.map((hit, i) =>
-            `[${i + 1}] ${hit.table}: ${JSON.stringify(hit.row).slice(0, 1800)}`
+            `[${i + 1}] ${hit.table}: ${JSON.stringify(hit.row).slice(0, 700)}`
           ).join("\n")}`
         : "";
       const contextualQuery = `${conversation ? `Use this conversation context to resolve follow-up references.\n${conversation}\n\n` : ""}` +
         `Current question: ${query}${recordContext}`;
       const up = await quickml(process.env.QML_RAG_PATH || "rag/answer", { query: contextualQuery }, token);
-      if (!up.ok) { reply(502, { error: "QuickML RAG error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
       const d = up.json || {};
-      const answer = d.response ?? d.answer ?? d.output ?? d.text ?? null;
+      let answer = up.ok ? quickmlText(d) : "";
+      let model = "QuickML RAG + Catalyst Search";
+      let quickmlWarning = null;
+      if (!answer) {
+        const llm = await quickmlLlm(
+          contextualQuery,
+          "You are NETRA for Karnataka State Police. Answer only from the supplied Cloud Scale records. State clearly when evidence is insufficient.",
+          { temperature: 0.2, max_tokens: 700 },
+          token,
+        );
+        answer = llm.answer;
+        model = answer ? "QuickML LLM + Catalyst Cloud Scale" : "Catalyst Cloud Scale Retrieval";
+        if (!answer) {
+          answer = groundedAnswer(String(query), records, payload.language);
+          quickmlWarning = `QuickML endpoint unavailable (${llm.status || up.status || 502}); returned a record-grounded answer.`;
+        }
+      }
       const sources = (Array.isArray(d.retrieved_nodes) ? d.retrieved_nodes : []).slice(0, 6).map((node, i) => ({
         title: node.title || node.document_name || `Case dossier ${i + 1}`,
         snippet: String(node.content || node.text || "").slice(0, 240),
@@ -720,16 +902,23 @@ module.exports = async (req, res) => {
         });
       }
       const processing_ms = Date.now() - started;
-      const model = "QuickML RAG + Catalyst Search";
       const audit = await writeAudit(platformContext.app, platformContext.officer, {
         action: "AI_QUERY", entity: "rag", processing_ms, model,
         detail: {
           prompt: String(query).slice(0, 2000), answer: String(answer || "").slice(0, 5000),
           via_voice: !!payload.via_voice, language: payload.language || "en",
           source_count: sources.length, search_engine: search.engine,
+          quickml_fallback: !!quickmlWarning,
         },
       });
-      const response = { answer, sources, model, search_engine: search.engine, search_warning: search.warning };
+      const response = {
+        answer,
+        sources: sources.length ? sources : groundedSources(records),
+        model,
+        search_engine: search.engine,
+        search_warning: search.warning,
+        quickml_warning: quickmlWarning,
+      };
       await cachePut(platformContext.app, responseCacheKey, response, 1);
       reply(200, { ...response, audit_id: audit.id, processing_ms, cache: false });
       return;
@@ -764,16 +953,20 @@ module.exports = async (req, res) => {
       };
       const spec = SPECS[op];
       if (!spec) { reply(400, { error: "unknown op", allowed: Object.keys(SPECS) }); return; }
-      const up = await quickml(LLM_PATH, { prompt: spec.prompt, guided_prompt: spec.sys, temperature: 0.1, max_tokens: 700 }, token);
-      if (!up.ok) { reply(502, { error: "QuickML NLP error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
-      const d = up.json || {};
-      const out = d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? "";
+      const up = await quickmlLlm(spec.prompt, spec.sys, { temperature: 0.1, max_tokens: 700 }, token);
+      const out = up.answer;
       const result = parseJsonLoose(out);
       const audit = await writeAudit(platformContext.app, platformContext.officer, {
         action: `AI_NLP_${String(op).toUpperCase()}`, entity: "CrimeRecord", model: "QuickML LLM",
         detail: { input_length: text.length, result_available: !!result },
       });
-      reply(200, { op, result, audit_id: audit.id, model: "QuickML LLM" });
+      reply(200, {
+        op,
+        result,
+        audit_id: audit.id,
+        model: "QuickML LLM",
+        warning: result ? null : "QuickML endpoint did not return structured output.",
+      });
       return;
     }
 
@@ -792,38 +985,44 @@ module.exports = async (req, res) => {
       return;
     }
     const conversation = conversationContext(payload.history);
-    const search = await searchRecords(platformContext, `${conversation}\n${prompt}`, 24);
+    const initialSearch = await searchRecords(platformContext, `${conversation}\n${prompt}`, 24);
+    const search = await ensureGrounding(platformContext, prompt, initialSearch, 8);
     const records = search.hits;
     const recordContext = records.length
-      ? `\n\nRelevant live Cloud Scale records:\n${records.slice(0, 10).map((hit, i) =>
-          `[${i + 1}] ${hit.table}: ${JSON.stringify(hit.row).slice(0, 1800)}`
+      ? `\n\nRelevant live Cloud Scale records:\n${records.slice(0, 8).map((hit, i) =>
+          `[${i + 1}] ${hit.table}: ${JSON.stringify(hit.row).slice(0, 700)}`
         ).join("\n")}`
       : "";
     const languageRule = payload.language === "kn"
       ? "Reply in natural Kannada, preserving official names, FIR numbers, and legal sections exactly."
       : "Reply in clear English.";
-    const reqBody = {
-      prompt: `${conversation ? `Conversation so far:\n${conversation}\n\n` : ""}Current officer question: ${prompt}${recordContext}`,
-      images: Array.isArray(images) ? images : [],
-      guided_prompt: `${guided_prompt || system || ""}\n${languageRule}`.trim(),
-      temperature: temperature ?? 0.2,
-      max_tokens: 700,
-    };
-    const up = await quickml(LLM_PATH, reqBody, token);
-    if (!up.ok) { reply(502, { error: "QuickML LLM error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
-    const d = up.json || {};
-    const answer = d.response ?? d.answer ?? d.output ?? d.text ?? d.generated_text ?? null;
+    const fullPrompt = `${conversation ? `Conversation so far:\n${conversation}\n\n` : ""}Current officer question: ${prompt}${recordContext}`;
+    const up = await quickmlLlm(
+      fullPrompt,
+      `${guided_prompt || system || ""}\n${languageRule}`.trim(),
+      { temperature: temperature ?? 0.2, max_tokens: 700, images },
+      token,
+    );
+    const answer = up.answer || groundedAnswer(String(prompt), records, payload.language);
     const processing_ms = Date.now() - started;
-    const model = "QuickML LLM + Catalyst Search";
+    const model = up.answer ? "QuickML LLM + Catalyst Search" : "Catalyst Cloud Scale Retrieval";
     const audit = await writeAudit(platformContext.app, platformContext.officer, {
       action: "AI_QUERY", entity: "chat", processing_ms, model,
       detail: {
         prompt: String(prompt).slice(0, 2000), answer: String(answer || "").slice(0, 5000),
         via_voice: !!payload.via_voice, language: payload.language || "en",
-        source_count: records.length, search_engine: search.engine,
+        source_count: records.length, search_engine: search.engine, quickml_fallback: !up.answer,
       },
     });
-    const response = { response: answer, model, source_count: records.length, search_engine: search.engine, search_warning: search.warning };
+    const response = {
+      response: answer,
+      model,
+      source_count: records.length,
+      sources: groundedSources(records),
+      search_engine: search.engine,
+      search_warning: search.warning,
+      quickml_warning: up.answer ? null : `QuickML endpoint unavailable (${up.status || 502}); returned a record-grounded answer.`,
+    };
     await cachePut(platformContext.app, responseCacheKey, response, 1);
     reply(200, { ...response, audit_id: audit.id, processing_ms, cache: false });
   } catch (e) {

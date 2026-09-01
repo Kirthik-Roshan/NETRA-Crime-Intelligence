@@ -33,6 +33,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
       setUser(u);
       setReady(true);
+    }).catch(() => {
+      if (active) replaceAppRoute("/login");
     });
     return () => { active = false; };
   }, []);

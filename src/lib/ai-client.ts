@@ -24,7 +24,9 @@ function functionUrls(): string[] {
   if (typeof window === "undefined") return [PROD_FN_URL];
   const host = window.location.hostname;
   const local = host === "localhost" || host === "127.0.0.1";
-  return [local || host.includes(".development.") ? DEV_FN_URL : PROD_FN_URL];
+  const publicStaticHost = host.endsWith(".chatgpt.site") || host.endsWith(".onslate.in");
+  if (local || publicStaticHost || host.includes(".development.")) return [DEV_FN_URL, PROD_FN_URL];
+  return [PROD_FN_URL, DEV_FN_URL];
 }
 
 type CatalystTokenAuth = {
@@ -67,6 +69,8 @@ async function catalystAccessToken(): Promise<string> {
 
 async function callFunction(body: Record<string, unknown>): Promise<Response | null> {
   const accessToken = await catalystAccessToken();
+  const requestBody = JSON.stringify(body);
+  let lastResponse: Response | null = null;
   for (const url of functionUrls()) {
     try {
       const res = await fetch(url, {
@@ -80,14 +84,16 @@ async function callFunction(body: Record<string, unknown>): Promise<Response | n
         // Development uses a public Function route and must remain a simple
         // CORS request. Catalyst cookies are only needed with hosted auth.
         credentials: accessToken ? "include" : "omit",
-        body: JSON.stringify(body),
+        body: requestBody,
       });
-      return res;
+      if (res.ok) return res;
+      lastResponse = res;
+      if (res.status >= 400 && res.status < 500 && ![401, 403, 404].includes(res.status)) return res;
     } catch {
       // A network failure is reported as unavailable to the caller.
     }
   }
-  return null;
+  return lastResponse;
 }
 
 export function aiConfigured(): boolean {

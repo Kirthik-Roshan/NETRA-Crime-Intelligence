@@ -1,10 +1,10 @@
 "use client";
 /**
- * Cloud Scale data layer — the ONLY data source for the app pages.
+ * Cloud Scale data layer for the operational pages.
  *
  * Every page reads through the Catalyst Function (`records` mode → Data Store).
- * Nothing here touches the old baked SQLite snapshot. When a table is empty or
- * not provisioned, fetchers return [] and pages render their empty states.
+ * A read-only synchronized snapshot keeps the prototype usable when one cloud
+ * environment or an optional intelligence table is temporarily unavailable.
  *
  * Data Store column names are owned by whoever loads the tables, so mapping is
  * defensive (tries several field names). Adjust the keys here to match the
@@ -14,7 +14,8 @@
  * `records` mode returns. Fine while data is small/empty; add ZCQL COUNT/GROUP
  * modes to the Function when the dataset outgrows a single page.
  */
-import { listRecords } from "./ai-client";
+import { listRecordCounts, listRecords } from "./ai-client";
+import { getSnapshotCount, getSnapshotRows } from "./record-snapshot";
 import type { CaseRow } from "@/components/cases/CasesList";
 import type { CrimRow } from "@/components/criminals/CriminalsList";
 import type { FirPoint, DistrictAgg } from "@/components/maps/CrimeMap";
@@ -23,8 +24,13 @@ type Row = Record<string, unknown>;
 const str = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) return String(r[x]); return ""; };
 const num = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) { const n = Number(r[x]); if (!Number.isNaN(n)) return n; } return 0; };
 
+async function records(table: string, max: number, refresh = false): Promise<Row[]> {
+  const cloudRows = await listRecords(table, max, refresh);
+  return cloudRows.length ? cloudRows : getSnapshotRows(table, max);
+}
+
 export async function fetchCases(refresh = false): Promise<CaseRow[]> {
-  const rows = await listRecords("Cases", 1000, refresh);
+  const rows = await records("Cases", 1000, refresh);
   return rows.map((r, i) => ({
     id: num(r, "id", "ROWID") || i + 1,
     case_number: str(r, "case_number", "CaseNo", "CrimeNo"),
@@ -39,7 +45,7 @@ export async function fetchCases(refresh = false): Promise<CaseRow[]> {
 }
 
 export async function fetchCriminals(refresh = false): Promise<CrimRow[]> {
-  const rows = await listRecords("Criminals", 1000, refresh);
+  const rows = await records("Criminals", 1000, refresh);
   return rows.map((r, i) => ({
     id: num(r, "id", "ROWID") || i + 1,
     name: str(r, "name", "Name", "AccusedName"),
@@ -56,7 +62,7 @@ export async function fetchCriminals(refresh = false): Promise<CrimRow[]> {
 }
 
 export async function fetchFirs(refresh = false): Promise<Row[]> {
-  return listRecords("Firs", 1000, refresh);
+  return records("Firs", 1000, refresh);
 }
 
 export function toGeoPoints(firs: Row[]): FirPoint[] {
@@ -123,9 +129,9 @@ export interface IntelligenceDimensions {
 
 export async function fetchIntelligenceDimensions(): Promise<IntelligenceDimensions> {
   const [victims, complainants, phones, vehicles, addresses, organizations, relationships] = await Promise.all([
-    listRecords("Victims", 5000), listRecords("Complainants", 5000), listRecords("Phones", 5000),
-    listRecords("Vehicles", 5000), listRecords("Addresses", 5000), listRecords("Organizations", 5000),
-    listRecords("Relationships", 5000),
+    records("Victims", 5000), records("Complainants", 5000), records("Phones", 5000),
+    records("Vehicles", 5000), records("Addresses", 5000), records("Organizations", 5000),
+    records("Relationships", 5000),
   ]);
   const group = (rows: Row[], keys: string[], fallback: string) => {
     const counts = new Map<string, number>();
@@ -191,8 +197,9 @@ function intelligenceConfidence(firs: Row[]): Confidence {
 
 /** Pull the base tables and derive the dashboard stats client-side. */
 export async function fetchDashboard(refresh = true): Promise<DashboardData> {
-  const [firs, cases, criminals, arrests] = await Promise.all([
-    fetchFirs(refresh), fetchCases(refresh), fetchCriminals(refresh), listRecords("Arrests", 1000, refresh),
+  const [firs, cases, criminals, arrests, counts] = await Promise.all([
+    fetchFirs(refresh), fetchCases(refresh), fetchCriminals(refresh), records("Arrests", 1000, refresh),
+    listRecordCounts(["Firs"], refresh),
   ]);
   const active = cases.filter((c) => c.status === "registered" || c.status === "under_investigation");
   const solved = cases.filter((c) => c.status === "charge_sheeted" || c.status === "closed");
@@ -211,7 +218,7 @@ export async function fetchDashboard(refresh = true): Promise<DashboardData> {
     stats: {
       activeCases: active.length,
       critical: active.filter((c) => c.priority === "critical").length,
-      totalFirs: firs.length,
+      totalFirs: Math.max(firs.length, counts.Firs || 0, getSnapshotCount("Firs")),
       atLarge: criminals.filter((c) => c.status === "at_large").length,
       arrests30: (() => {
         const dates = arrests.map((row) => Date.parse(str(row, "arrested_at", "ArrestedAt", "CREATEDTIME"))).filter((value) => !Number.isNaN(value));
