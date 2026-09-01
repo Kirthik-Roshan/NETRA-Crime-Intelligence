@@ -34,6 +34,18 @@
     {
       "name": "netra-crime-intelligence-r2",
       "source": "out"
+    },
+    {
+      "name": "Netra-Crime-Intelligence",
+      "source": "/home/kirthik-roshan/NETRA-Crime-Intelligence/Netra-Crime-Intelligence"
+    },
+    {
+      "name": "nextjs",
+      "source": "/home/kirthik-roshan/NETRA-Crime-Intelligence/nextjs"
+    },
+    {
+      "name": "Netra-crime-Intelligence",
+      "source": "/home/kirthik-roshan/NETRA-Crime-Intelligence"
     }
   ]
 }
