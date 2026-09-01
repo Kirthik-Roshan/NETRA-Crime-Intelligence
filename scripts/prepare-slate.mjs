@@ -1,9 +1,13 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputDir = path.join(projectRoot, "out");
+const sitesDir = path.join(projectRoot, "dist");
+const sitesClientDir = path.join(sitesDir, "client");
+const sitesServerDir = path.join(sitesDir, "server");
+const sitesHostingDir = path.join(sitesDir, ".openai");
 const configDir = path.join(projectRoot, "out", ".catalyst");
 const configPath = path.join(configDir, "slate-config.toml");
 const hostingDir = path.join(outputDir, ".openai");
@@ -40,4 +44,34 @@ await writeFile(
   "utf8",
 );
 
-console.log(`Prepared Catalyst hosting metadata (${clientVersion}) in ${path.relative(projectRoot, outputDir)}`);
+await rm(sitesDir, { recursive: true, force: true });
+await mkdir(sitesServerDir, { recursive: true });
+await mkdir(sitesHostingDir, { recursive: true });
+await cp(outputDir, sitesClientDir, { recursive: true });
+await writeFile(
+  path.join(sitesServerDir, "index.js"),
+  [
+    "export default {",
+    "  async fetch(request, env) {",
+    "    const response = await env.ASSETS.fetch(request);",
+    '    const acceptsHtml = request.headers.get("accept")?.includes("text/html");',
+    "",
+    '    if (response.status !== 404 || !acceptsHtml || !["GET", "HEAD"].includes(request.method)) {',
+    "      return response;",
+    "    }",
+    "",
+    "    const indexUrl = new URL(request.url);",
+    '    indexUrl.pathname = "/index.html";',
+    '    indexUrl.search = "";',
+    "    return env.ASSETS.fetch(new Request(indexUrl, request));",
+    "  },",
+    "};",
+    "",
+  ].join("\n"),
+  "utf8",
+);
+await writeFile(path.join(sitesHostingDir, "hosting.json"), await readFile(hostingSourcePath, "utf8"), "utf8");
+
+console.log(
+  `Prepared Catalyst hosting metadata (${clientVersion}) in ${path.relative(projectRoot, outputDir)} and Sites artifact in ${path.relative(projectRoot, sitesDir)}`,
+);
