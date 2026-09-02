@@ -110,15 +110,17 @@ CREATE TABLE IF NOT EXISTS CrimeSubHead (
 );
 
 CREATE TABLE IF NOT EXISTS Act (
-  ActCode  TEXT PRIMARY KEY,
-  ActName  TEXT,
-  Active   INTEGER DEFAULT 1
+  ActCode         TEXT PRIMARY KEY,
+  ActDescription  TEXT,
+  ShortName       TEXT,
+  Active          INTEGER DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS Section (
-  SectionCode  TEXT PRIMARY KEY,
-  ActCode      TEXT REFERENCES Act(ActCode),
-  SectionName  TEXT
+  ActCode            TEXT REFERENCES Act(ActCode),
+  SectionCode        TEXT PRIMARY KEY,
+  SectionDescription TEXT,
+  Active             INTEGER DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS CrimeHeadActSection (

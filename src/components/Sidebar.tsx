@@ -71,7 +71,7 @@ const NAV_SECTIONS: NavSection[] = [
     key: "nav.group.system",
     icon: ShieldCheck,
     items: [
-      { href: "/admin", key: "nav.admin", icon: ShieldCheck, roles: ["administrator", "senior_officer"] },
+      { href: "/admin", key: "nav.admin", icon: ShieldCheck, cap: "audit" },
       { href: "/settings", key: "nav.settings", icon: Settings },
     ],
   },

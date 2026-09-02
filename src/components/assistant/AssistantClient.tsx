@@ -517,10 +517,11 @@ export function AssistantClient() {
       setVoiceMsg("Voice input needs microphone access in a current Chrome, Edge, Firefox, or Safari browser.");
       return;
     }
-    // Chromium exposes native speech recognition on localhost. Prefer it for
-    // immediate capture, then enrich the transcript through Catalyst Zia NLP.
-    // MediaRecorder + Zia speech-to-text remains the cross-browser fallback.
-    if (getSpeechRecognition()) {
+    // Keep localhost immediate for development. On deployed HTTPS builds,
+    // record audio and send it through Catalyst Zia speech-to-text so the
+    // production microphone path is owned by the configured Catalyst models.
+    const localBrowser = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (localBrowser && getSpeechRecognition()) {
       startWebSpeech();
       return;
     }

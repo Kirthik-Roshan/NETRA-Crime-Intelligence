@@ -7,16 +7,18 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && node scripts/prepare-slate.mjs",
-    "build:catalyst": "CATALYST_WEB_CLIENT=true next build && node scripts/prepare-slate.mjs",
+    "build:catalyst": "CATALYST_WEB_CLIENT=true next build && CATALYST_WEB_CLIENT=true node scripts/prepare-slate.mjs",
     "deploy:catalyst": "npm run build:catalyst && catalyst deploy --only client",
     "start": "next start",
     "lint": "next lint",
     "bake": "node scripts/bake-db.mjs",
     "cloudscale:export": "node scripts/export-cloudscale-csv.mjs",
     "evidence:test": "node scripts/test-evidence-workflows.mjs",
+    "voice:test": "node scripts/test-voice-workflow.mjs",
     "dossiers": "node scripts/gen-case-dossiers.mjs",
     "seed": "node scripts/seed.mjs",
     "db:reset": "node scripts/seed.mjs --reset",
+    "schema:audit": "node scripts/audit-er-schema.mjs",
     "catalyst:check": "node scripts/catalyst-check.mjs"
   },
   "dependencies": {

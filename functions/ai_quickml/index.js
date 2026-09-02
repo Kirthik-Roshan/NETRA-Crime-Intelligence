@@ -465,13 +465,36 @@ module.exports = async (req, res) => {
     }
 
     if (mode === "audit:list") {
-      requireRole(platformContext, ["administrator", "senior_officer"]);
-      reply(200, { rows: await listAudits(platformContext.app, payload.max) });
+      requireRole(platformContext, ["administrator", "senior_officer", "investigation_officer", "analyst"]);
+      const limit = Math.min(200, Math.max(1, Number(payload.max) || 100));
+      let archived = [];
+      let stored = [];
+      try { archived = await listAudits(platformContext.app, limit); } catch { /* Stratus can be empty in a new environment. */ }
+      try {
+        const result = await listRows(platformContext, "AuditLogs", limit, false);
+        stored = result.rows.map((row) => ({
+          id: row.request_id || `AUDIT-${row.id || row.ROWID}`,
+          occurred_at: row.ts || row.CREATEDTIME || "",
+          actor: { username: row.username || "Officer", role: row.role || "" },
+          action: row.action || "ACTIVITY",
+          entity: row.entity || "",
+          entity_id: row.entity_id || "",
+          model: row.ai_model || "",
+          processing_ms: Number(row.processing_ms || 0),
+          detail: row.detail || "",
+          source: "Cloud Scale",
+        }));
+      } catch { /* AuditLogs is optional when only core tables were imported. */ }
+      const rows = [...archived, ...stored]
+        .filter((row, index, all) => all.findIndex((item) => String(item.id) === String(row.id)) === index)
+        .sort((a, b) => String(b.occurred_at || "").localeCompare(String(a.occurred_at || "")))
+        .slice(0, limit);
+      reply(200, { rows });
       return;
     }
 
     if (mode === "infra:health") {
-      requireRole(platformContext, ["administrator", "senior_officer"]);
+      requireRole(platformContext, ["administrator", "senior_officer", "investigation_officer", "analyst"]);
       const searchHealth = await searchRecords(platformContext, "netra-health-probe", 1);
       reply(200, {
         ok: true,

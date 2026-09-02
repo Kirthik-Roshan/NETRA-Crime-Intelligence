@@ -45,11 +45,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ["/assistant", "ai"], ["/predictions", "predictive"], ["/cases", "cases"],
       ["/criminals", "criminals"], ["/network", "network"], ["/analytics", "analytics"],
       ["/maps", "analytics"], ["/database", "search"], ["/evidence", "evidence"], ["/reports", "reports"],
+      ["/admin", "audit"],
     ];
     const routePath = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
     const required = rules.find(([path]) => routePath.startsWith(path))?.[1];
     if (required && !can(user.role, required)) replaceAppRoute("/dashboard");
-    if (routePath.startsWith("/admin") && !["administrator", "senior_officer"].includes(user.role)) replaceAppRoute("/dashboard");
   }, [pathname, user]);
 
   useEffect(() => {

@@ -213,9 +213,9 @@ export function seedInto(db) {
     const insSub = db.prepare("INSERT INTO CrimeSubHead (CrimeSubHeadID, CrimeHeadID, CrimeHeadName, SeqID) VALUES (?,?,?,?)");
     SUB_HEADS.forEach((s, i) => insSub.run(s.id, s.head, s.name, i + 1));
 
-    const insAct = db.prepare("INSERT INTO Act (ActCode, ActName) VALUES (?,?)");
-    for (const a of ACTS) insAct.run(...a);
-    const insSection = db.prepare("INSERT OR IGNORE INTO Section (SectionCode, ActCode, SectionName) VALUES (?,?,?)");
+    const insAct = db.prepare("INSERT INTO Act (ActCode, ActDescription, ShortName) VALUES (?,?,?)");
+    for (const [code, description] of ACTS) insAct.run(code, description, code);
+    const insSection = db.prepare("INSERT OR IGNORE INTO Section (SectionCode, ActCode, SectionDescription) VALUES (?,?,?)");
     const insHeadActSec = db.prepare("INSERT INTO CrimeHeadActSection (CrimeHeadID, ActCode, SectionCode) VALUES (?,?,?)");
     for (const s of SUB_HEADS) {
       for (const [act, sec] of s.sections) {

@@ -81,7 +81,7 @@ export function catalystHostedSignInUrl(): string {
 export function beginCatalystSignIn(): void {
   if (typeof window === "undefined") return;
   if (!isCatalystHosted()) {
-    window.location.assign(`${CATALYST_APP_ORIGIN}/app/login/index.html`);
+    window.location.assign(`${CATALYST_APP_ORIGIN}/__catalyst/auth/login`);
     return;
   }
   window.location.assign(catalystHostedSignInUrl());
@@ -284,9 +284,9 @@ export async function logout(): Promise<boolean> {
 
 const CAPS: Record<Role, string[]> = {
   administrator: ["*"],
-  senior_officer: ["view_all", "reports", "predictive", "analytics", "cases", "criminals", "network", "ai", "search", "evidence"],
-  investigation_officer: ["cases", "criminals", "network", "ai", "analytics", "evidence", "search", "reports"],
-  analyst: ["analytics", "criminals", "network", "patterns", "reports", "ai", "search"],
+  senior_officer: ["view_all", "reports", "predictive", "analytics", "cases", "criminals", "network", "ai", "search", "evidence", "audit"],
+  investigation_officer: ["cases", "criminals", "network", "ai", "analytics", "evidence", "search", "reports", "audit"],
+  analyst: ["analytics", "criminals", "network", "patterns", "reports", "ai", "search", "audit"],
   readonly: ["view", "search", "reports"],
 };
 

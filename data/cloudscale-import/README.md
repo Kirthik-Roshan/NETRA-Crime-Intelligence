@@ -7,6 +7,28 @@ already read by the Cloud Scale adapter: `Firs`, `Cases`, and `Criminals`,
 and add the link/detail tables needed to move the remaining prototype screens
 off local SQLite.
 
+## Normalized KSP ER Schema
+
+The bundled SQLite source also contains all 28 tables named by
+`Police_FIR_ER_Diagram.pdf`. Run the repeatable contract check before an export
+or demo:
+
+```bash
+npm run schema:audit
+```
+
+The audit checks table and column names, required demo values, and every
+declared foreign key. The Database workspace separates these normalized tables
+under **KSP ER schema** from NETRA's denormalized **Operational** read models.
+Optional unknown values are preserved and displayed as `Not recorded`; they are
+not replaced with invented police data.
+
+The CSVs below are the operational Cloud Scale read models used by the live
+dashboard, assistant, maps, network, and case screens. A normalized ER table is
+read live when a same-named table exists in the selected Catalyst environment;
+otherwise the Database workspace clearly labels its bundled synchronized
+schema snapshot.
+
 ## Import Order
 
 1. `Firs`, `Cases`, `Criminals`

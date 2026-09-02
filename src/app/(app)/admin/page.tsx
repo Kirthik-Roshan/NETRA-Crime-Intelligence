@@ -1,43 +1,78 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Users, ScrollText, Cpu, ShieldCheck, Gauge, ClipboardList } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Users, ScrollText, Cpu, ShieldCheck, Gauge, ClipboardList, Download, RefreshCw, Search } from "lucide-react";
 import { PageHeader, Badge, StatCard, Avatar, EmptyState, PanelHeader, Tag } from "@/components/ui";
 import { ROLE_LABEL, type SessionUser } from "@/lib/types";
 import { timeAgo } from "@/lib/utils";
 import { DataImport } from "@/components/admin/DataImport";
 import { useT } from "@/lib/i18n-client";
-import { RequireRole, RoleBadge } from "@/components/OfficerName";
+import { RequireRole, RoleBadge, useOfficer } from "@/components/OfficerName";
 import { fetchAuditTrail, fetchCatalystUsers, fetchInfraHealth, type CatalystInfraHealth } from "@/lib/ai-client";
 
 export default function AdminPage() {
   const t = useT();
+  const currentOfficer = useOfficer();
   const [users, setUsers] = useState<SessionUser[]>([]);
   const [infra, setInfra] = useState<CatalystInfraHealth | null>(null);
-  const [audit, setAudit] = useState<{ ts: string; username: string; role: string; action: string; entity: string; ai_model: string; processing_ms: number; request_id: string }[]>([]);
-  useEffect(() => {
-    void Promise.all([fetchCatalystUsers(), fetchAuditTrail(100), fetchInfraHealth()]).then(([officers, rows, health]) => {
-      setUsers(officers);
-      setInfra(health);
-      setAudit(rows.map((row) => {
+  const [audit, setAudit] = useState<{ ts: string; username: string; role: string; action: string; entity: string; ai_model: string; processing_ms: number; request_id: string; detail: string; source: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [actionFilter, setActionFilter] = useState("all");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [officersResult, auditResult, healthResult] = await Promise.allSettled([
+      fetchCatalystUsers(), fetchAuditTrail(200), fetchInfraHealth(),
+    ]);
+    setUsers(officersResult.status === "fulfilled" ? officersResult.value : []);
+    setInfra(healthResult.status === "fulfilled" ? healthResult.value : null);
+    const rows = auditResult.status === "fulfilled" ? auditResult.value : [];
+    setAudit(rows.map((row) => {
         const actor = row.actor && typeof row.actor === "object" ? row.actor as Record<string, unknown> : {};
         return {
           ts: String(row.occurred_at || ""), username: String(actor.username || actor.full_name || ""), role: String(actor.role || ""),
           action: String(row.action || ""), entity: String(row.entity || ""), ai_model: String(row.model || ""),
           processing_ms: Number(row.processing_ms || 0), request_id: String(row.id || ""),
+          detail: typeof row.detail === "string" ? row.detail : row.detail ? JSON.stringify(row.detail) : "",
+          source: String(row.source || "Stratus"),
         };
-      }).sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 40));
-    }).catch(() => { setUsers([]); setAudit([]); setInfra(null); });
+      }).sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 200));
+    setLoading(false);
   }, []);
 
+  useEffect(() => { void load(); }, [load]);
+
+  const actions = useMemo(() => [...new Set(audit.map((row) => row.action).filter(Boolean))].sort(), [audit]);
+  const filteredAudit = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return audit.filter((row) => {
+      if (actionFilter !== "all" && row.action !== actionFilter) return false;
+      return !needle || Object.values(row).some((value) => String(value).toLowerCase().includes(needle));
+    });
+  }, [actionFilter, audit, query]);
+
+  const exportLogs = useCallback(() => {
+    const fields = ["ts", "username", "role", "action", "entity", "ai_model", "processing_ms", "request_id", "source", "detail"] as const;
+    const quote = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const csv = [fields.join(","), ...filteredAudit.map((row) => fields.map((field) => quote(row[field])).join(","))].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `netra-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [filteredAudit]);
+
   // Presentation-only rollups over the rows already loaded above.
-  const admins = users.filter((u) => u.role === "administrator").length;
+  const visibleUsers = users.length ? users : currentOfficer ? [currentOfficer] : [];
+  const admins = visibleUsers.filter((u) => u.role === "administrator").length;
   const aiCalls = audit.filter((a) => a.ai_model).length;
   const latencies = audit.map((a) => a.processing_ms).filter((n) => Number(n) > 0);
   const avgMs = latencies.length ? Math.round(latencies.reduce((s, n) => s + Number(n), 0) / latencies.length) : 0;
 
   return (
-    <RequireRole roles={["administrator", "senior_officer"]}>
+    <RequireRole roles={["administrator", "senior_officer", "investigation_officer", "analyst"]}>
       <div className="space-y-5">
         <PageHeader title={t("admin.title")} subtitle={t("admin.subtitle")}>
           <RoleBadge />
@@ -45,7 +80,13 @@ export default function AdminPage() {
 
         {/* Posture KPI strip */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatCard label="Officers on roster" value={users.length} sub={`${admins} with admin rights`} icon={Users} tone="accent" />
+          <StatCard
+            label={users.length ? "Officers on roster" : "Visible sessions"}
+            value={visibleUsers.length}
+            sub={users.length ? `${admins} with admin rights` : "Full roster restricted by role"}
+            icon={Users}
+            tone="accent"
+          />
           <StatCard label="Audit entries" value={audit.length} sub="Most recent window" icon={ScrollText} />
           <StatCard label="AI-assisted actions" value={aiCalls} sub="Model-attributed" icon={Cpu} tone="success" />
           <StatCard label="Avg AI latency" value={avgMs ? `${avgMs}ms` : "—"} sub={latencies.length ? `Across ${latencies.length} timed calls` : "No timed calls"} icon={Gauge} />
@@ -58,11 +99,11 @@ export default function AdminPage() {
               icon={Users}
               title="Officers & roles"
               sub="Role-based access control across the console"
-              count={users.length}
+              count={visibleUsers.length}
             />
-            {users.length ? (
+            {visibleUsers.length ? (
               <div className="divide-y divide-border/50">
-                {users.map((u) => (
+                {visibleUsers.map((u) => (
                   <div key={u.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                     <Avatar name={u.full_name} size={32} />
                     <div className="min-w-0 flex-1">
@@ -113,9 +154,27 @@ export default function AdminPage() {
             icon={ClipboardList}
             title="Audit trail"
             sub="Immutable record of console and AI activity · newest first"
-            count={audit.length}
+            count={filteredAudit.length}
+            action={<div className="flex items-center gap-1.5">
+              <button type="button" onClick={() => void load()} disabled={loading} className="btn-ghost h-8 px-2.5" title="Refresh audit trail">
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+              </button>
+              <button type="button" onClick={exportLogs} disabled={!filteredAudit.length} className="btn-ghost h-8 px-2.5" title="Export filtered logs">
+                <Download className="h-3.5 w-3.5" /> Export
+              </button>
+            </div>}
           />
-          {audit.length ? (
+          <div className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px]">
+            <label className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actor, entity, model, or request ID…" className="h-9 w-full rounded-md border border-border bg-elevated/40 pl-8 pr-3 text-xs outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/15" />
+            </label>
+            <select value={actionFilter} onChange={(event) => setActionFilter(event.target.value)} className="h-9 rounded-md border border-border bg-elevated/40 px-3 text-xs outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/15">
+              <option value="all">All actions</option>
+              {actions.map((action) => <option key={action} value={action}>{action}</option>)}
+            </select>
+          </div>
+          {filteredAudit.length ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
@@ -130,8 +189,8 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {audit.map((a, i) => (
-                    <tr key={i} className="border-t border-border/50 transition-colors hover:bg-elevated/50">
+                  {filteredAudit.map((a, index) => (
+                    <tr key={`${a.request_id}-${a.ts}-${index}`} className="border-t border-border/50 transition-colors hover:bg-elevated/50">
                       <td className="py-2 pr-3"><Tag mono>{a.action}</Tag></td>
                       <td className="whitespace-nowrap py-2 pr-3 capitalize text-subtle">{a.role?.replace(/_/g, " ")}</td>
                       <td className="py-2 pr-3 text-muted">{a.entity}</td>
@@ -145,7 +204,7 @@ export default function AdminPage() {
               </table>
             </div>
           ) : (
-            <EmptyState icon={ScrollText} title="No audit entries yet" hint="Console and AI activity is logged here as officers work." />
+            <EmptyState icon={ScrollText} title={loading ? "Loading audit entries" : query || actionFilter !== "all" ? "No matching audit entries" : "No audit entries yet"} hint={loading ? "Reading immutable logs from Catalyst Stratus and Cloud Scale." : "Console and AI activity is logged here as officers work."} />
           )}
         </div>
       </div>

@@ -8,7 +8,8 @@ import { getRecordSnapshot } from "@/lib/record-snapshot";
 
 type DataSource = "cloud" | "snapshot";
 interface TableInfo { name: string; count: number | null | undefined; source?: DataSource }
-interface Group { group: string; tables: TableInfo[] }
+type SchemaView = "operational" | "er";
+interface Group { group: string; view: SchemaView; tables: TableInfo[] }
 interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number; source: DataSource; unavailable?: boolean }
 
 function snapshotFallback(table: string): BakedTable | null {
@@ -16,24 +17,50 @@ function snapshotFallback(table: string): BakedTable | null {
   return snapshot ? { ...snapshot, source: "snapshot" } : null;
 }
 
-const CLOUD_GROUPS: Group[] = [
-  { group: "official", tables: ["Firs", "Cases", "Criminals", "FirCriminals", "Arrests", "Victims", "Complainants", "Evidence"].map((name) => ({ name, count: undefined })) },
-  { group: "intel", tables: ["Relationships", "Phones", "Vehicles", "Addresses", "Weapons", "Organizations", "OrgMembers", "PoliceStations", "Chargesheets", "OcrResult"].map((name) => ({ name, count: undefined })) },
-  { group: "audit", tables: ["AuditLogs", "Notifications"].map((name) => ({ name, count: undefined })) },
+const TABLE_GROUPS: Group[] = [
+  { group: "operational", view: "operational", tables: ["Firs", "Cases", "Criminals", "FirCriminals", "Arrests", "Victims", "Complainants", "Evidence"].map((name) => ({ name, count: undefined })) },
+  { group: "intel", view: "operational", tables: ["Relationships", "Phones", "Vehicles", "Addresses", "Weapons", "Organizations", "OrgMembers", "PoliceStations", "Chargesheets", "OcrResult"].map((name) => ({ name, count: undefined })) },
+  { group: "audit", view: "operational", tables: ["AuditLogs", "Notifications"].map((name) => ({ name, count: undefined })) },
+  { group: "er_cases", view: "er", tables: ["CaseMaster", "ComplainantDetails", "Victim", "Accused", "ArrestSurrender", "ChargesheetDetails", "ActSectionAssociation", "Inv_OccuranceTime", "inv_arrestsurrenderaccused"].map((name) => ({ name, count: undefined })) },
+  { group: "er_legal", view: "er", tables: ["Act", "Section", "CrimeHead", "CrimeSubHead", "CrimeHeadActSection", "CaseCategory", "GravityOffence", "CaseStatusMaster"].map((name) => ({ name, count: undefined })) },
+  { group: "er_police", view: "er", tables: ["Court", "District", "State", "Unit", "UnitType", "Rank", "Designation", "Employee"].map((name) => ({ name, count: undefined })) },
+  { group: "er_people", view: "er", tables: ["CasteMaster", "ReligionMaster", "OccupationMaster"].map((name) => ({ name, count: undefined })) },
 ];
 
-const CLOUD_TABLES = CLOUD_GROUPS.flatMap((group) => group.tables.map((table) => table.name));
+const CLOUD_TABLES = TABLE_GROUPS.flatMap((group) => group.tables.map((table) => table.name));
 
-const GROUP_META: Record<string, { icon: typeof Table2; key: "database.official" | "database.intel" | "database.views" | "admin.audit" }> = {
-  official: { icon: Database, key: "database.official" },
-  intel: { icon: Layers, key: "database.intel" },
-  views: { icon: Eye, key: "database.views" },
-  audit: { icon: ScrollText, key: "admin.audit" },
+const GROUP_META: Record<string, { icon: typeof Table2; label: string }> = {
+  operational: { icon: Eye, label: "Operational records" },
+  intel: { icon: Layers, label: "Intelligence layer" },
+  audit: { icon: ScrollText, label: "Audit trail" },
+  er_cases: { icon: Database, label: "Case records" },
+  er_legal: { icon: ScrollText, label: "Legal classification" },
+  er_police: { icon: Layers, label: "Police organization" },
+  er_people: { icon: Eye, label: "Demographic lookup" },
 };
+
+function isMissing(value: unknown): boolean {
+  return value == null || (typeof value === "string" && value.trim() === "");
+}
+
+function catalystType(rows: Record<string, unknown>[], column: string): string {
+  const values = rows.map((row) => row[column]).filter((value) => !isMissing(value));
+  if (/date|_at$|time/i.test(column)) {
+    return values.some((value) => /[T ]\d{2}:\d{2}/.test(String(value))) ? "DateTime" : "Date";
+  }
+  if (/^(active|is_|victimpolice|physicallychallenged)/i.test(column)) return "Boolean";
+  if (values.length && values.every((value) => typeof value === "number" && Number.isInteger(value))) {
+    return values.some((value) => Math.abs(Number(value)) > 2147483647) ? "BigInt" : "Int";
+  }
+  if (values.length && values.every((value) => typeof value === "number")) return "Double";
+  return values.some((value) => String(value).length > 255) ? "Text" : "Var Char";
+}
 
 export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const t = useT();
-  const [groups, setGroups] = useState<Group[]>(CLOUD_GROUPS);
+  const initialView: SchemaView = initialTable && TABLE_GROUPS.some((group) => group.view === "er" && group.tables.some((table) => table.name === initialTable)) ? "er" : "operational";
+  const [schemaView, setSchemaView] = useState<SchemaView>(initialView);
+  const [groups, setGroups] = useState<Group[]>(TABLE_GROUPS);
   const [active, setActive] = useState<string | null>(null);
   const [baked, setBaked] = useState<BakedTable | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,6 +137,14 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
     void load(table);
   }
 
+  function selectSchemaView(view: SchemaView) {
+    setSchemaView(view);
+    setFilter("");
+    setDataQuery("");
+    const first = groups.find((group) => group.view === view)?.tables[0]?.name;
+    if (first) void load(first);
+  }
+
   // Client-side full-row search over records fetched from Cloud Scale.
   const matched = useMemo(() => {
     if (!baked) return [];
@@ -133,13 +168,25 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
       }
     : null;
 
-  const tableCount = useMemo(() => groups.reduce((n, g) => n + g.tables.length, 0), [groups]);
+  const tableCount = useMemo(() => groups.filter((group) => group.view === schemaView).reduce((n, group) => n + group.tables.length, 0), [groups, schemaView]);
   const visibleGroups = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     return groups
+      .filter((group) => group.view === schemaView)
       .map((g) => ({ ...g, tables: needle ? g.tables.filter((tb) => tb.name.toLowerCase().includes(needle)) : g.tables }))
       .filter((g) => g.tables.length > 0);
-  }, [groups, filter]);
+  }, [groups, filter, schemaView]);
+
+  const columnQuality = useMemo(() => {
+    if (!baked) return new Map<string, { type: string; missing: number }>();
+    return new Map(baked.columns.map((column) => [column, {
+      type: catalystType(baked.rows, column),
+      missing: baked.rows.filter((row) => isMissing(row[column])).length,
+    }]));
+  }, [baked]);
+  const missingValues = useMemo(() => [...columnQuality.values()].reduce((total, column) => total + column.missing, 0), [columnQuality]);
+  const inspectedValues = baked ? baked.rows.length * baked.columns.length : 0;
+  const completeness = inspectedValues ? Math.round(((inspectedValues - missingValues) / inspectedValues) * 1000) / 10 : 100;
 
   const page = Math.floor(offset / LIMIT) + 1;
   const pages = data ? Math.max(1, Math.ceil(data.total / LIMIT)) : 1;
@@ -152,6 +199,10 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
           <div className="mb-2.5 flex items-baseline justify-between gap-2">
             <h2 className="truncate font-display text-sm font-semibold tracking-[-0.01em]">{t("database.tables")}</h2>
             <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">{tableCount}</span>
+          </div>
+          <div className="mb-2 grid grid-cols-2 rounded-md border border-border bg-elevated/40 p-0.5 text-[11px]">
+            <button type="button" onClick={() => selectSchemaView("operational")} className={`rounded px-2 py-1.5 font-medium transition-colors ${schemaView === "operational" ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg"}`}>Operational</button>
+            <button type="button" onClick={() => selectSchemaView("er")} className={`rounded px-2 py-1.5 font-medium transition-colors ${schemaView === "er" ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg"}`}>KSP ER schema</button>
           </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
@@ -182,12 +233,12 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
             </div>
           ) : (
             visibleGroups.map((g) => {
-              const meta = GROUP_META[g.group] || GROUP_META.official;
+              const meta = GROUP_META[g.group] || GROUP_META.operational;
               return (
                 <div key={g.group} className="mb-4 last:mb-0">
                   <div className="mb-1.5 flex items-center gap-1.5 stat-label">
                     <meta.icon className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{t(meta.key)}</span>
+                    <span className="truncate">{meta.label}</span>
                     <span className="ml-auto shrink-0 font-mono text-[10px] tabular-nums text-muted/70">{g.tables.length}</span>
                   </div>
                   <div className="space-y-0.5">
@@ -270,6 +321,9 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
               <Tag mono><Rows3 className="h-3 w-3 text-muted" />{data.total.toLocaleString()} {t("common.rows")}</Tag>
               <Tag mono><Columns3 className="h-3 w-3 text-muted" />{data.columns.length} cols</Tag>
+              <Tag>{data.source === "cloud" ? "Cloud Scale" : "Synchronized schema"}</Tag>
+              <Tag>{completeness}% sample complete</Tag>
+              {missingValues > 0 && <Tag>{missingValues.toLocaleString()} not recorded in sample</Tag>}
               {data.q && <Tag>match &ldquo;{data.q}&rdquo;</Tag>}
               <span className="ml-auto text-muted">
                 showing <span className="font-mono tabular-nums text-subtle">{data.rows.length.toLocaleString()}</span>
@@ -288,7 +342,11 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                           ci === 0 ? "text-subtle" : "text-muted"
                         }`}
                       >
-                        {c}
+                        <span className="block">{c}</span>
+                        <span className="mt-0.5 block text-[9px] font-normal normal-case text-muted/70">
+                          {columnQuality.get(c)?.type || "Var Char"}
+                          {columnQuality.get(c)?.missing ? ` · ${columnQuality.get(c)?.missing} missing` : ""}
+                        </span>
                       </th>
                     ))}
                   </tr>
@@ -312,9 +370,9 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                         <td
                           key={c}
                           className={`max-w-[320px] truncate whitespace-nowrap px-3 py-2 font-mono tabular-nums ${ci === 0 ? "text-fg" : "text-subtle"}`}
-                          title={String(r[c] ?? "")}
+                          title={isMissing(r[c]) ? "No value recorded for this optional field" : String(r[c])}
                         >
-                          {r[c] === null ? <span className="italic text-muted/50">null</span> : String(r[c])}
+                          {isMissing(r[c]) ? <span className="italic text-muted/60">Not recorded</span> : String(r[c])}
                         </td>
                       ))}
                     </tr>

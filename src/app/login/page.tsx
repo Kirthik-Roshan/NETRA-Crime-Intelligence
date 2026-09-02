@@ -5,7 +5,7 @@ import { AlertTriangle, ExternalLink, Loader2, Lock, Network, ShieldAlert, Shiel
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { Emblem } from "@/components/Emblem";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { beginCatalystSignIn, getClientUser, isCatalystHosted, mountCatalystSignIn, replaceAppRoute } from "@/lib/auth-client";
+import { beginCatalystSignIn, getClientUser, isLocalDevelopment, replaceAppRoute } from "@/lib/auth-client";
 
 const CAPABILITIES = [
   { icon: Sparkles, label: "Natural language", sub: "English and Kannada" },
@@ -14,35 +14,22 @@ const CAPABILITIES = [
 ];
 
 export default function LoginPage() {
-  const [embedded, setEmbedded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-    const canEmbed = isCatalystHosted();
-    setEmbedded(canEmbed);
-    if (!canEmbed) {
-      setLoading(false);
-      return () => { active = false; };
-    }
-
-    void getClientUser().then(async (user) => {
+    void getClientUser().then((user) => {
       if (!active) return;
       if (user) {
         replaceAppRoute("/dashboard");
         return;
       }
-      try {
-        const mounted = await mountCatalystSignIn("catalyst-login");
-        if (!active) return;
-        setLoading(false);
-        if (!mounted) setError("Catalyst Authentication is unavailable in this environment.");
-      } catch {
-        if (!active) return;
-        setLoading(false);
-        setError("Catalyst could not initialize the secure sign-in panel.");
-      }
+      setLoading(false);
+      // Deployed builds use Catalyst's hosted login page so branding configured
+      // in the Catalyst console (crest, title, background, social providers) is
+      // the exact page officers see. Localhost retains a manual launch button.
+      if (!isLocalDevelopment()) beginCatalystSignIn();
     }).catch(() => {
       if (!active) return;
       setLoading(false);
@@ -114,20 +101,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {!embedded ? (
-              <button type="button" onClick={beginCatalystSignIn} className="btn-accent mt-6 w-full">
-                <ExternalLink className="h-4 w-4" /> Sign in with Google via Catalyst
-              </button>
-            ) : (
-              <div className="relative mt-6 h-[520px] overflow-hidden rounded-md border border-border bg-elevated/30 p-2">
-                <div id="catalyst-login" className="h-[500px]" />
-                {loading && (
-                  <div className="absolute inset-2 grid h-[500px] place-items-center bg-elevated text-sm text-muted">
-                    <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin text-accent" /> Loading secure sign in...</span>
-                  </div>
-                )}
-              </div>
-            )}
+            <button type="button" onClick={beginCatalystSignIn} disabled={loading} className="btn-accent mt-6 w-full disabled:opacity-70">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+              {loading ? "Checking officer session…" : "Continue to Catalyst secure sign in"}
+            </button>
 
             {error && (
               <div role="alert" className="mt-4 flex items-start gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger">

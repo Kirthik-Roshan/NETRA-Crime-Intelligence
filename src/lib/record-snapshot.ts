@@ -13,7 +13,7 @@ const TABLE_ALIASES: Record<string, string> = {
   Firs: "firs",
   Cases: "cases",
   Criminals: "criminals",
-  FirCriminals: "intel_accused_link",
+  FirCriminals: "fir_criminals",
   Arrests: "arrests",
   Victims: "victims",
   Complainants: "complainants",

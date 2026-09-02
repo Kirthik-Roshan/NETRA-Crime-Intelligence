@@ -8,12 +8,33 @@ const STRATUS_BUCKET = process.env.STRATUS_BUCKET || "ksp-netra";
 const EVIDENCE_TABLE = process.env.EVIDENCE_TABLE || "Evidence";
 const MAX_IMAGE_BYTES = Math.min(10, Math.max(1, Number(process.env.MAX_IMAGE_MB) || 6)) * 1024 * 1024;
 
-const DATASTORE_TABLES = [
+const OPERATIONAL_TABLES = [
   "Firs", "Cases", "Criminals", "FirCriminals", "Arrests", "Victims",
   "Complainants", "Evidence", "Relationships", "Phones", "Vehicles",
   "Addresses", "Organizations", "OrgMembers", "Weapons", "Chargesheets",
   "PoliceStations", "AuditLogs", "Notifications", "OcrResult",
 ];
+
+// Tables defined in the supplied Karnataka Police FIR ER diagram. Keeping
+// these names available through the same bounded API lets the database
+// workspace validate a normalized KSP import as well as NETRA's operational
+// read models. Missing Cloud Scale tables are reported as unavailable and the
+// web client can use its synchronized snapshot without failing the whole list.
+const KSP_ER_TABLES = [
+  "CaseMaster", "ComplainantDetails", "ActSectionAssociation", "Victim",
+  "Accused", "ArrestSurrender", "Act", "Section", "CrimeHeadActSection",
+  "CrimeHead", "CrimeSubHead", "CasteMaster", "ReligionMaster",
+  "OccupationMaster", "CaseStatusMaster", "Court", "District", "State",
+  "Unit", "UnitType", "Rank", "Designation", "Employee", "CaseCategory",
+  "GravityOffence", "ChargesheetDetails", "Inv_OccuranceTime",
+  "inv_arrestsurrenderaccused",
+];
+
+const configuredTables = String(process.env.DATASTORE_TABLES || "")
+  .split(",")
+  .map((table) => table.trim())
+  .filter(Boolean);
+const DATASTORE_TABLES = [...new Set([...OPERATIONAL_TABLES, ...KSP_ER_TABLES, ...configuredTables])];
 
 const DEFAULT_SEARCH_COLUMNS = {
   Firs: ["fir_number", "crime_type", "ipc_sections", "district", "taluk", "status", "severity", "modus", "description"],

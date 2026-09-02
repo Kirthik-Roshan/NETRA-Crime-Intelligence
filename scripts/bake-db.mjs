@@ -30,7 +30,7 @@ const GROUPS = [
     group: "official",
     tables: [
       "CaseMaster", "ComplainantDetails", "Victim", "Accused", "ArrestSurrender",
-      "ChargesheetDetails", "ActSectionAssociation", "Inv_OccuranceTime",
+      "ChargesheetDetails", "ActSectionAssociation", "Inv_OccuranceTime", "inv_arrestsurrenderaccused",
       "Act", "Section", "CrimeHead", "CrimeSubHead", "CrimeHeadActSection",
       "Court", "District", "State", "Unit", "UnitType", "Rank", "Designation",
       "Employee", "CaseCategory", "GravityOffence", "CaseStatusMaster",
@@ -48,7 +48,7 @@ const GROUPS = [
   {
     group: "views",
     tables: [
-      "firs", "cases", "criminals", "arrests", "victims", "complainants",
+      "firs", "cases", "criminals", "fir_criminals", "arrests", "victims", "complainants",
       "police_stations", "evidence", "phones", "vehicles", "addresses",
       "weapons", "organizations", "org_members", "relationships",
     ],

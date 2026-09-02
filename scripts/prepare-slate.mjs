@@ -15,6 +15,7 @@ const hostingSourcePath = path.join(projectRoot, ".openai", "hosting.json");
 const hostingOutputPath = path.join(hostingDir, "hosting.json");
 const clientPackagePath = path.join(outputDir, "client-package.json");
 const clientVersion = process.env.CATALYST_CLIENT_VERSION || `1.0.${Math.floor(Date.now() / 1000)}`;
+const catalystWebClient = process.env.CATALYST_WEB_CLIENT === "true";
 
 await mkdir(configDir, { recursive: true });
 await mkdir(hostingDir, { recursive: true });
@@ -37,7 +38,9 @@ await writeFile(
     name: "netra-crime-intelligence",
     version: clientVersion,
     description: "NETRA authenticated crime intelligence workspace",
-    homepage: "index.html",
+    // Catalyst uses this value as the unauthenticated entry point. The hosted
+    // login is where console-managed branding and social providers are shown.
+    homepage: catalystWebClient ? "/__catalyst/auth/login" : "index.html",
     login_redirect: "index.html",
     404: "404.html",
   }, null, 2)}\n`,
