@@ -390,6 +390,16 @@ function conversationContext(history) {
   }).filter(Boolean).join("\n");
 }
 
+function contextualSearchQuery(query, history) {
+  const current = String(query || "").trim();
+  if (!Array.isArray(history) || !/(\bthere\b|\bthose\b|\bthem\b|\bthese\b|\bsame\b|what about|how about|\balso\b|\band\b|ಅಲ್ಲಿ|ಅದೇ|ಮತ್ತು)/i.test(current)) {
+    return current;
+  }
+  const previous = [...history].reverse().find((message) => message && message.role === "user" && String(message.content || "").trim());
+  const priorQuery = String((previous && previous.content) || "").trim().slice(0, 500);
+  return priorQuery ? `${current}\nPrevious officer request: ${priorQuery}` : current;
+}
+
 function aiCacheIdentity(context, mode, payload) {
   return cacheKey("ai", JSON.stringify({
     actor: context.officer.id,
@@ -883,8 +893,9 @@ module.exports = async (req, res) => {
         return;
       }
       const conversation = conversationContext(payload.history);
-      const initialSearch = await searchRecords(platformContext, `${conversation}\n${query}`, 24);
-      const search = await ensureGrounding(platformContext, query, initialSearch, 8);
+      const searchQuery = contextualSearchQuery(query, payload.history);
+      const initialSearch = await searchRecords(platformContext, searchQuery, 24);
+      const search = await ensureGrounding(platformContext, searchQuery, initialSearch, 8);
       const records = search.hits;
       const recordContext = records.length
         ? `\n\nMatching live Cloud Scale records (use as factual evidence):\n${records.map((hit, i) =>
