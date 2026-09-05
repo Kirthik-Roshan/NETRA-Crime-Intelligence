@@ -15,7 +15,28 @@ const hostingSourcePath = path.join(projectRoot, ".openai", "hosting.json");
 const hostingOutputPath = path.join(hostingDir, "hosting.json");
 const clientPackagePath = path.join(outputDir, "client-package.json");
 const clientVersion = process.env.CATALYST_CLIENT_VERSION || `1.0.${Math.floor(Date.now() / 1000)}`;
-const catalystWebClient = process.env.CATALYST_WEB_CLIENT === "true";
+const notFoundHtml = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Opening NETRA</title>
+</head>
+<body>
+  <p>Opening NETRA...</p>
+  <script>
+    (function () {
+      var pathname = window.location.pathname;
+      var lastSegment = pathname.split("/").pop() || "";
+      if (lastSegment === "index.html" || /\\.[a-z0-9]+$/i.test(lastSegment)) return;
+      var route = pathname.endsWith("/") ? pathname : pathname + "/";
+      window.location.replace(route + "index.html" + window.location.search + window.location.hash);
+    }());
+  </script>
+</body>
+</html>
+`;
 
 await mkdir(configDir, { recursive: true });
 await mkdir(hostingDir, { recursive: true });
@@ -31,6 +52,9 @@ await writeFile(
 );
 
 await writeFile(hostingOutputPath, await readFile(hostingSourcePath, "utf8"), "utf8");
+await writeFile(path.join(outputDir, "404.html"), notFoundHtml, "utf8");
+await mkdir(path.join(outputDir, "404"), { recursive: true });
+await writeFile(path.join(outputDir, "404", "index.html"), notFoundHtml, "utf8");
 
 await writeFile(
   clientPackagePath,
@@ -38,9 +62,9 @@ await writeFile(
     name: "netra-crime-intelligence",
     version: clientVersion,
     description: "NETRA authenticated crime intelligence workspace",
-    // Catalyst uses this value as the unauthenticated entry point. The hosted
-    // login is where console-managed branding and social providers are shown.
-    homepage: catalystWebClient ? "/__catalyst/auth/login" : "index.html",
+    // Always enter through NETRA so Catalyst's embedded provider can render in
+    // the animated officer gateway instead of replacing it with hosted login.
+    homepage: "index.html",
     login_redirect: "index.html",
     404: "404.html",
   }, null, 2)}\n`,
@@ -61,6 +85,16 @@ await writeFile(
     "",
     '    if (response.status !== 404 || !acceptsHtml || !["GET", "HEAD"].includes(request.method)) {',
     "      return response;",
+    "    }",
+    "",
+    "    const routeUrl = new URL(request.url);",
+    '    const pathname = routeUrl.pathname.replace(/\\/+$/, "");',
+    '    const lastSegment = pathname.split("/").pop() || "";',
+    '    if (!lastSegment.includes(".")) {',
+    '      routeUrl.pathname = `${pathname || ""}/index.html`;',
+    '      routeUrl.search = "";',
+    "      const routeResponse = await env.ASSETS.fetch(new Request(routeUrl, request));",
+    "      if (routeResponse.status !== 404) return routeResponse;",
     "    }",
     "",
     "    const indexUrl = new URL(request.url);",

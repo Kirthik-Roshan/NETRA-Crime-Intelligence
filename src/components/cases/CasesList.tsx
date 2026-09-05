@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { FolderKanban, Search, ShieldAlert, Radar, CheckCircle2, X } from "lucide-react";
 import { PageHeader, Badge, StatCard, StatusBadge, EmptyState, Segmented, Tag, Avatar } from "@/components/ui";
 import { timeAgo } from "@/lib/utils";

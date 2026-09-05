@@ -6,6 +6,8 @@ dist/
 build/
 coverage/
 *.log
+*.db-shm
+*.db-wal
 
 # build output
 /.next/

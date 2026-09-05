@@ -71,6 +71,16 @@ export function replaceAppRoute(route: string): void {
   if (typeof window !== "undefined") window.location.replace(appDocumentPath(route));
 }
 
+/** Use a real exported document on Catalyst, otherwise preserve SPA routing. */
+export function navigateAppRoute(route: string, clientNavigate: (route: string) => void): void {
+  if (typeof window === "undefined") return;
+  if (CATALYST_WEB_CLIENT) {
+    window.location.assign(appDocumentPath(route));
+    return;
+  }
+  clientNavigate(route);
+}
+
 export function catalystHostedSignInUrl(): string {
   if (typeof window === "undefined") return `${CATALYST_DEVELOPMENT_ORIGIN}/__catalyst/auth/login`;
   const catalystHost = window.location.hostname.endsWith(".catalystserverless.in");
@@ -221,12 +231,23 @@ export function getClientUser(): Promise<SessionUser | null> {
 export function mountCatalystSignIn(elementId: string): Promise<boolean> {
   if (!signInMountPromise) {
     signInMountPromise = (async () => {
-      const sdk = await waitForAuthSdk();
+      const sdk = await waitForAuthSdk(12000);
       if (!sdk) return false;
       const redirect = new URL(appDocumentPath("/dashboard"), window.location.origin).toString();
-      await withTimeout(Promise.resolve(sdk.signIn(elementId, { service_url: redirect })), 7000);
+      const authCss = new URL(appDocumentPath("/catalyst-auth.css"), window.location.origin).toString();
+      await withTimeout(Promise.resolve(sdk.signIn(elementId, {
+        service_url: redirect,
+        signin_providers_only: true,
+        css_url: authCss,
+      })), 12000);
       return true;
-    })();
+    })().then((mounted) => {
+      if (!mounted) signInMountPromise = null;
+      return mounted;
+    }).catch((error) => {
+      signInMountPromise = null;
+      throw error;
+    });
   }
   return signInMountPromise;
 }

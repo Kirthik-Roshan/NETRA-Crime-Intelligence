@@ -250,6 +250,31 @@ async function ziaTranscribe(audio, mime, filename, language, token) {
   return { ok: r.ok, status: r.status, json, text };
 }
 
+function ttsRequest(payload) {
+  const requestedLanguage = String(payload.language || "en-IN").trim().toLowerCase();
+  const isKannada = requestedLanguage === "kn" || requestedLanguage.startsWith("kn-");
+  const configuredSpeaker = isKannada
+    ? process.env.ZIA_KANNADA_TTS_SPEAKER
+    : process.env.ZIA_TTS_SPEAKER;
+  const speaker = String(payload.speaker || configuredSpeaker || "").trim();
+  const body = {
+    text: String(payload.text || ""),
+    // The deployed Zia voice model accepts the multilingual `en` selector,
+    // not `kn`. It still synthesizes Kannada correctly from Kannada Unicode
+    // text; sending `kn` makes the upstream service reject the request.
+    language: isKannada ? "en" : requestedLanguage.split("-")[0],
+    pitch: payload.pitch || "moderate",
+    speed: payload.speed || "moderate",
+    emotion: payload.emotion || "neutral",
+  };
+
+  // This model's multilingual default voice handles Kannada script as well as
+  // English. Keep the default stable unless a project-specific voice is set.
+  if (speaker) body.speaker = speaker;
+  else body.speaker = "Mary";
+  return { body, isKannada };
+}
+
 function readBody(req, maxBytes = 18 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let b = "";
@@ -348,6 +373,165 @@ function groundedAnswer(query, records, language) {
   return `${intro}${snapshot}\n\n${rows.join("\n")}${note}`;
 }
 
+function normalizeLookupText(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function listFieldValues(value) {
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean);
+  const text = String(value || "").trim();
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) return parsed.map(String).map((item) => item.trim()).filter(Boolean);
+  } catch { /* legacy CSV values can be plain comma-separated text */ }
+  return text.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function namedCriminalScore(query, row) {
+  const normalizedQuery = normalizeLookupText(query);
+  if (!normalizedQuery) return 0;
+  const names = [recordValue(row, "name", "full_name"), ...listFieldValues(row && row.aliases)]
+    .map(normalizeLookupText)
+    .filter(Boolean);
+  let best = 0;
+  for (const name of names) {
+    const exactPhrase = ` ${normalizedQuery} `.includes(` ${name} `);
+    if (exactPhrase) best = Math.max(best, 100 + name.length);
+    const tokens = name.split(" ").filter((token) => token.length > 1);
+    if (tokens.length >= 2 && tokens.every((token) => normalizedQuery.split(" ").includes(token))) {
+      best = Math.max(best, 50 + tokens.length);
+    }
+  }
+  return best;
+}
+
+function hitIdentity(hit) {
+  const row = hit && hit.row || {};
+  const id = recordValue(row, "id", "ROWID", "fir_number", "case_number", "plate", "name");
+  return `${hit && hit.table}:${id}:${recordValue(row, "role", "type")}`;
+}
+
+/**
+ * Resolve a named criminal through the normalized Cloud Scale relationship
+ * tables. This gives QuickML the profile and its linked FIRs instead of a
+ * coincidental text sample from whichever table the generic query selected.
+ */
+async function enrichNamedCriminal(context, query, search, max = 20) {
+  try {
+    const result = await listRows(context, "Criminals", 500, false);
+    const candidates = result.rows
+      .map((row) => ({ row, score: namedCriminalScore(query, row) }))
+      .filter((candidate) => candidate.score > 0)
+      .sort((a, b) => b.score - a.score);
+    if (!candidates.length) return search;
+
+    const profile = candidates[0].row;
+    const criminalId = Number(recordValue(profile, "id", "ROWID"));
+    if (!Number.isSafeInteger(criminalId) || criminalId <= 0) return search;
+    const intelligence = await criminalIntelligence(context.app, criminalId);
+    if (!intelligence || !intelligence.criminal) return search;
+
+    const profileRow = {
+      ...intelligence.criminal,
+      linked_fir_count: intelligence.counts.firs,
+      linked_arrest_count: intelligence.counts.arrests,
+      linked_vehicle_count: intelligence.counts.vehicles,
+      linked_evidence_count: intelligence.counts.evidence,
+    };
+    const enriched = [
+      { table: "Criminals", score: 120, row: profileRow },
+      ...intelligence.firs.map((row, index) => ({ table: "Firs", score: 110 - index / 10, row })),
+      ...intelligence.arrests.map((row, index) => ({ table: "Arrests", score: 90 - index / 10, row })),
+      ...intelligence.vehicles.map((row, index) => ({ table: "Vehicles", score: 80 - index / 10, row })),
+      ...intelligence.evidence.map((row, index) => ({ table: "Evidence", score: 70 - index / 10, row })),
+      ...search.hits,
+    ];
+    const seen = new Set();
+    const hits = enriched.filter((hit) => {
+      const key = hitIdentity(hit);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, max);
+    return {
+      ...search,
+      hits,
+      engine: `${search.engine}+criminal-intelligence-join`,
+    };
+  } catch {
+    return search;
+  }
+}
+
+function quickmlMissedGrounding(value) {
+  const head = normalizeLookupText(String(value || "").slice(0, 500));
+  if (!head) return false;
+  return [
+    /^(i )?(cannot|can t|could not|couldn t|was unable|am unable).*(find|locate|retrieve|access)/,
+    /^(there (is|are) )?no (matching |relevant |associated |available )?(data|records?|information)/,
+    /^(the )?(provided |available )?(data|records?|information).*(does not|do not|doesn t|don t).*(contain|include|mention)/,
+    /^(i )?(do not|don t) have (enough |any )?(data|records?|information)/,
+    /^(no results?|nothing) (was |were )?(found|available|returned)/,
+  ].some((pattern) => pattern.test(head)) || /ಮಾಹಿತಿ.{0,30}ಲಭ್ಯವಿಲ್ಲ|ದಾಖಲೆಗಳು?.{0,30}ಸಿಗಲಿಲ್ಲ/.test(head);
+}
+
+function criminalProfileAnswer(query, records, language) {
+  const profileHit = records.find((hit) => hit.table === "Criminals" && namedCriminalScore(query, hit.row) > 0);
+  if (!profileHit) return "";
+  const profile = profileHit.row || {};
+  const name = recordValue(profile, "name", "full_name") || "Matched criminal profile";
+  const aliases = listFieldValues(profile.aliases);
+  const knownLocations = listFieldValues(profile.known_locations);
+  const status = recordValue(profile, "status").replace(/_/g, " ");
+  const risk = recordValue(profile, "risk_score");
+  const category = recordValue(profile, "crime_category");
+  const district = recordValue(profile, "home_district");
+  const age = recordValue(profile, "age");
+  const linkedFirs = records.filter((hit) => hit.table === "Firs");
+  const firCount = Number(recordValue(profile, "linked_fir_count", "fir_count")) || linkedFirs.length;
+  const arrestCount = Number(recordValue(profile, "linked_arrest_count", "arrest_count")) || records.filter((hit) => hit.table === "Arrests").length;
+  const evidenceCount = Number(recordValue(profile, "linked_evidence_count")) || records.filter((hit) => hit.table === "Evidence").length;
+
+  const identity = [
+    age && `${age} years old`,
+    aliases.length && `alias ${aliases.join(", ")}`,
+    status && `status: ${status}`,
+    risk && `risk score: ${risk}/100`,
+  ].filter(Boolean).join("; ");
+  const profileFacts = [
+    category && `Primary category: ${category}`,
+    district && `home district: ${district}`,
+    knownLocations.length && `known locations: ${knownLocations.join(", ")}`,
+  ].filter(Boolean).join("; ");
+  const firLines = linkedFirs.slice(0, 8).map((hit) => {
+    const row = hit.row || {};
+    const fir = recordValue(row, "fir_number", "id") || "Unnumbered FIR";
+    const details = [
+      recordValue(row, "crime_type"),
+      recordValue(row, "district"),
+      recordValue(row, "status").replace(/_/g, " "),
+      recordValue(row, "link_role").replace(/_/g, " "),
+    ].filter(Boolean).join(" | ");
+    return `- ${fir}${details ? ` | ${details}` : ""}`;
+  });
+  const remaining = Math.max(0, firCount - firLines.length);
+  const coverage = `Cloud Scale linkage: ${firCount} FIR${firCount === 1 ? "" : "s"}, ${arrestCount} arrest record${arrestCount === 1 ? "" : "s"}, and ${evidenceCount} linked evidence record${evidenceCount === 1 ? "" : "s"}.`;
+  const verification = "Verify the cited FIR and evidence records before operational action.";
+
+  if (language === "kn") {
+    return `${name} ಅವರ Cloud Scale ಪ್ರೊಫೈಲ್ ಕಂಡುಬಂದಿದೆ. ${identity}. ${profileFacts}.\n\n${coverage}\n\n${firLines.join("\n")}${remaining ? `\n- ಇನ್ನೂ ${remaining} ಸಂಬಂಧಿತ FIR ದಾಖಲೆಗಳು ಇವೆ.` : ""}\n\n${verification}`;
+  }
+  return `${name} is a matched Catalyst Cloud Scale criminal profile${identity ? ` (${identity})` : ""}. ${profileFacts}.\n\n${coverage}` +
+    `${firLines.length ? `\n\nLinked FIRs:\n${firLines.join("\n")}${remaining ? `\n- ${remaining} additional linked FIR record${remaining === 1 ? "" : "s"}.` : ""}` : ""}` +
+    `\n\n${verification}`;
+}
+
 async function ensureGrounding(context, query, search, max = 8) {
   const text = String(query || "").toLowerCase();
   const table = /evidence|proof|ಸಾಕ್ಷ/.test(text) ? "Evidence"
@@ -402,6 +586,7 @@ function contextualSearchQuery(query, history) {
 
 function aiCacheIdentity(context, mode, payload) {
   return cacheKey("ai", JSON.stringify({
+    retrieval: "named-criminal-v3",
     actor: context.officer.id,
     role: context.officer.role,
     mode,
@@ -437,7 +622,7 @@ function resolvedFirId(payload, intelligence) {
   return Number.isSafeInteger(linked) && linked > 0 ? linked : null;
 }
 
-module.exports = async (req, res) => {
+async function handler(req, res) {
   const origin = (req.headers && req.headers.origin) || "";
   const reply = (code, obj) => send(res, code, obj, origin);
   try {
@@ -826,18 +1011,19 @@ module.exports = async (req, res) => {
 
     if (mode === "tts") {
       if (!payload.text) { reply(400, { error: "text required" }); return; }
-      // Zia TTS model body: text + short language code + speaker/prosody.
-      // Returns binary wav (zia() base64-encodes it as audio_b64).
-      const up = await zia("tts/synthesize", {
-        text: payload.text,
-        language: String(payload.language || "en").split("-")[0],
-        speaker: payload.speaker || "Mary",
-        pitch: payload.pitch || "moderate",
-        speed: payload.speed || "moderate",
-        emotion: payload.emotion || "neutral",
-      }, token);
+      // Zia TTS returns binary WAV, which zia() hands back as base64. The
+      // request helper maps Kannada script to Zia's supported voice selector.
+      const request = ttsRequest(payload);
+      let up = await zia("tts/synthesize", request.body, token);
+      // An explicitly configured Kannada speaker might be retired or renamed.
+      // Retry once without it and let Zia select a compatible default.
+      if (!up.ok && request.isKannada && request.body.speaker) {
+        const fallback = { ...request.body };
+        delete fallback.speaker;
+        up = await zia("tts/synthesize", fallback, token);
+      }
       if (!up.ok) { reply(502, { error: "Zia TTS error", status: up.status, detail: (up.text || "").slice(0, 300) }); return; }
-      reply(200, { audio: up.audio_b64 || null, mime: "audio/wav" });
+      reply(200, { audio: up.audio_b64 || null, mime: "audio/wav", language: request.isKannada ? "kn-IN" : "en-IN" });
       return;
     }
 
@@ -895,7 +1081,8 @@ module.exports = async (req, res) => {
       const conversation = conversationContext(payload.history);
       const searchQuery = contextualSearchQuery(query, payload.history);
       const initialSearch = await searchRecords(platformContext, searchQuery, 24);
-      const search = await ensureGrounding(platformContext, searchQuery, initialSearch, 8);
+      const sampledSearch = await ensureGrounding(platformContext, searchQuery, initialSearch, 8);
+      const search = await enrichNamedCriminal(platformContext, searchQuery, sampledSearch, 20);
       const records = search.hits;
       const recordContext = records.length
         ? `\n\nMatching live Cloud Scale records (use as factual evidence):\n${records.map((hit, i) =>
@@ -907,6 +1094,8 @@ module.exports = async (req, res) => {
       const up = await quickml(process.env.QML_RAG_PATH || "rag/answer", { query: contextualQuery }, token);
       const d = up.json || {};
       let answer = up.ok ? quickmlText(d) : "";
+      const ragMissedGrounding = !!answer && records.length > 0 && quickmlMissedGrounding(answer);
+      if (ragMissedGrounding) answer = "";
       let model = "QuickML RAG + Catalyst Search";
       let quickmlWarning = null;
       if (!answer) {
@@ -916,23 +1105,25 @@ module.exports = async (req, res) => {
           { temperature: 0.2, max_tokens: 700 },
           token,
         );
-        answer = llm.answer;
+        const llmMissedGrounding = !!llm.answer && records.length > 0 && quickmlMissedGrounding(llm.answer);
+        answer = llmMissedGrounding ? "" : llm.answer;
         model = answer ? "QuickML LLM + Catalyst Cloud Scale" : "Catalyst Cloud Scale Retrieval";
         if (!answer) {
-          answer = groundedAnswer(String(query), records, payload.language);
-          quickmlWarning = `QuickML endpoint unavailable (${llm.status || up.status || 502}); returned a record-grounded answer.`;
+          answer = criminalProfileAnswer(String(searchQuery), records, payload.language) || groundedAnswer(String(query), records, payload.language);
+          quickmlWarning = ragMissedGrounding || llmMissedGrounding
+            ? "QuickML did not use the retrieved Cloud Scale records; NETRA returned a deterministic record-grounded answer."
+            : `QuickML endpoint unavailable (${llm.status || up.status || 502}); returned a record-grounded answer.`;
         }
       }
-      const sources = (Array.isArray(d.retrieved_nodes) ? d.retrieved_nodes : []).slice(0, 6).map((node, i) => ({
-        title: node.title || node.document_name || `Case dossier ${i + 1}`,
-        snippet: String(node.content || node.text || "").slice(0, 240),
-        score: node.score ?? null,
-      }));
-      for (const hit of records.slice(0, 6)) {
+      // Live relational records are the primary evidence. Knowledge-base
+      // passages remain available after them, but cannot displace the profile
+      // or linked FIRs from the assistant's visible source panel.
+      const sources = groundedSources(records);
+      for (const [index, node] of (Array.isArray(d.retrieved_nodes) ? d.retrieved_nodes : []).slice(0, 4).entries()) {
         sources.push({
-          title: `${hit.table} · Cloud Scale record`,
-          snippet: JSON.stringify(hit.row).slice(0, 240),
-          score: hit.score,
+          title: node.title || node.document_name || `Case dossier ${index + 1}`,
+          snippet: String(node.content || node.text || "").slice(0, 240),
+          score: node.score ?? null,
         });
       }
       const processing_ms = Date.now() - started;
@@ -1019,8 +1210,10 @@ module.exports = async (req, res) => {
       return;
     }
     const conversation = conversationContext(payload.history);
-    const initialSearch = await searchRecords(platformContext, `${conversation}\n${prompt}`, 24);
-    const search = await ensureGrounding(platformContext, prompt, initialSearch, 8);
+    const searchQuery = `${conversation}\n${prompt}`.trim();
+    const initialSearch = await searchRecords(platformContext, searchQuery, 24);
+    const sampledSearch = await ensureGrounding(platformContext, prompt, initialSearch, 8);
+    const search = await enrichNamedCriminal(platformContext, searchQuery, sampledSearch, 20);
     const records = search.hits;
     const recordContext = records.length
       ? `\n\nRelevant live Cloud Scale records:\n${records.slice(0, 8).map((hit, i) =>
@@ -1037,15 +1230,17 @@ module.exports = async (req, res) => {
       { temperature: temperature ?? 0.2, max_tokens: 700, images },
       token,
     );
-    const answer = up.answer || groundedAnswer(String(prompt), records, payload.language);
+    const llmMissedGrounding = !!up.answer && records.length > 0 && quickmlMissedGrounding(up.answer);
+    const quickmlAnswer = llmMissedGrounding ? "" : up.answer;
+    const answer = quickmlAnswer || criminalProfileAnswer(String(searchQuery), records, payload.language) || groundedAnswer(String(prompt), records, payload.language);
     const processing_ms = Date.now() - started;
-    const model = up.answer ? "QuickML LLM + Catalyst Search" : "Catalyst Cloud Scale Retrieval";
+    const model = quickmlAnswer ? "QuickML LLM + Catalyst Search" : "Catalyst Cloud Scale Retrieval";
     const audit = await writeAudit(platformContext.app, platformContext.officer, {
       action: "AI_QUERY", entity: "chat", processing_ms, model,
       detail: {
         prompt: String(prompt).slice(0, 2000), answer: String(answer || "").slice(0, 5000),
         via_voice: !!payload.via_voice, language: payload.language || "en",
-        source_count: records.length, search_engine: search.engine, quickml_fallback: !up.answer,
+        source_count: records.length, search_engine: search.engine, quickml_fallback: !quickmlAnswer,
       },
     });
     const response = {
@@ -1055,11 +1250,22 @@ module.exports = async (req, res) => {
       sources: groundedSources(records),
       search_engine: search.engine,
       search_warning: search.warning,
-      quickml_warning: up.answer ? null : `QuickML endpoint unavailable (${up.status || 502}); returned a record-grounded answer.`,
+      quickml_warning: quickmlAnswer
+        ? null
+        : llmMissedGrounding
+          ? "QuickML did not use the retrieved Cloud Scale records; NETRA returned a deterministic record-grounded answer."
+          : `QuickML endpoint unavailable (${up.status || 502}); returned a record-grounded answer.`,
     };
     await cachePut(platformContext.app, responseCacheKey, response, 1);
     reply(200, { ...response, audit_id: audit.id, processing_ms, cache: false });
   } catch (e) {
     try { reply(Number(e && e.statusCode) || 500, { error: String(e && e.message || e) }); } catch { /* res already gone */ }
   }
+}
+
+module.exports = handler;
+module.exports.__test = {
+  criminalProfileAnswer,
+  namedCriminalScore,
+  quickmlMissedGrounding,
 };

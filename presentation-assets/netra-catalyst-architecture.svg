@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="970" viewBox="0 0 1920 970" role="img" aria-labelledby="title desc">
+  <title id="title">NETRA Catalyst architecture</title>
+  <desc id="desc">Layered architecture showing the officer experience, authentication and API gateway, serverless orchestration, QuickML and Zia intelligence services, Cloud Scale storage, and cross-cutting governance.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0f2740" flood-opacity="0.10"/>
+    </filter>
+    <marker id="down" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 11 6 L 1 11 z" fill="#39536b"/>
+    </marker>
+    <style>
+      .font { font-family: Inter, Arial, sans-serif; }
+      .eyebrow { font-size: 22px; font-weight: 800; letter-spacing: 2px; fill: #0b7896; }
+      .top-note { font-size: 22px; font-weight: 650; fill: #365269; }
+      .layer-title { font-size: 29px; font-weight: 800; fill: #10283d; }
+      .layer-title-inverse { font-size: 27px; font-weight: 800; fill: #ffffff; }
+      .layer-sub { font-size: 21px; font-weight: 560; fill: #60788c; }
+      .pill { font-size: 21px; font-weight: 700; fill: #284258; }
+      .service-title { font-size: 24px; font-weight: 800; fill: #153047; }
+      .service-body { font-size: 19px; font-weight: 520; fill: #526b7e; }
+      .rail { font-size: 20px; font-weight: 700; fill: #29475d; }
+      .small { font-size: 18px; font-weight: 650; fill: #5f788b; }
+    </style>
+  </defs>
+
+  <rect width="1920" height="970" fill="#f7fafc"/>
+  <path d="M0 66 H1920" stroke="#d9e5ed" stroke-width="2"/>
+  <text x="58" y="43" class="font eyebrow">CATALYST-NATIVE | SECURE | EXPLAINABLE</text>
+  <text x="1862" y="43" text-anchor="end" class="font top-note">Current web deployment: Catalyst Slate / Web Client Hosting</text>
+
+  <!-- Officer experience -->
+  <g filter="url(#shadow)">
+    <rect x="80" y="92" width="1760" height="142" rx="8" fill="#ffffff" stroke="#b9ccda" stroke-width="2"/>
+  </g>
+  <rect x="80" y="92" width="12" height="142" rx="6" fill="#1769aa"/>
+  <text x="117" y="132" class="font layer-title">1. OFFICER EXPERIENCE</text>
+  <text x="117" y="164" class="font layer-sub">Next.js officer workspace on Catalyst Slate</text>
+  <rect x="610" y="116" width="150" height="54" rx="8" fill="#edf4fa"/><text x="685" y="150" text-anchor="middle" class="font pill">Dashboard</text>
+  <rect x="776" y="116" width="166" height="54" rx="8" fill="#e7f8fb"/><text x="859" y="150" text-anchor="middle" class="font pill">AI Assistant</text>
+  <rect x="958" y="116" width="108" height="54" rx="8" fill="#edf4fa"/><text x="1012" y="150" text-anchor="middle" class="font pill">Cases</text>
+  <rect x="1082" y="116" width="180" height="54" rx="8" fill="#eef8f5"/><text x="1172" y="150" text-anchor="middle" class="font pill">Network Graph</text>
+  <rect x="1278" y="116" width="148" height="54" rx="8" fill="#fff6e9"/><text x="1352" y="150" text-anchor="middle" class="font pill">Crime Maps</text>
+  <rect x="1442" y="116" width="168" height="54" rx="8" fill="#f2effa"/><text x="1526" y="150" text-anchor="middle" class="font pill">Evidence AI</text>
+  <rect x="1626" y="116" width="176" height="54" rx="8" fill="#edf4fa"/><text x="1714" y="150" text-anchor="middle" class="font pill">Reports / Admin</text>
+  <text x="610" y="203" class="font small">English and Kannada | voice | charts | maps | criminal intelligence | PDF reports</text>
+
+  <path d="M960 236 V260" stroke="#39536b" stroke-width="4" marker-end="url(#down)"/>
+
+  <!-- Trust layer -->
+  <g filter="url(#shadow)">
+    <rect x="185" y="270" width="1550" height="112" rx="8" fill="#ffffff" stroke="#9fd4df" stroke-width="2"/>
+  </g>
+  <rect x="185" y="270" width="12" height="112" rx="6" fill="#0587a8"/>
+  <text x="222" y="313" class="font layer-title">2. TRUST AND ACCESS</text>
+  <text x="222" y="347" class="font layer-sub">Identity is established before data or AI access</text>
+  <rect x="755" y="297" width="212" height="54" rx="8" fill="#e7f8fb"/><text x="861" y="331" text-anchor="middle" class="font pill">Authentication</text>
+  <rect x="983" y="297" width="190" height="54" rx="8" fill="#e7f8fb"/><text x="1078" y="331" text-anchor="middle" class="font pill">API Gateway</text>
+  <rect x="1189" y="297" width="144" height="54" rx="8" fill="#eef8f5"/><text x="1261" y="331" text-anchor="middle" class="font pill">RBAC</text>
+  <rect x="1349" y="297" width="190" height="54" rx="8" fill="#eef8f5"/><text x="1444" y="331" text-anchor="middle" class="font pill">Rate limits</text>
+  <rect x="1555" y="297" width="142" height="54" rx="8" fill="#edf4fa"/><text x="1626" y="331" text-anchor="middle" class="font pill">CORS</text>
+
+  <path d="M960 384 V408" stroke="#39536b" stroke-width="4" marker-end="url(#down)"/>
+
+  <!-- Orchestration -->
+  <g filter="url(#shadow)">
+    <rect x="185" y="418" width="1550" height="158" rx="8" fill="#ffffff" stroke="#a8d8cf" stroke-width="2"/>
+  </g>
+  <rect x="185" y="418" width="12" height="158" rx="6" fill="#0f8a72"/>
+  <text x="222" y="462" class="font layer-title">3. SERVERLESS CORE</text>
+  <text x="222" y="496" class="font layer-sub">Catalyst Function: ai_quickml (Node.js)</text>
+  <rect x="631" y="444" width="196" height="88" rx="8" fill="#eef8f5"/>
+  <text x="729" y="479" text-anchor="middle" class="font service-title">Route</text>
+  <text x="729" y="510" text-anchor="middle" class="font service-body">intent and entities</text>
+  <rect x="843" y="444" width="196" height="88" rx="8" fill="#eef8f5"/>
+  <text x="941" y="479" text-anchor="middle" class="font service-title">Retrieve</text>
+  <text x="941" y="510" text-anchor="middle" class="font service-body">approved records</text>
+  <rect x="1055" y="444" width="216" height="88" rx="8" fill="#eef8f5"/>
+  <text x="1163" y="479" text-anchor="middle" class="font service-title">Validate</text>
+  <text x="1163" y="510" text-anchor="middle" class="font service-body">SELECT-only query</text>
+  <rect x="1287" y="444" width="196" height="88" rx="8" fill="#eef8f5"/>
+  <text x="1385" y="479" text-anchor="middle" class="font service-title">Explain</text>
+  <text x="1385" y="510" text-anchor="middle" class="font service-body">sources and score</text>
+  <rect x="1499" y="444" width="198" height="88" rx="8" fill="#eef8f5"/>
+  <text x="1598" y="479" text-anchor="middle" class="font service-title">Audit</text>
+  <text x="1598" y="510" text-anchor="middle" class="font service-body">actor and outcome</text>
+
+  <path d="M720 578 V609" stroke="#39536b" stroke-width="4" marker-end="url(#down)"/>
+  <path d="M1200 578 V609" stroke="#39536b" stroke-width="4" marker-end="url(#down)"/>
+  <path d="M930 715 H983" stroke="#39536b" stroke-width="4" marker-start="url(#down)" marker-end="url(#down)"/>
+
+  <!-- Intelligence services -->
+  <g filter="url(#shadow)">
+    <rect x="80" y="620" width="850" height="244" rx="8" fill="#ffffff" stroke="#c7bfe4" stroke-width="2"/>
+  </g>
+  <rect x="80" y="620" width="850" height="58" rx="8" fill="#6153a6"/>
+  <text x="110" y="658" class="font layer-title-inverse">4A. CATALYST INTELLIGENCE SERVICES</text>
+  <rect x="110" y="703" width="372" height="64" rx="8" fill="#f2effa"/>
+  <text x="132" y="731" class="font service-title">QuickML LLM + RAG</text>
+  <text x="132" y="757" class="font service-body">Complex reasoning and KB retrieval</text>
+  <rect x="500" y="703" width="396" height="64" rx="8" fill="#f2effa"/>
+  <text x="522" y="731" class="font service-title">Zia services</text>
+  <text x="522" y="757" class="font service-body">Speech, translation, OCR and vision</text>
+  <rect x="110" y="784" width="372" height="54" rx="8" fill="#f6f4fb"/>
+  <text x="132" y="818" class="font pill">Deterministic fallback engine</text>
+  <rect x="500" y="784" width="396" height="54" rx="8" fill="#fff6e9"/>
+  <text x="522" y="818" class="font pill">Explainable predictive baseline</text>
+
+  <!-- Data services -->
+  <g filter="url(#shadow)">
+    <rect x="990" y="620" width="850" height="244" rx="8" fill="#ffffff" stroke="#aacddd" stroke-width="2"/>
+  </g>
+  <rect x="990" y="620" width="850" height="58" rx="8" fill="#1769aa"/>
+  <text x="1020" y="658" class="font layer-title-inverse">4B. CATALYST DATA AND OUTPUT SERVICES</text>
+  <rect x="1020" y="703" width="382" height="64" rx="8" fill="#edf4fa"/>
+  <text x="1042" y="731" class="font service-title">Cloud Scale / Data Store</text>
+  <text x="1042" y="757" class="font service-body">FIR, case, person and evidence tables</text>
+  <rect x="1420" y="703" width="386" height="64" rx="8" fill="#edf4fa"/>
+  <text x="1442" y="731" class="font service-title">Search + Cache</text>
+  <text x="1442" y="757" class="font service-body">Indexed retrieval and fast context</text>
+  <rect x="1020" y="784" width="382" height="54" rx="8" fill="#edf4fa"/>
+  <text x="1042" y="818" class="font pill">Stratus: evidence and audit objects</text>
+  <rect x="1420" y="784" width="386" height="54" rx="8" fill="#edf4fa"/>
+  <text x="1442" y="818" class="font pill">SmartBrowz: confidential PDF reports</text>
+
+  <!-- Governance rail -->
+  <rect x="80" y="891" width="1760" height="58" rx="8" fill="#eaf2f7" stroke="#b9ccda"/>
+  <rect x="80" y="891" width="214" height="58" rx="8" fill="#102f4a"/>
+  <text x="187" y="928" text-anchor="middle" class="font layer-title-inverse">GOVERNANCE</text>
+  <circle cx="337" cy="920" r="6" fill="#0f9f8e"/><text x="354" y="927" class="font rail">Source citations</text>
+  <circle cx="590" cy="920" r="6" fill="#0f9f8e"/><text x="607" y="927" class="font rail">Confidence</text>
+  <circle cx="788" cy="920" r="6" fill="#0f9f8e"/><text x="805" y="927" class="font rail">Human verification</text>
+  <circle cx="1086" cy="920" r="6" fill="#0f9f8e"/><text x="1103" y="927" class="font rail">Encryption in transit</text>
+  <circle cx="1400" cy="920" r="6" fill="#0f9f8e"/><text x="1417" y="927" class="font rail">Role-scoped data</text>
+  <circle cx="1659" cy="920" r="6" fill="#0f9f8e"/><text x="1676" y="927" class="font rail">Immutable audit ID</text>
+</svg>

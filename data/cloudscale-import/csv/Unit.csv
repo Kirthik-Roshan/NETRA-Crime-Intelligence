@@ -1,0 +1,25 @@
+UnitID,UnitName,TypeID,ParentUnit,NationalityID,StateID,DistrictID,Active
+1,Bengaluru Urban City PS,1,,1,1,401,1
+2,Bengaluru Urban Rural PS,1,,1,1,401,1
+3,Mysuru City PS,1,,1,1,402,1
+4,Mysuru Rural PS,1,,1,1,402,1
+5,Dakshina Kannada City PS,1,,1,1,403,1
+6,Dakshina Kannada Rural PS,1,,1,1,403,1
+7,Hubballi-Dharwad City PS,1,,1,1,404,1
+8,Hubballi-Dharwad Rural PS,1,,1,1,404,1
+9,Belagavi City PS,1,,1,1,405,1
+10,Belagavi Rural PS,1,,1,1,405,1
+11,Kalaburagi City PS,1,,1,1,406,1
+12,Kalaburagi Rural PS,1,,1,1,406,1
+13,Ballari City PS,1,,1,1,407,1
+14,Ballari Rural PS,1,,1,1,407,1
+15,Vijayapura City PS,1,,1,1,408,1
+16,Vijayapura Rural PS,1,,1,1,408,1
+17,Shivamogga City PS,1,,1,1,409,1
+18,Shivamogga Rural PS,1,,1,1,409,1
+19,Tumakuru City PS,1,,1,1,410,1
+20,Tumakuru Rural PS,1,,1,1,410,1
+21,Udupi City PS,1,,1,1,411,1
+22,Udupi Rural PS,1,,1,1,411,1
+23,Mandya City PS,1,,1,1,412,1
+24,Mandya Rural PS,1,,1,1,412,1

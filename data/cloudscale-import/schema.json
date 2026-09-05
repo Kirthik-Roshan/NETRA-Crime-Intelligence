@@ -793,6 +793,964 @@
           "type": "Var Char"
         }
       ]
+    },
+    {
+      "name": "State",
+      "source": "State",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "StateID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "StateName",
+          "type": "Var Char"
+        },
+        {
+          "name": "NationalityID",
+          "type": "Int"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/State.csv",
+      "row_count": 3
+    },
+    {
+      "name": "District",
+      "source": "District",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "DistrictID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "DistrictName",
+          "type": "Var Char"
+        },
+        {
+          "name": "StateID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "State.StateID"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/District.csv",
+      "row_count": 12
+    },
+    {
+      "name": "UnitType",
+      "source": "UnitType",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "UnitTypeID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "UnitTypeName",
+          "type": "Var Char"
+        },
+        {
+          "name": "CityDistState",
+          "type": "Var Char"
+        },
+        {
+          "name": "Hierarchy",
+          "type": "Int"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/UnitType.csv",
+      "row_count": 3
+    },
+    {
+      "name": "Unit",
+      "source": "Unit",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "UnitID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "UnitName",
+          "type": "Var Char"
+        },
+        {
+          "name": "TypeID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "UnitType.UnitTypeID"
+        },
+        {
+          "name": "ParentUnit",
+          "type": "Int"
+        },
+        {
+          "name": "NationalityID",
+          "type": "Int"
+        },
+        {
+          "name": "StateID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "State.StateID"
+        },
+        {
+          "name": "DistrictID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "District.DistrictID"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/Unit.csv",
+      "row_count": 24
+    },
+    {
+      "name": "Rank",
+      "source": "Rank",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "RankID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "RankName",
+          "type": "Var Char"
+        },
+        {
+          "name": "Hierarchy",
+          "type": "Int"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/Rank.csv",
+      "row_count": 9
+    },
+    {
+      "name": "Designation",
+      "source": "Designation",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "DesignationID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "DesignationName",
+          "type": "Var Char"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        },
+        {
+          "name": "SortOrder",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/Designation.csv",
+      "row_count": 6
+    },
+    {
+      "name": "Employee",
+      "source": "Employee",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "EmployeeID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "DistrictID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "District.DistrictID"
+        },
+        {
+          "name": "UnitID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Unit.UnitID"
+        },
+        {
+          "name": "RankID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Rank.RankID"
+        },
+        {
+          "name": "DesignationID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Designation.DesignationID"
+        },
+        {
+          "name": "KGID",
+          "type": "Var Char"
+        },
+        {
+          "name": "FirstName",
+          "type": "Var Char"
+        },
+        {
+          "name": "EmployeeDOB",
+          "type": "Date"
+        },
+        {
+          "name": "GenderID",
+          "type": "Int"
+        },
+        {
+          "name": "BloodGroupID",
+          "type": "Int"
+        },
+        {
+          "name": "PhysicallyChallenged",
+          "type": "Boolean"
+        },
+        {
+          "name": "AppointmentDate",
+          "type": "Date"
+        }
+      ],
+      "csv": "csv/Employee.csv",
+      "row_count": 72
+    },
+    {
+      "name": "CaseCategory",
+      "source": "CaseCategory",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CaseCategoryID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "LookupValue",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/CaseCategory.csv",
+      "row_count": 4
+    },
+    {
+      "name": "GravityOffence",
+      "source": "GravityOffence",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "GravityOffenceID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "LookupValue",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/GravityOffence.csv",
+      "row_count": 2
+    },
+    {
+      "name": "CaseStatusMaster",
+      "source": "CaseStatusMaster",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CaseStatusID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CaseStatusName",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/CaseStatusMaster.csv",
+      "row_count": 4
+    },
+    {
+      "name": "CasteMaster",
+      "source": "CasteMaster",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "caste_master_id",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "caste_master_name",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/CasteMaster.csv",
+      "row_count": 5
+    },
+    {
+      "name": "ReligionMaster",
+      "source": "ReligionMaster",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "ReligionID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "ReligionName",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/ReligionMaster.csv",
+      "row_count": 6
+    },
+    {
+      "name": "OccupationMaster",
+      "source": "OccupationMaster",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "OccupationID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "OccupationName",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/OccupationMaster.csv",
+      "row_count": 10
+    },
+    {
+      "name": "Court",
+      "source": "Court",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CourtID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CourtName",
+          "type": "Var Char"
+        },
+        {
+          "name": "DistrictID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "District.DistrictID"
+        },
+        {
+          "name": "StateID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "State.StateID"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/Court.csv",
+      "row_count": 12
+    },
+    {
+      "name": "Act",
+      "source": "Act",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "ActCode",
+          "type": "Var Char",
+          "key": "PK"
+        },
+        {
+          "name": "ActDescription",
+          "type": "Var Char"
+        },
+        {
+          "name": "ShortName",
+          "type": "Var Char"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/Act.csv",
+      "row_count": 4
+    },
+    {
+      "name": "Section",
+      "source": "Section",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "ActCode",
+          "type": "Var Char",
+          "key": "FK",
+          "reference": "Act.ActCode"
+        },
+        {
+          "name": "SectionCode",
+          "type": "Var Char",
+          "key": "PK"
+        },
+        {
+          "name": "SectionDescription",
+          "type": "Var Char"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/Section.csv",
+      "row_count": 22
+    },
+    {
+      "name": "CrimeHead",
+      "source": "CrimeHead",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CrimeHeadID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CrimeGroupName",
+          "type": "Var Char"
+        },
+        {
+          "name": "Active",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/CrimeHead.csv",
+      "row_count": 6
+    },
+    {
+      "name": "CrimeSubHead",
+      "source": "CrimeSubHead",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CrimeSubHeadID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CrimeHeadID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CrimeHead.CrimeHeadID"
+        },
+        {
+          "name": "CrimeHeadName",
+          "type": "Var Char"
+        },
+        {
+          "name": "SeqID",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/CrimeSubHead.csv",
+      "row_count": 16
+    },
+    {
+      "name": "CrimeHeadActSection",
+      "source": "CrimeHeadActSection",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CrimeHeadID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CrimeHead.CrimeHeadID"
+        },
+        {
+          "name": "ActCode",
+          "type": "Var Char",
+          "key": "FK",
+          "reference": "Act.ActCode"
+        },
+        {
+          "name": "SectionCode",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/CrimeHeadActSection.csv",
+      "row_count": 23
+    },
+    {
+      "name": "CaseMaster",
+      "source": "CaseMaster",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CrimeNo",
+          "type": "Var Char"
+        },
+        {
+          "name": "CaseNo",
+          "type": "Var Char"
+        },
+        {
+          "name": "CrimeRegisteredDate",
+          "type": "Date"
+        },
+        {
+          "name": "PolicePersonID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Employee.EmployeeID"
+        },
+        {
+          "name": "PoliceStationID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Unit.UnitID"
+        },
+        {
+          "name": "CaseCategoryID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseCategory.CaseCategoryID"
+        },
+        {
+          "name": "GravityOffenceID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "GravityOffence.GravityOffenceID"
+        },
+        {
+          "name": "CrimeMajorHeadID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CrimeHead.CrimeHeadID"
+        },
+        {
+          "name": "CrimeMinorHeadID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CrimeSubHead.CrimeSubHeadID"
+        },
+        {
+          "name": "CaseStatusID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseStatusMaster.CaseStatusID"
+        },
+        {
+          "name": "CourtID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Court.CourtID"
+        },
+        {
+          "name": "IncidentFromDate",
+          "type": "DateTime"
+        },
+        {
+          "name": "IncidentToDate",
+          "type": "DateTime"
+        },
+        {
+          "name": "InfoReceivedPSDate",
+          "type": "DateTime"
+        },
+        {
+          "name": "latitude",
+          "type": "Double"
+        },
+        {
+          "name": "longitude",
+          "type": "Double"
+        },
+        {
+          "name": "BriefFacts",
+          "type": "Text"
+        }
+      ],
+      "csv": "csv/CaseMaster.csv",
+      "row_count": 500
+    },
+    {
+      "name": "ComplainantDetails",
+      "source": "ComplainantDetails",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "ComplainantID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseMaster.CaseMasterID"
+        },
+        {
+          "name": "ComplainantName",
+          "type": "Var Char"
+        },
+        {
+          "name": "AgeYear",
+          "type": "Int"
+        },
+        {
+          "name": "OccupationID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "OccupationMaster.OccupationID"
+        },
+        {
+          "name": "ReligionID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "ReligionMaster.ReligionID"
+        },
+        {
+          "name": "CasteID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CasteMaster.caste_master_id"
+        },
+        {
+          "name": "GenderID",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/ComplainantDetails.csv",
+      "row_count": 662
+    },
+    {
+      "name": "Victim",
+      "source": "Victim",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "VictimMasterID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseMaster.CaseMasterID"
+        },
+        {
+          "name": "VictimName",
+          "type": "Var Char"
+        },
+        {
+          "name": "AgeYear",
+          "type": "Int"
+        },
+        {
+          "name": "GenderID",
+          "type": "Int"
+        },
+        {
+          "name": "VictimPolice",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/Victim.csv",
+      "row_count": 564
+    },
+    {
+      "name": "Accused",
+      "source": "Accused",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "AccusedMasterID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseMaster.CaseMasterID"
+        },
+        {
+          "name": "AccusedName",
+          "type": "Var Char"
+        },
+        {
+          "name": "AgeYear",
+          "type": "Int"
+        },
+        {
+          "name": "GenderID",
+          "type": "Int"
+        },
+        {
+          "name": "PersonID",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/Accused.csv",
+      "row_count": 703
+    },
+    {
+      "name": "ActSectionAssociation",
+      "source": "ActSectionAssociation",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseMaster.CaseMasterID"
+        },
+        {
+          "name": "ActID",
+          "type": "Var Char",
+          "key": "FK",
+          "reference": "Act.ActCode"
+        },
+        {
+          "name": "SectionID",
+          "type": "Var Char",
+          "key": "FK",
+          "reference": "Section.SectionCode"
+        },
+        {
+          "name": "ActOrderID",
+          "type": "Int"
+        },
+        {
+          "name": "SectionOrderID",
+          "type": "Int"
+        }
+      ],
+      "csv": "csv/ActSectionAssociation.csv",
+      "row_count": 731
+    },
+    {
+      "name": "Inv_OccuranceTime",
+      "source": "Inv_OccuranceTime",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "PK + FK",
+          "reference": "CaseMaster.CaseMasterID"
+        },
+        {
+          "name": "PlaceOfOccurance",
+          "type": "Var Char"
+        },
+        {
+          "name": "OccuranceFrom",
+          "type": "Var Char"
+        },
+        {
+          "name": "OccuranceTo",
+          "type": "Var Char"
+        }
+      ],
+      "csv": "csv/Inv_OccuranceTime.csv",
+      "row_count": 500
+    },
+    {
+      "name": "ArrestSurrender",
+      "source": "ArrestSurrender",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "ArrestSurrenderID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseMaster.CaseMasterID"
+        },
+        {
+          "name": "ArrestSurrenderTypeID",
+          "type": "Int"
+        },
+        {
+          "name": "ArrestSurrenderDate",
+          "type": "Date"
+        },
+        {
+          "name": "ArrestSurrenderStateId",
+          "type": "Int",
+          "key": "FK",
+          "reference": "State.StateID"
+        },
+        {
+          "name": "ArrestSurrenderDistrictId",
+          "type": "Int",
+          "key": "FK",
+          "reference": "District.DistrictID"
+        },
+        {
+          "name": "PoliceStationID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Unit.UnitID"
+        },
+        {
+          "name": "IOID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Employee.EmployeeID"
+        },
+        {
+          "name": "CourtID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Court.CourtID"
+        },
+        {
+          "name": "AccusedMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Accused.AccusedMasterID"
+        },
+        {
+          "name": "IsAccused",
+          "type": "Boolean"
+        },
+        {
+          "name": "IsComplainantAccused",
+          "type": "Boolean"
+        }
+      ],
+      "csv": "csv/ArrestSurrender.csv",
+      "row_count": 251
+    },
+    {
+      "name": "inv_arrestsurrenderaccused",
+      "source": "inv_arrestsurrenderaccused",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "ArrestSurrenderID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "ArrestSurrender.ArrestSurrenderID"
+        },
+        {
+          "name": "AccusedMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Accused.AccusedMasterID"
+        }
+      ],
+      "csv": "csv/inv_arrestsurrenderaccused.csv",
+      "row_count": 251
+    },
+    {
+      "name": "ChargesheetDetails",
+      "source": "ChargesheetDetails",
+      "tier": "ksp_er",
+      "purpose": "Official normalized KSP FIR schema table.",
+      "fields": [
+        {
+          "name": "CSID",
+          "type": "Int",
+          "key": "PK"
+        },
+        {
+          "name": "CaseMasterID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "CaseMaster.CaseMasterID"
+        },
+        {
+          "name": "csdate",
+          "type": "Date"
+        },
+        {
+          "name": "cstype",
+          "type": "Var Char"
+        },
+        {
+          "name": "PolicePersonID",
+          "type": "Int",
+          "key": "FK",
+          "reference": "Employee.EmployeeID"
+        }
+      ],
+      "csv": "csv/ChargesheetDetails.csv",
+      "row_count": 191
     }
   ]
 }

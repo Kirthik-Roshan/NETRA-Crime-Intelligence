@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { Search, Users, ShieldAlert, Database, UserSearch, Fingerprint, ChevronRight, X } from "lucide-react";
 import { PageHeader, Avatar, RiskMeter, StatusBadge, EmptyState, StatCard, Segmented, Tag } from "@/components/ui";
 import { parseJsonArray, riskBand } from "@/lib/utils";

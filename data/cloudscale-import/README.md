@@ -2,43 +2,30 @@
 
 Generated from `data/netra.db` by `npm run cloudscale:export`.
 
-Use these denormalized, prototype-facing tables first. They match the tables
-already read by the Cloud Scale adapter: `Firs`, `Cases`, and `Criminals`,
-and add the link/detail tables needed to move the remaining prototype screens
-off local SQLite.
+This package now contains both the prototype-facing operational tables and all
+28 normalized tables from `Police_FIR_ER_Diagram.pdf`. Every generated field
+uses a Catalyst Cloud Scale-supported type.
 
-## Normalized KSP ER Schema
+## Schema Contract
 
-The bundled SQLite source also contains all 28 tables named by
-`Police_FIR_ER_Diagram.pdf`. Run the repeatable contract check before an export
-or demo:
+Run the repeatable fidelity check before an export or deployment:
 
 ```bash
 npm run schema:audit
 ```
 
-The audit checks table and column names, required demo values, and every
-declared foreign key. The Database workspace separates these normalized tables
-under **KSP ER schema** from NETRA's denormalized **Operational** read models.
-Optional unknown values are preserved and displayed as `Not recorded`; they are
-not replaced with invented police data.
-
-The CSVs below are the operational Cloud Scale read models used by the live
-dashboard, assistant, maps, network, and case screens. A normalized ER table is
-read live when a same-named table exists in the selected Catalyst environment;
-otherwise the Database workspace clearly labels its bundled synchronized
-schema snapshot.
+The audit verifies all 28 official tables and columns, required values, date
+values, storage types, and every declared foreign-key relationship. Optional
+unknown values remain empty and are shown in NETRA as `Not recorded`.
 
 ## Import Order
 
-1. `Firs`, `Cases`, `Criminals`
-2. `FirCriminals`, `Arrests`, `Victims`, `Complainants`, `Evidence`
-3. `Relationships`, `Phones`, `Vehicles`, `Addresses`, `Organizations`, `OrgMembers`, `Weapons`
-4. `Chargesheets`, `PoliceStations`, `AuditLogs` if the matching screens need them
+1. Operational application tables: `Firs`, `Cases`, `Criminals`, then their detail/link tables.
+2. ER lookup tables: `State` through `CrimeSubHead` in the generated CSV table below.
+3. ER transactional tables: `CaseMaster`, then complainant/victim/accused/arrest/chargesheet tables.
 
-The id/link columns are typed as `Int` for easy CSV import. You can convert
-them to Catalyst `Foreign Key` fields later if you wire table relationships
-manually in the console.
+The generated CSVs keep relationship columns as `Int` so Catalyst can import
+them before foreign-key wiring. The schema manifest records every PK/FK target.
 
 ## Function Allowlist
 
@@ -46,7 +33,7 @@ After importing beyond the first three tables, set the `ai_quickml` Function
 environment variable:
 
 ```
-DATASTORE_TABLES=Firs,Cases,Criminals,FirCriminals,Arrests,Victims,Complainants,Evidence,Relationships,Phones,Vehicles,Addresses,Organizations,OrgMembers,Weapons,Chargesheets,PoliceStations,AuditLogs,Notifications,OcrResult
+DATASTORE_TABLES=Firs,Cases,Criminals,FirCriminals,Arrests,Victims,Complainants,Evidence,Relationships,Phones,Vehicles,Addresses,Organizations,OrgMembers,Weapons,Chargesheets,PoliceStations,AuditLogs,Notifications,OcrResult,State,District,UnitType,Unit,Rank,Designation,Employee,CaseCategory,GravityOffence,CaseStatusMaster,CasteMaster,ReligionMaster,OccupationMaster,Court,Act,Section,CrimeHead,CrimeSubHead,CrimeHeadActSection,CaseMaster,ComplainantDetails,Victim,Accused,ActSectionAssociation,Inv_OccuranceTime,ArrestSurrender,inv_arrestsurrenderaccused,ChargesheetDetails
 ```
 
 ## CSV Files
@@ -71,6 +58,34 @@ DATASTORE_TABLES=Firs,Cases,Criminals,FirCriminals,Arrests,Victims,Complainants,
 | `Chargesheets` | `csv/Chargesheets.csv` | 191 | detail | Case detail final-report/court panel. |
 | `PoliceStations` | `csv/PoliceStations.csv` | 24 | support | Station names/codes for filters and display. |
 | `AuditLogs` | `csv/AuditLogs.csv` | 64 | optional | Admin demo audit trail. Skip for public demo if you do not want seeded user activity. |
+| `State` | `csv/State.csv` | 3 | ksp_er | Official normalized KSP FIR schema table. |
+| `District` | `csv/District.csv` | 12 | ksp_er | Official normalized KSP FIR schema table. |
+| `UnitType` | `csv/UnitType.csv` | 3 | ksp_er | Official normalized KSP FIR schema table. |
+| `Unit` | `csv/Unit.csv` | 24 | ksp_er | Official normalized KSP FIR schema table. |
+| `Rank` | `csv/Rank.csv` | 9 | ksp_er | Official normalized KSP FIR schema table. |
+| `Designation` | `csv/Designation.csv` | 6 | ksp_er | Official normalized KSP FIR schema table. |
+| `Employee` | `csv/Employee.csv` | 72 | ksp_er | Official normalized KSP FIR schema table. |
+| `CaseCategory` | `csv/CaseCategory.csv` | 4 | ksp_er | Official normalized KSP FIR schema table. |
+| `GravityOffence` | `csv/GravityOffence.csv` | 2 | ksp_er | Official normalized KSP FIR schema table. |
+| `CaseStatusMaster` | `csv/CaseStatusMaster.csv` | 4 | ksp_er | Official normalized KSP FIR schema table. |
+| `CasteMaster` | `csv/CasteMaster.csv` | 5 | ksp_er | Official normalized KSP FIR schema table. |
+| `ReligionMaster` | `csv/ReligionMaster.csv` | 6 | ksp_er | Official normalized KSP FIR schema table. |
+| `OccupationMaster` | `csv/OccupationMaster.csv` | 10 | ksp_er | Official normalized KSP FIR schema table. |
+| `Court` | `csv/Court.csv` | 12 | ksp_er | Official normalized KSP FIR schema table. |
+| `Act` | `csv/Act.csv` | 4 | ksp_er | Official normalized KSP FIR schema table. |
+| `Section` | `csv/Section.csv` | 22 | ksp_er | Official normalized KSP FIR schema table. |
+| `CrimeHead` | `csv/CrimeHead.csv` | 6 | ksp_er | Official normalized KSP FIR schema table. |
+| `CrimeSubHead` | `csv/CrimeSubHead.csv` | 16 | ksp_er | Official normalized KSP FIR schema table. |
+| `CrimeHeadActSection` | `csv/CrimeHeadActSection.csv` | 23 | ksp_er | Official normalized KSP FIR schema table. |
+| `CaseMaster` | `csv/CaseMaster.csv` | 500 | ksp_er | Official normalized KSP FIR schema table. |
+| `ComplainantDetails` | `csv/ComplainantDetails.csv` | 662 | ksp_er | Official normalized KSP FIR schema table. |
+| `Victim` | `csv/Victim.csv` | 564 | ksp_er | Official normalized KSP FIR schema table. |
+| `Accused` | `csv/Accused.csv` | 703 | ksp_er | Official normalized KSP FIR schema table. |
+| `ActSectionAssociation` | `csv/ActSectionAssociation.csv` | 731 | ksp_er | Official normalized KSP FIR schema table. |
+| `Inv_OccuranceTime` | `csv/Inv_OccuranceTime.csv` | 500 | ksp_er | Official normalized KSP FIR schema table. |
+| `ArrestSurrender` | `csv/ArrestSurrender.csv` | 251 | ksp_er | Official normalized KSP FIR schema table. |
+| `inv_arrestsurrenderaccused` | `csv/inv_arrestsurrenderaccused.csv` | 251 | ksp_er | Official normalized KSP FIR schema table. |
+| `ChargesheetDetails` | `csv/ChargesheetDetails.csv` | 191 | ksp_er | Official normalized KSP FIR schema table. |
 
 ## Runtime-Only Tables
 
@@ -328,3 +343,285 @@ These have no seed CSV because the app writes them at runtime.
 | `language` | Var Char |
 | `source_key` | Text |
 | `source_name` | Var Char |
+
+### State
+
+| Column | Catalyst type |
+|---|---|
+| `StateID` | Int |
+| `StateName` | Var Char |
+| `NationalityID` | Int |
+| `Active` | Boolean |
+
+### District
+
+| Column | Catalyst type |
+|---|---|
+| `DistrictID` | Int |
+| `DistrictName` | Var Char |
+| `StateID` | Int |
+| `Active` | Boolean |
+
+### UnitType
+
+| Column | Catalyst type |
+|---|---|
+| `UnitTypeID` | Int |
+| `UnitTypeName` | Var Char |
+| `CityDistState` | Var Char |
+| `Hierarchy` | Int |
+| `Active` | Boolean |
+
+### Unit
+
+| Column | Catalyst type |
+|---|---|
+| `UnitID` | Int |
+| `UnitName` | Var Char |
+| `TypeID` | Int |
+| `ParentUnit` | Int |
+| `NationalityID` | Int |
+| `StateID` | Int |
+| `DistrictID` | Int |
+| `Active` | Boolean |
+
+### Rank
+
+| Column | Catalyst type |
+|---|---|
+| `RankID` | Int |
+| `RankName` | Var Char |
+| `Hierarchy` | Int |
+| `Active` | Boolean |
+
+### Designation
+
+| Column | Catalyst type |
+|---|---|
+| `DesignationID` | Int |
+| `DesignationName` | Var Char |
+| `Active` | Boolean |
+| `SortOrder` | Int |
+
+### Employee
+
+| Column | Catalyst type |
+|---|---|
+| `EmployeeID` | Int |
+| `DistrictID` | Int |
+| `UnitID` | Int |
+| `RankID` | Int |
+| `DesignationID` | Int |
+| `KGID` | Var Char |
+| `FirstName` | Var Char |
+| `EmployeeDOB` | Date |
+| `GenderID` | Int |
+| `BloodGroupID` | Int |
+| `PhysicallyChallenged` | Boolean |
+| `AppointmentDate` | Date |
+
+### CaseCategory
+
+| Column | Catalyst type |
+|---|---|
+| `CaseCategoryID` | Int |
+| `LookupValue` | Var Char |
+
+### GravityOffence
+
+| Column | Catalyst type |
+|---|---|
+| `GravityOffenceID` | Int |
+| `LookupValue` | Var Char |
+
+### CaseStatusMaster
+
+| Column | Catalyst type |
+|---|---|
+| `CaseStatusID` | Int |
+| `CaseStatusName` | Var Char |
+
+### CasteMaster
+
+| Column | Catalyst type |
+|---|---|
+| `caste_master_id` | Int |
+| `caste_master_name` | Var Char |
+
+### ReligionMaster
+
+| Column | Catalyst type |
+|---|---|
+| `ReligionID` | Int |
+| `ReligionName` | Var Char |
+
+### OccupationMaster
+
+| Column | Catalyst type |
+|---|---|
+| `OccupationID` | Int |
+| `OccupationName` | Var Char |
+
+### Court
+
+| Column | Catalyst type |
+|---|---|
+| `CourtID` | Int |
+| `CourtName` | Var Char |
+| `DistrictID` | Int |
+| `StateID` | Int |
+| `Active` | Boolean |
+
+### Act
+
+| Column | Catalyst type |
+|---|---|
+| `ActCode` | Var Char |
+| `ActDescription` | Var Char |
+| `ShortName` | Var Char |
+| `Active` | Boolean |
+
+### Section
+
+| Column | Catalyst type |
+|---|---|
+| `ActCode` | Var Char |
+| `SectionCode` | Var Char |
+| `SectionDescription` | Var Char |
+| `Active` | Boolean |
+
+### CrimeHead
+
+| Column | Catalyst type |
+|---|---|
+| `CrimeHeadID` | Int |
+| `CrimeGroupName` | Var Char |
+| `Active` | Boolean |
+
+### CrimeSubHead
+
+| Column | Catalyst type |
+|---|---|
+| `CrimeSubHeadID` | Int |
+| `CrimeHeadID` | Int |
+| `CrimeHeadName` | Var Char |
+| `SeqID` | Int |
+
+### CrimeHeadActSection
+
+| Column | Catalyst type |
+|---|---|
+| `CrimeHeadID` | Int |
+| `ActCode` | Var Char |
+| `SectionCode` | Var Char |
+
+### CaseMaster
+
+| Column | Catalyst type |
+|---|---|
+| `CaseMasterID` | Int |
+| `CrimeNo` | Var Char |
+| `CaseNo` | Var Char |
+| `CrimeRegisteredDate` | Date |
+| `PolicePersonID` | Int |
+| `PoliceStationID` | Int |
+| `CaseCategoryID` | Int |
+| `GravityOffenceID` | Int |
+| `CrimeMajorHeadID` | Int |
+| `CrimeMinorHeadID` | Int |
+| `CaseStatusID` | Int |
+| `CourtID` | Int |
+| `IncidentFromDate` | DateTime |
+| `IncidentToDate` | DateTime |
+| `InfoReceivedPSDate` | DateTime |
+| `latitude` | Double |
+| `longitude` | Double |
+| `BriefFacts` | Text |
+
+### ComplainantDetails
+
+| Column | Catalyst type |
+|---|---|
+| `ComplainantID` | Int |
+| `CaseMasterID` | Int |
+| `ComplainantName` | Var Char |
+| `AgeYear` | Int |
+| `OccupationID` | Int |
+| `ReligionID` | Int |
+| `CasteID` | Int |
+| `GenderID` | Int |
+
+### Victim
+
+| Column | Catalyst type |
+|---|---|
+| `VictimMasterID` | Int |
+| `CaseMasterID` | Int |
+| `VictimName` | Var Char |
+| `AgeYear` | Int |
+| `GenderID` | Int |
+| `VictimPolice` | Var Char |
+
+### Accused
+
+| Column | Catalyst type |
+|---|---|
+| `AccusedMasterID` | Int |
+| `CaseMasterID` | Int |
+| `AccusedName` | Var Char |
+| `AgeYear` | Int |
+| `GenderID` | Int |
+| `PersonID` | Var Char |
+
+### ActSectionAssociation
+
+| Column | Catalyst type |
+|---|---|
+| `CaseMasterID` | Int |
+| `ActID` | Var Char |
+| `SectionID` | Var Char |
+| `ActOrderID` | Int |
+| `SectionOrderID` | Int |
+
+### Inv_OccuranceTime
+
+| Column | Catalyst type |
+|---|---|
+| `CaseMasterID` | Int |
+| `PlaceOfOccurance` | Var Char |
+| `OccuranceFrom` | Var Char |
+| `OccuranceTo` | Var Char |
+
+### ArrestSurrender
+
+| Column | Catalyst type |
+|---|---|
+| `ArrestSurrenderID` | Int |
+| `CaseMasterID` | Int |
+| `ArrestSurrenderTypeID` | Int |
+| `ArrestSurrenderDate` | Date |
+| `ArrestSurrenderStateId` | Int |
+| `ArrestSurrenderDistrictId` | Int |
+| `PoliceStationID` | Int |
+| `IOID` | Int |
+| `CourtID` | Int |
+| `AccusedMasterID` | Int |
+| `IsAccused` | Boolean |
+| `IsComplainantAccused` | Boolean |
+
+### inv_arrestsurrenderaccused
+
+| Column | Catalyst type |
+|---|---|
+| `ArrestSurrenderID` | Int |
+| `AccusedMasterID` | Int |
+
+### ChargesheetDetails
+
+| Column | Catalyst type |
+|---|---|
+| `CSID` | Int |
+| `CaseMasterID` | Int |
+| `csdate` | Date |
+| `cstype` | Var Char |
+| `PolicePersonID` | Int |

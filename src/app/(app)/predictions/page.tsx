@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import {
   Radar, TrendingUp, TrendingDown, Minus, AlertTriangle, UserSearch, ShieldCheck, ScanSearch, Sparkles,
 } from "lucide-react";

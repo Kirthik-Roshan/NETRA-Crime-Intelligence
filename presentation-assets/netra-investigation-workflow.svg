@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="970" viewBox="0 0 1920 970" role="img" aria-labelledby="title desc">
+  <title id="title">NETRA end-to-end investigation workflow</title>
+  <desc id="desc">Six stages from secure officer authentication through multimodal input, guarded retrieval, Catalyst analysis, human review, and audited action.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#0f2740" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 11 6 L 1 11 z" fill="#39536b"/>
+    </marker>
+    <style>
+      .font { font-family: Inter, Arial, sans-serif; }
+      .eyebrow { font-size: 23px; font-weight: 700; letter-spacing: 2px; fill: #0b7896; }
+      .note { font-size: 23px; font-weight: 650; fill: #365269; }
+      .stage-title { font-size: 24px; font-weight: 800; fill: #10283d; }
+      .stage-sub { font-size: 18px; font-weight: 600; fill: #60788c; }
+      .body { font-size: 20px; font-weight: 520; fill: #2f485d; }
+      .chip { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+      .scenario-title { font-size: 25px; font-weight: 800; fill: #10283d; }
+      .scenario-body { font-size: 20px; font-weight: 520; fill: #4c6579; }
+      .footer { font-size: 20px; font-weight: 650; fill: #536d80; }
+    </style>
+  </defs>
+
+  <rect width="1920" height="970" fill="#f7fafc"/>
+  <path d="M0 74 H1920" stroke="#d9e5ed" stroke-width="2"/>
+  <text x="56" y="48" class="font eyebrow">FROM INPUT TO AUDITED ACTION</text>
+  <rect x="1390" y="17" width="474" height="40" rx="8" fill="#e7f8fb" stroke="#8bd6e5"/>
+  <circle cx="1420" cy="37" r="7" fill="#0f9f8e"/>
+  <text x="1438" y="44" class="font note">Officer-in-command | Audit-by-design</text>
+
+  <!-- Stage 1 -->
+  <g filter="url(#shadow)">
+    <rect x="55" y="105" width="275" height="390" rx="8" fill="#ffffff" stroke="#b9ccda" stroke-width="2"/>
+    <rect x="55" y="105" width="275" height="8" rx="4" fill="#1769aa"/>
+  </g>
+  <rect x="77" y="133" width="46" height="46" rx="8" fill="#eaf3fb"/>
+  <text x="100" y="166" text-anchor="middle" class="font stage-title" fill="#1769aa">1</text>
+  <text x="139" y="151" class="font stage-title">SECURE SIGN-IN</text>
+  <text x="139" y="177" class="font stage-sub">Establish identity</text>
+  <circle cx="82" cy="225" r="5" fill="#1769aa"/><text x="98" y="233" class="font body">Catalyst federation</text>
+  <circle cx="82" cy="271" r="5" fill="#1769aa"/><text x="98" y="279" class="font body">Officer role and unit</text>
+  <circle cx="82" cy="317" r="5" fill="#1769aa"/><text x="98" y="325" class="font body">Signed secure session</text>
+  <rect x="77" y="425" width="160" height="38" rx="7" fill="#eaf3fb"/>
+  <text x="157" y="451" text-anchor="middle" class="font chip" fill="#1769aa">AUTHENTICATED</text>
+
+  <!-- Stage 2 -->
+  <g filter="url(#shadow)">
+    <rect x="364" y="105" width="275" height="390" rx="8" fill="#ffffff" stroke="#b9ccda" stroke-width="2"/>
+    <rect x="364" y="105" width="275" height="8" rx="4" fill="#0587a8"/>
+  </g>
+  <rect x="386" y="133" width="46" height="46" rx="8" fill="#e7f8fb"/>
+  <text x="409" y="166" text-anchor="middle" class="font stage-title" fill="#0587a8">2</text>
+  <text x="448" y="151" class="font stage-title">ASK OR UPLOAD</text>
+  <text x="448" y="177" class="font stage-sub">Start the investigation</text>
+  <circle cx="391" cy="225" r="5" fill="#0587a8"/><text x="407" y="233" class="font body">English or Kannada</text>
+  <circle cx="391" cy="271" r="5" fill="#0587a8"/><text x="407" y="279" class="font body">Voice command</text>
+  <circle cx="391" cy="317" r="5" fill="#0587a8"/><text x="407" y="325" class="font body">Image, scan or PDF</text>
+  <rect x="386" y="425" width="132" height="38" rx="7" fill="#e7f8fb"/>
+  <text x="452" y="451" text-anchor="middle" class="font chip" fill="#0587a8">MULTIMODAL</text>
+
+  <!-- Stage 3 -->
+  <g filter="url(#shadow)">
+    <rect x="673" y="105" width="275" height="390" rx="8" fill="#ffffff" stroke="#b9ccda" stroke-width="2"/>
+    <rect x="673" y="105" width="275" height="8" rx="4" fill="#0f8a72"/>
+  </g>
+  <rect x="695" y="133" width="46" height="46" rx="8" fill="#e8f7f3"/>
+  <text x="718" y="166" text-anchor="middle" class="font stage-title" fill="#0f8a72">3</text>
+  <text x="757" y="151" class="font stage-title">UNDERSTAND</text>
+  <text x="757" y="177" class="font stage-sub">Interpret and guard</text>
+  <circle cx="700" cy="225" r="5" fill="#0f8a72"/><text x="716" y="233" class="font body">Intent and entities</text>
+  <circle cx="700" cy="271" r="5" fill="#0f8a72"/><text x="716" y="279" class="font body">Permission check</text>
+  <circle cx="700" cy="317" r="5" fill="#0f8a72"/><text x="716" y="325" class="font body">Read-only SQL guard</text>
+  <rect x="695" y="425" width="127" height="38" rx="7" fill="#e8f7f3"/>
+  <text x="758" y="451" text-anchor="middle" class="font chip" fill="#0f8a72">VALIDATED</text>
+
+  <!-- Stage 4 -->
+  <g filter="url(#shadow)">
+    <rect x="982" y="105" width="275" height="390" rx="8" fill="#ffffff" stroke="#b9ccda" stroke-width="2"/>
+    <rect x="982" y="105" width="275" height="8" rx="4" fill="#6153a6"/>
+  </g>
+  <rect x="1004" y="133" width="46" height="46" rx="8" fill="#f0edfa"/>
+  <text x="1027" y="166" text-anchor="middle" class="font stage-title" fill="#6153a6">4</text>
+  <text x="1066" y="151" class="font stage-title">CORRELATE</text>
+  <text x="1066" y="177" class="font stage-sub">Retrieve linked records</text>
+  <circle cx="1009" cy="225" r="5" fill="#6153a6"/><text x="1025" y="233" class="font body">Cloud Scale tables</text>
+  <circle cx="1009" cy="271" r="5" fill="#6153a6"/><text x="1025" y="279" class="font body">Search and RAG context</text>
+  <circle cx="1009" cy="317" r="5" fill="#6153a6"/><text x="1025" y="325" class="font body">FIR-person-vehicle links</text>
+  <rect x="1004" y="425" width="119" height="38" rx="7" fill="#f0edfa"/>
+  <text x="1063" y="451" text-anchor="middle" class="font chip" fill="#6153a6">GROUNDED</text>
+
+  <!-- Stage 5 -->
+  <g filter="url(#shadow)">
+    <rect x="1291" y="105" width="275" height="390" rx="8" fill="#ffffff" stroke="#b9ccda" stroke-width="2"/>
+    <rect x="1291" y="105" width="275" height="8" rx="4" fill="#c17316"/>
+  </g>
+  <rect x="1313" y="133" width="46" height="46" rx="8" fill="#fdf3e5"/>
+  <text x="1336" y="166" text-anchor="middle" class="font stage-title" fill="#c17316">5</text>
+  <text x="1375" y="151" class="font stage-title">ANALYZE</text>
+  <text x="1375" y="177" class="font stage-sub">Create explainable leads</text>
+  <circle cx="1318" cy="225" r="5" fill="#c17316"/><text x="1334" y="233" class="font body">QuickML reasoning</text>
+  <circle cx="1318" cy="271" r="5" fill="#c17316"/><text x="1334" y="279" class="font body">Zia speech and vision</text>
+  <circle cx="1318" cy="317" r="5" fill="#c17316"/><text x="1334" y="325" class="font body">Graph, hotspot and risk</text>
+  <rect x="1313" y="425" width="125" height="38" rx="7" fill="#fdf3e5"/>
+  <text x="1375" y="451" text-anchor="middle" class="font chip" fill="#a75f0e">EXPLAINED</text>
+
+  <!-- Stage 6 -->
+  <g filter="url(#shadow)">
+    <rect x="1600" y="105" width="275" height="390" rx="8" fill="#ffffff" stroke="#b9ccda" stroke-width="2"/>
+    <rect x="1600" y="105" width="275" height="8" rx="4" fill="#1769aa"/>
+  </g>
+  <rect x="1622" y="133" width="46" height="46" rx="8" fill="#eaf3fb"/>
+  <text x="1645" y="166" text-anchor="middle" class="font stage-title" fill="#1769aa">6</text>
+  <text x="1684" y="151" class="font stage-title">REVIEW &amp; ACT</text>
+  <text x="1684" y="177" class="font stage-sub">Officer stays in control</text>
+  <circle cx="1627" cy="225" r="5" fill="#1769aa"/><text x="1643" y="233" class="font body">Verify sources and score</text>
+  <circle cx="1627" cy="271" r="5" fill="#1769aa"/><text x="1643" y="279" class="font body">Open case or export PDF</text>
+  <circle cx="1627" cy="317" r="5" fill="#1769aa"/><text x="1643" y="325" class="font body">Write immutable audit</text>
+  <rect x="1622" y="425" width="113" height="38" rx="7" fill="#eaf3fb"/>
+  <text x="1678" y="451" text-anchor="middle" class="font chip" fill="#1769aa">AUDITED</text>
+
+  <!-- Main flow arrows -->
+  <path d="M336 300 H354" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M645 300 H663" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M954 300 H972" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1263 300 H1281" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1572 300 H1590" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <!-- Demonstration scenario -->
+  <rect x="55" y="555" width="1820" height="345" rx="8" fill="#ffffff" stroke="#c6d7e3" stroke-width="2"/>
+  <rect x="55" y="555" width="12" height="345" rx="6" fill="#0a90ad"/>
+  <text x="91" y="603" class="font eyebrow">REAL-WORLD DEMONSTRATION</text>
+  <text x="91" y="640" class="font note">A single evidence upload becomes a traceable investigation lead.</text>
+
+  <rect x="91" y="675" width="365" height="150" rx="8" fill="#f4f9fc" stroke="#b9ccda"/>
+  <text x="116" y="716" class="font scenario-title">1. Evidence arrives</text>
+  <text x="116" y="754" class="font scenario-body">Crowd image, number plate</text>
+  <text x="116" y="786" class="font scenario-body">or scanned FIR document</text>
+
+  <rect x="513" y="675" width="365" height="150" rx="8" fill="#eefaf8" stroke="#a8d8cf"/>
+  <text x="538" y="716" class="font scenario-title">2. Zia extracts signals</text>
+  <text x="538" y="754" class="font scenario-body">Face candidate, plate text</text>
+  <text x="538" y="786" class="font scenario-body">and document entities</text>
+
+  <rect x="935" y="675" width="365" height="150" rx="8" fill="#f4f1fb" stroke="#c7bfe4"/>
+  <text x="960" y="716" class="font scenario-title">3. NETRA links records</text>
+  <text x="960" y="754" class="font scenario-body">Person - vehicle - FIR - associate</text>
+  <text x="960" y="786" class="font scenario-body">with network and location context</text>
+
+  <rect x="1357" y="675" width="474" height="150" rx="8" fill="#fff7ec" stroke="#e4c394"/>
+  <text x="1382" y="716" class="font scenario-title">4. Officer reviews an actionable lead</text>
+  <text x="1382" y="754" class="font scenario-body">Cited answer, confidence, map and graph</text>
+  <text x="1382" y="786" class="font scenario-body">followed by a PDF and immutable audit ID</text>
+
+  <path d="M466 750 H501" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M888 750 H923" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1310 750 H1345" stroke="#39536b" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <circle cx="70" cy="935" r="7" fill="#0f9f8e"/>
+  <text x="89" y="942" class="font footer">AI output is advisory. The investigator verifies cited records before any operational decision.</text>
+</svg>

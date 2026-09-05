@@ -1,0 +1,23 @@
+ActCode,SectionCode,SectionDescription,Active
+IPC,454,Lurking house-trespass,1
+IPC,457,Lurking house-trespass by night,1
+IPC,380,Theft in dwelling house,1
+IPC,379,Theft,1
+IPC,356,Assault in attempt to commit theft,1
+IPC,392,Robbery,1
+IPC,395,Dacoity,1
+IPC,302,Murder,1
+IPC,307,Attempt to murder,1
+IPC,324,Voluntarily causing hurt by dangerous weapons,1
+IPC,326,Grievous hurt by dangerous weapons,1
+IPC,420,Cheating,1
+ITACT,66C,Identity theft,1
+ITACT,66D,Cheating by personation using computer,1
+NDPS,20,Contravention involving cannabis,1
+NDPS,22,Contravention involving psychotropic substances,1
+IPC,363,Kidnapping,1
+IPC,365,Kidnapping with intent to confine,1
+IPC,384,Extortion,1
+IPC,147,Rioting,1
+IPC,148,Rioting armed with deadly weapon,1
+IPC,489A,Counterfeiting currency,1

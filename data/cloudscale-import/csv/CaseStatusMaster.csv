@@ -1,0 +1,5 @@
+CaseStatusID,CaseStatusName
+1,Registered
+2,Under Investigation
+3,Charge Sheeted
+4,Closed

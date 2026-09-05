@@ -10,7 +10,8 @@ type DataSource = "cloud" | "snapshot";
 interface TableInfo { name: string; count: number | null | undefined; source?: DataSource }
 type SchemaView = "operational" | "er";
 interface Group { group: string; view: SchemaView; tables: TableInfo[] }
-interface BakedTable { table: string; columns: string[]; rows: Record<string, unknown>[]; total: number; source: DataSource; unavailable?: boolean }
+interface ColumnSchema { name: string; type: string; key: string | null; reference: string | null }
+interface BakedTable { table: string; columns: string[]; schema?: ColumnSchema[]; rows: Record<string, unknown>[]; total: number; source: DataSource; unavailable?: boolean }
 
 function snapshotFallback(table: string): BakedTable | null {
   const snapshot = getRecordSnapshot(table);
@@ -58,7 +59,7 @@ function catalystType(rows: Record<string, unknown>[], column: string): string {
 
 export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   const t = useT();
-  const initialView: SchemaView = initialTable && TABLE_GROUPS.some((group) => group.view === "er" && group.tables.some((table) => table.name === initialTable)) ? "er" : "operational";
+  const initialView: SchemaView = initialTable && TABLE_GROUPS.some((group) => group.view === "operational" && group.tables.some((table) => table.name === initialTable)) ? "operational" : "er";
   const [schemaView, setSchemaView] = useState<SchemaView>(initialView);
   const [groups, setGroups] = useState<Group[]>(TABLE_GROUPS);
   const [active, setActive] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
       }
       const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
       const storedTotal = Math.max(rows.length, counts[table] || 0);
-      setBaked({ table, columns, rows, total: storedTotal, source: "cloud" });
+      setBaked({ table, columns, schema: fallback?.schema, rows, total: storedTotal, source: "cloud" });
       setGroups((current) => current.map((group) => ({
         ...group,
         tables: group.tables.map((item) => (
@@ -108,7 +109,7 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   }, []);
 
   useEffect(() => {
-    const first = initialTable || groups?.[0]?.tables?.[0]?.name;
+    const first = initialTable || groups.find((group) => group.view === initialView)?.tables[0]?.name;
     if (first) void load(first);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -178,11 +179,16 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
   }, [groups, filter, schemaView]);
 
   const columnQuality = useMemo(() => {
-    if (!baked) return new Map<string, { type: string; missing: number }>();
-    return new Map(baked.columns.map((column) => [column, {
-      type: catalystType(baked.rows, column),
-      missing: baked.rows.filter((row) => isMissing(row[column])).length,
-    }]));
+    if (!baked) return new Map<string, { type: string; key: string | null; reference: string | null; missing: number }>();
+    return new Map(baked.columns.map((column) => {
+      const contract = baked.schema?.find((field) => field.name === column);
+      return [column, {
+        type: contract?.type || catalystType(baked.rows, column),
+        key: contract?.key || null,
+        reference: contract?.reference || null,
+        missing: baked.rows.filter((row) => isMissing(row[column])).length,
+      }] as const;
+    }));
   }, [baked]);
   const missingValues = useMemo(() => [...columnQuality.values()].reduce((total, column) => total + column.missing, 0), [columnQuality]);
   const inspectedValues = baked ? baked.rows.length * baked.columns.length : 0;
@@ -345,8 +351,14 @@ export function DatabaseExplorer({ initialTable }: { initialTable?: string }) {
                         <span className="block">{c}</span>
                         <span className="mt-0.5 block text-[9px] font-normal normal-case text-muted/70">
                           {columnQuality.get(c)?.type || "Var Char"}
+                          {columnQuality.get(c)?.key ? ` · ${columnQuality.get(c)?.key}` : ""}
                           {columnQuality.get(c)?.missing ? ` · ${columnQuality.get(c)?.missing} missing` : ""}
                         </span>
+                        {columnQuality.get(c)?.reference && (
+                          <span className="mt-0.5 block max-w-44 truncate text-[9px] font-normal normal-case text-accent/80" title={`References ${columnQuality.get(c)?.reference}`}>
+                            → {columnQuality.get(c)?.reference}
+                          </span>
+                        )}
                       </th>
                     ))}
                   </tr>

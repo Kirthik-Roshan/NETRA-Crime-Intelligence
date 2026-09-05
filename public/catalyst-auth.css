@@ -1,0 +1,18 @@
+@import url("/__catalyst/auth/static-file?file_name=embedded_signin_providers_only.css");
+
+/* Catalyst's saved provider-only stylesheet currently exposes only Zoho and
+   Facebook. NETRA enables these four providers in the Catalyst console. */
+.zoho_fed,
+.google_fed,
+.azure_fed,
+.facebook_fed {
+  display: block !important;
+}
+
+.fed_2show > .fed_div {
+  margin: 0 0 12px !important;
+}
+
+.fed_2show > .fed_div:last-of-type {
+  margin-bottom: 0 !important;
+}

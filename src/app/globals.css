@@ -176,6 +176,40 @@
   border-color: rgb(var(--border));
 }
 
+/* Catalyst renders embedded authentication into an iframe. Keep that iframe
+   inside NETRA's officer gateway while Catalyst owns the provider UI itself. */
+.login-gateway::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  height: 3px;
+  background: rgb(var(--accent));
+}
+
+.catalyst-signin-frame {
+  display: none;
+  width: 100%;
+  min-height: 332px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--border));
+  border-radius: 6px;
+  background: rgb(var(--surface));
+}
+
+.catalyst-signin-frame.is-mounted {
+  display: block;
+}
+
+.catalyst-signin-frame iframe {
+  display: block !important;
+  width: 100% !important;
+  min-height: 332px !important;
+  height: 332px !important;
+  border: 0 !important;
+  background: #fff;
+}
+
 /* ── Ambient cinematic background (theme-reactive glow blobs) ── */
 .ambient-blob {
   position: absolute;

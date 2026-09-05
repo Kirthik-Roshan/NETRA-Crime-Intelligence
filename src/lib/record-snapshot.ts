@@ -5,6 +5,12 @@ import DATABASE_SNAPSHOT from "@/data/db-baked.json";
 export interface SnapshotTable {
   table: string;
   columns: string[];
+  schema?: Array<{
+    name: string;
+    type: string;
+    key: string | null;
+    reference: string | null;
+  }>;
   rows: Record<string, unknown>[];
   total: number;
 }

@@ -7,7 +7,7 @@ import { useAppStore } from "@/store/useAppStore";
 import type { SessionUser } from "@/lib/types";
 import { useT } from "@/lib/i18n-client";
 import { aiOnline as aiOnlineFn } from "@/lib/ai-client";
-import { logout as clearAuth, replaceAppRoute } from "@/lib/auth-client";
+import { logout as clearAuth, navigateAppRoute, replaceAppRoute } from "@/lib/auth-client";
 import { useState, useEffect } from "react";
 
 export function Topbar({ user: _user, onMenu }: { user: SessionUser; onMenu?: () => void }) {
@@ -45,7 +45,7 @@ export function Topbar({ user: _user, onMenu }: { user: SessionUser; onMenu?: ()
   function goSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const q = new FormData(e.currentTarget).get("q");
-    if (q) router.push(`/assistant?q=${encodeURIComponent(String(q))}`);
+    if (q) navigateAppRoute(`/assistant?q=${encodeURIComponent(String(q))}`, router.push);
   }
 
   return (

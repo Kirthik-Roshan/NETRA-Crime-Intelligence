@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { Map as MapIcon, Layers, MapPin, ExternalLink, X, ListOrdered, Loader2, Database } from "lucide-react";
 import { Badge, EmptyState, PanelHeader, Segmented } from "@/components/ui";
 import { MapPanel } from "./MapPanel";

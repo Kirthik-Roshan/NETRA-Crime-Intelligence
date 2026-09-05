@@ -25,6 +25,54 @@ const OUT = join(OUT_DIR, "db-baked.json");
 // is still shown. The demo tables are small, so this rarely bites.
 const ROW_CAP = 500;
 
+const DATE_FIELDS = new Set([
+  "CaseMaster.CrimeRegisteredDate",
+  "ArrestSurrender.ArrestSurrenderDate",
+  "Employee.EmployeeDOB",
+  "Employee.AppointmentDate",
+  "ChargesheetDetails.csdate",
+]);
+
+const DATETIME_FIELDS = new Set([
+  "CaseMaster.IncidentFromDate",
+  "CaseMaster.IncidentToDate",
+  "CaseMaster.InfoReceivedPSDate",
+]);
+
+const BOOLEAN_FIELDS = new Set([
+  "ArrestSurrender.IsAccused",
+  "ArrestSurrender.IsComplainantAccused",
+  "Employee.PhysicallyChallenged",
+]);
+
+function catalystType(table, column, declaredType) {
+  const field = `${table}.${column}`;
+  if (DATE_FIELDS.has(field)) return "Date";
+  if (DATETIME_FIELDS.has(field)) return "DateTime";
+  if (BOOLEAN_FIELDS.has(field) || column === "Active") return "Boolean";
+  if (field === "CaseMaster.BriefFacts") return "Text";
+  if (declaredType === "REAL") return "Double";
+  if (declaredType === "INTEGER") return "Int";
+  return "Var Char";
+}
+
+function tableSchema(db, table) {
+  const fields = db.prepare(`PRAGMA table_info("${table}")`).all();
+  const foreignKeys = db.prepare(`PRAGMA foreign_key_list("${table}")`).all();
+  return fields.map((field) => {
+    const foreignKey = foreignKeys.find((candidate) => candidate.from === field.name);
+    const keys = [];
+    if (field.pk) keys.push("PK");
+    if (foreignKey) keys.push("FK");
+    return {
+      name: field.name,
+      type: catalystType(table, field.name, String(field.type || "").toUpperCase()),
+      key: keys.join(" + ") || null,
+      reference: foreignKey ? `${foreignKey.table}.${foreignKey.to}` : null,
+    };
+  });
+}
+
 const GROUPS = [
   {
     group: "official",
@@ -67,8 +115,9 @@ for (const g of GROUPS) {
     try {
       const count = db.prepare(`SELECT COUNT(*) n FROM "${name}"`).get().n;
       const rows = db.prepare(`SELECT * FROM "${name}" LIMIT ${ROW_CAP}`).all();
-      const columns = rows.length ? Object.keys(rows[0]) : [];
-      tables[name] = { table: name, columns, rows, total: count };
+      const schema = tableSchema(db, name);
+      const columns = schema.map((field) => field.name);
+      tables[name] = { table: name, columns, schema, rows, total: count };
       list.push({ name, count });
     } catch (e) {
       console.warn(`[bake-db] skip ${name}: ${e.message}`);

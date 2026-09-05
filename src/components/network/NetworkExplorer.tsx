@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { navigateAppRoute } from "@/lib/auth-client";
 import { Search, Loader2, Network as NetworkIcon, RotateCcw, Filter, MousePointerClick, UserSearch, X } from "lucide-react";
 import { GraphView } from "./GraphView";
 import { Avatar, EmptyState, PanelHeader, Tag } from "@/components/ui";
@@ -207,7 +208,7 @@ export function NetworkExplorer({
         <GraphView
           data={filtered}
           height={580}
-          onNodeFocus={(id) => router.push(`/criminals/${id}`)}
+          onNodeFocus={(id) => navigateAppRoute(`/criminals/${id}`, router.push)}
           onNodeExpand={(id, name) => load(id, name)}
         />
 

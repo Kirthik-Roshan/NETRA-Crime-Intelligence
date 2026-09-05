@@ -21,6 +21,71 @@ const CATALYST_TYPES = new Set([
   "BigInt", "Foreign Key", "Encrypted Text",
 ]);
 
+const OFFICIAL_ER_TABLES = [
+  "State", "District", "UnitType", "Unit", "Rank", "Designation", "Employee",
+  "CaseCategory", "GravityOffence", "CaseStatusMaster", "CasteMaster",
+  "ReligionMaster", "OccupationMaster", "Court", "Act", "Section", "CrimeHead",
+  "CrimeSubHead", "CrimeHeadActSection", "CaseMaster", "ComplainantDetails",
+  "Victim", "Accused", "ActSectionAssociation", "Inv_OccuranceTime",
+  "ArrestSurrender", "inv_arrestsurrenderaccused", "ChargesheetDetails",
+];
+
+const ER_DATE_FIELDS = new Set([
+  "CaseMaster.CrimeRegisteredDate",
+  "ArrestSurrender.ArrestSurrenderDate",
+  "Employee.EmployeeDOB",
+  "Employee.AppointmentDate",
+  "ChargesheetDetails.csdate",
+]);
+
+const ER_DATETIME_FIELDS = new Set([
+  "CaseMaster.IncidentFromDate",
+  "CaseMaster.IncidentToDate",
+  "CaseMaster.InfoReceivedPSDate",
+]);
+
+const ER_BOOLEAN_FIELDS = new Set([
+  "ArrestSurrender.IsAccused",
+  "ArrestSurrender.IsComplainantAccused",
+  "Employee.PhysicallyChallenged",
+]);
+
+function officialCatalystType(table, column, declaredType) {
+  const field = `${table}.${column}`;
+  if (ER_DATE_FIELDS.has(field)) return "Date";
+  if (ER_DATETIME_FIELDS.has(field)) return "DateTime";
+  if (ER_BOOLEAN_FIELDS.has(field) || column === "Active") return "Boolean";
+  if (field === "CaseMaster.BriefFacts") return "Text";
+  if (declaredType === "REAL") return "Double";
+  if (declaredType === "INTEGER") return "Int";
+  return "Var Char";
+}
+
+function officialTableDefinitions(db) {
+  return OFFICIAL_ER_TABLES.map((name) => {
+    const fields = db.prepare(`PRAGMA table_info("${name}")`).all();
+    const foreignKeys = db.prepare(`PRAGMA foreign_key_list("${name}")`).all();
+    return {
+      name,
+      source: name,
+      tier: "ksp_er",
+      purpose: "Official normalized KSP FIR schema table.",
+      columns: fields.map((field) => {
+        const foreignKey = foreignKeys.find((candidate) => candidate.from === field.name);
+        const keys = [];
+        if (field.pk) keys.push("PK");
+        if (foreignKey) keys.push("FK");
+        return [
+          field.name,
+          officialCatalystType(name, field.name, String(field.type || "").toUpperCase()),
+          keys.join(" + ") || null,
+          foreignKey ? `${foreignKey.table}.${foreignKey.to}` : null,
+        ];
+      }),
+    };
+  });
+}
+
 const tables = [
   {
     name: "Firs",
@@ -327,9 +392,9 @@ const tables = [
   },
 ];
 
-function assertTypes() {
+function assertTypes(exportTables) {
   const bad = [];
-  for (const table of tables) {
+  for (const table of exportTables) {
     for (const [name, type] of table.columns) {
       if (!CATALYST_TYPES.has(type)) bad.push(`${table.name}.${name}: ${type}`);
     }
@@ -394,21 +459,30 @@ function markdown(schema) {
 
 Generated from \`data/netra.db\` by \`npm run cloudscale:export\`.
 
-Use these denormalized, prototype-facing tables first. They match the tables
-already read by the Cloud Scale adapter: \`Firs\`, \`Cases\`, and \`Criminals\`,
-and add the link/detail tables needed to move the remaining prototype screens
-off local SQLite.
+This package now contains both the prototype-facing operational tables and all
+28 normalized tables from \`Police_FIR_ER_Diagram.pdf\`. Every generated field
+uses a Catalyst Cloud Scale-supported type.
+
+## Schema Contract
+
+Run the repeatable fidelity check before an export or deployment:
+
+\`\`\`bash
+npm run schema:audit
+\`\`\`
+
+The audit verifies all 28 official tables and columns, required values, date
+values, storage types, and every declared foreign-key relationship. Optional
+unknown values remain empty and are shown in NETRA as \`Not recorded\`.
 
 ## Import Order
 
-1. \`Firs\`, \`Cases\`, \`Criminals\`
-2. \`FirCriminals\`, \`Arrests\`, \`Victims\`, \`Complainants\`, \`Evidence\`
-3. \`Relationships\`, \`Phones\`, \`Vehicles\`, \`Addresses\`, \`Organizations\`, \`OrgMembers\`, \`Weapons\`
-4. \`Chargesheets\`, \`PoliceStations\`, \`AuditLogs\` if the matching screens need them
+1. Operational application tables: \`Firs\`, \`Cases\`, \`Criminals\`, then their detail/link tables.
+2. ER lookup tables: \`State\` through \`CrimeSubHead\` in the generated CSV table below.
+3. ER transactional tables: \`CaseMaster\`, then complainant/victim/accused/arrest/chargesheet tables.
 
-The id/link columns are typed as \`Int\` for easy CSV import. You can convert
-them to Catalyst \`Foreign Key\` fields later if you wire table relationships
-manually in the console.
+The generated CSVs keep relationship columns as \`Int\` so Catalyst can import
+them before foreign-key wiring. The schema manifest records every PK/FK target.
 
 ## Function Allowlist
 
@@ -440,10 +514,11 @@ ${fieldSections}
 }
 
 function main() {
-  assertTypes();
   mkdirSync(CSV_OUT, { recursive: true });
 
   const db = new Database(DB, { readonly: true });
+  const exportTables = [...tables, ...officialTableDefinitions(db)];
+  assertTypes(exportTables);
   const schema = {
     generated_from: "data/netra.db",
     catalyst_supported_types: [...CATALYST_TYPES],
@@ -451,8 +526,13 @@ function main() {
     tables: [],
   };
 
-  for (const table of tables) {
-    const fields = table.columns.map(([name, type]) => ({ name, type }));
+  for (const table of exportTables) {
+    const fields = table.columns.map(([name, type, key, reference]) => ({
+      name,
+      type,
+      ...(key ? { key } : {}),
+      ...(reference ? { reference } : {}),
+    }));
     const entry = {
       name: table.name,
       source: table.source,

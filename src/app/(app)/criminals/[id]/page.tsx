@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft, Phone, Car, MapPin, Users, FileText, Fingerprint, Swords, Network, Building2, Database,

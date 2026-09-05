@@ -19,6 +19,8 @@ import type { AiResponseMeta, ConversationMessage } from "@/lib/ai-client";
 
 const HISTORY_KEY = "netra_assistant_history_v1";
 const STALE_BACKEND_FAILURE = /AI backend didn't return an answer|AI assistant isn't connected in this build/i;
+const MAX_VOICE_RECORDING_MS = 60_000;
+const VOICE_SAMPLE_RATE = 16_000;
 
 const NETRA_SYSTEM =
   "You are NETRA, an AI crime-investigation assistant for the Karnataka State Police. " +
@@ -235,6 +237,20 @@ function encodeMonoWav(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([view], { type: "audio/wav" });
 }
 
+function downsampleMono(samples: Float32Array, sourceRate: number, targetRate: number): Float32Array {
+  if (sourceRate <= targetRate) return samples;
+  const ratio = sourceRate / targetRate;
+  const output = new Float32Array(Math.ceil(samples.length / ratio));
+  for (let index = 0; index < output.length; index += 1) {
+    const start = Math.floor(index * ratio);
+    const end = Math.min(samples.length, Math.max(start + 1, Math.floor((index + 1) * ratio)));
+    let total = 0;
+    for (let sourceIndex = start; sourceIndex < end; sourceIndex += 1) total += samples[sourceIndex];
+    output[index] = total / (end - start);
+  }
+  return output;
+}
+
 async function recordingToWav(recording: Blob): Promise<Blob> {
   const AudioContextCtor = getAudioContext();
   if (!AudioContextCtor) throw new Error("Audio conversion is unavailable in this browser.");
@@ -246,7 +262,8 @@ async function recordingToWav(recording: Blob): Promise<Blob> {
       const data = decoded.getChannelData(channel);
       for (let i = 0; i < data.length; i += 1) mono[i] += data[i] / decoded.numberOfChannels;
     }
-    return encodeMonoWav(mono, decoded.sampleRate);
+    const sampleRate = Math.min(decoded.sampleRate, VOICE_SAMPLE_RATE);
+    return encodeMonoWav(downsampleMono(mono, decoded.sampleRate, sampleRate), sampleRate);
   } finally {
     await context.close().catch(() => undefined);
   }
@@ -273,6 +290,7 @@ function fmtTime(ts: number): string {
 export function AssistantClient() {
   const params = useSearchParams();
   const lang = useAppStore((s) => s.lang);
+  const setLang = useAppStore((s) => s.setLang);
   const t = useT();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
@@ -400,22 +418,20 @@ export function AssistantClient() {
     const rec = new SR();
     rec.lang = lang === "kn" ? "kn-IN" : "en-IN";
     rec.interimResults = true;
-    rec.continuous = false;
+    rec.continuous = true;
+    let latestTranscript = "";
     rec.onresult = (e) => {
       const results = Array.from(e.results as ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>);
       const transcript = results.map((r) => r[0]?.transcript ?? "").join(" ").trim();
       // Drop the transcript into the composer so the officer can review or edit
       // before hitting send — do NOT auto-submit.
+      latestTranscript = transcript;
       setInput(transcript);
-      const last = results[results.length - 1];
-      if (last?.isFinal && transcript) {
-        setListening(false);
-        void prepareVoiceTranscript(transcript);
-      }
     };
     rec.onend = () => {
       setListening(false);
       recRef.current = null;
+      if (latestTranscript) void prepareVoiceTranscript(latestTranscript);
     };
     rec.onerror = (e) => {
       setListening(false);
@@ -488,10 +504,10 @@ export function AssistantClient() {
       mediaRecorderRef.current = recorder;
       recorder.start(250);
       setListening(true);
-      setVoiceMsg(null);
+      setVoiceMsg("Listening - tap the microphone to stop (up to 60 seconds).");
       recordTimerRef.current = setTimeout(() => {
         if (recorder.state === "recording") recorder.stop();
-      }, 12000);
+      }, MAX_VOICE_RECORDING_MS);
     } catch (error) {
       const name = error instanceof DOMException ? error.name : "";
       setListening(false);
@@ -517,14 +533,9 @@ export function AssistantClient() {
       setVoiceMsg("Voice input needs microphone access in a current Chrome, Edge, Firefox, or Safari browser.");
       return;
     }
-    // Keep localhost immediate for development. On deployed HTTPS builds,
-    // record audio and send it through Catalyst Zia speech-to-text so the
-    // production microphone path is owned by the configured Catalyst models.
-    const localBrowser = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    if (localBrowser && getSpeechRecognition()) {
-      startWebSpeech();
-      return;
-    }
+    // Use the same Catalyst Zia transcription path in localhost and hosted
+    // builds so Kannada recognition behaves consistently. startCloudRecording
+    // falls back to browser speech recognition when recording is unavailable.
     void startCloudRecording();
   }, [listening, startCloudRecording, startWebSpeech, voiceBusy, voiceSupported]);
 
@@ -685,6 +696,22 @@ export function AssistantClient() {
             >
               {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
             </button>
+            <label
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-border bg-elevated/60 px-2 text-[11px] font-semibold text-muted focus-within:border-accent/60"
+              title="Select microphone language"
+            >
+              <span className="hidden lg:inline">Voice</span>
+              <select
+                value={lang}
+                onChange={(event) => setLang(event.target.value === "kn" ? "kn" : "en")}
+                disabled={listening || voiceBusy}
+                className="max-w-[6.5rem] cursor-pointer bg-transparent text-xs font-semibold text-fg outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Microphone input language"
+              >
+                <option value="en">English</option>
+                <option value="kn">ಕನ್ನಡ</option>
+              </select>
+            </label>
             <button
               type="button"
               onClick={toggleMic}

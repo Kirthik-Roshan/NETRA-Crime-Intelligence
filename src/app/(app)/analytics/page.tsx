@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/AppLink";
 import {
   BarChart3, FolderKanban, AlertTriangle, Users, Fingerprint, Clock,
   Flame, MapPin, Radar, Activity, Database, ArrowRight, ScanText,

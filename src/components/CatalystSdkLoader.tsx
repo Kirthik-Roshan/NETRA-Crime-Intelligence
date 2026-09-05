@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 const SDK_ID = "netra-catalyst-sdk";
 const INIT_ID = "netra-catalyst-init";
-const SDK_URL = "https://static.zohocdn.com/catalyst/sdk/js/4.6.1/catalystWebSDK.js";
+const SDK_URL = "https://static.zohocdn.com/catalyst/sdk/js/4.6.2/catalystWebSDK.js";
 
 type CatalystWindow = Window & { __netraCatalystReady?: boolean };
 

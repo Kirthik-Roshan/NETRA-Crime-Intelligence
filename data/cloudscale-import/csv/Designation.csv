@@ -1,0 +1,7 @@
+DesignationID,DesignationName,Active,SortOrder
+1,Station House Officer (SHO),1,1
+2,Investigating Officer,1,2
+3,Station Writer,1,3
+4,Beat Officer,1,4
+5,Crime Analyst,1,5
+6,Administrator,1,6
