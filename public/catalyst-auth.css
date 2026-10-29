@@ -9,10 +9,140 @@
   display: block !important;
 }
 
-.fed_2show > .fed_div {
-  margin: 0 0 12px !important;
+/* Keep Catalyst's native links and brand glyphs inside the NETRA gateway. */
+html,
+body {
+  margin: 0 !important;
+  padding: 3px !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  overflow-x: hidden;
 }
-
-.fed_2show > .fed_div:last-of-type {
+.signin_container,
+.signin_box,
+.mod_container {
+  display: block !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  float: none !important;
+  box-sizing: border-box !important;
+}
+.bg_one,
+.portal_logo,
+.signin_fed_text,
+.signwith,
+.rightside_box,
+.linkedin_fed,
+.signin_head {
+  display: none !important;
+}
+#login {
+  margin: 0 !important;
+}
+.fed_2show > :not(.fed_div) {
+  display: none !important;
+}
+.fed_2show {
+  display: flex !important;
+  flex-direction: column;
+  gap: 8px;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.fed_2show > .fed_div,
+.fed_div.small_box {
+  display: block !important;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid #d5e3f0 !important;
+  border-radius: 5px !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+  color: #09284c !important;
+  box-shadow: 0 1px 2px #17426808 !important;
+  position: relative;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+.fed_2show > .fed_div:hover {
+  background:
+    linear-gradient(#f8fcff, #fff) padding-box,
+    linear-gradient(110deg, #008dff, #00c5c0, #8955ff) border-box !important;
+  border-color: transparent !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 7px #1689c71c !important;
+}
+.fed_2show > .fed_div::after {
+  content: "›";
+  position: absolute;
+  right: 20px;
+  top: 8px;
+  font:
+    25px Arial,
+    sans-serif;
+  color: #385a7d;
+}
+.fed_2show span {
   margin-bottom: 0 !important;
+}
+.small_box .fed_center {
+  margin: 0 !important;
+  position: absolute !important;
+  left: 24px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+}
+.fedicon-Zoho_common-2,
+.fedicon-google,
+.fedicon-azure_small,
+.fedicon-facebook_small {
+  font-size: 25px !important;
+}
+.fedicon-Zoho_common-2::after,
+.fedicon-google::after,
+.fedicon-azure_small::after,
+.fedicon-facebook_small::after {
+  color: #09284c !important;
+  left: 48px !important;
+  top: 0 !important;
+  font:
+    15px Arial,
+    sans-serif !important;
+}
+.fed_2show > .linkedin_fed {
+  display: none !important;
+}
+.fed_2show > .zoho_fed { order: 0; }
+.fed_2show > .google_fed { order: 1; }
+.fed_2show > .azure_fed { order: 2; }
+.fed_2show > .facebook_fed { display: block !important; order: 3; }
+.fedicon-facebook_small {
+  color: #1877f2 !important;
+}
+.fedicon-facebook_small::before { color: #1877f2 !important; }
+.fed_2show > .fed_div:focus-visible {
+  outline: 2px solid #008dff;
+  outline-offset: 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fed_2show > .fed_div {
+    transition: none;
+  }
+  .fed_2show > .fed_div:hover {
+    transform: none;
+  }
 }

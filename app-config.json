@@ -1,5 +1,5 @@
 {
-  "$comment": "Catalyst AppSail configuration for the NETRA Next.js app (managed Node runtime). Adjust `name` / `stack` to match your Catalyst environment after `catalyst init`.",
+  "$comment": "Legacy AppSail configuration retained for compatibility. The current NETRA frontend is exported as a Catalyst Web Client.",
   "name": "netra-web",
   "stack": "node18",
   "type": "web",
@@ -9,6 +9,6 @@
   "env": {
     "NODE_ENV": "production",
     "NETRA_SESSION_SECRET": "set-in-catalyst-console",
-    "NEXT_PUBLIC_AI_FN_URL": "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/"
+    "NEXT_PUBLIC_AI_FN_URL": "https://ksphacks-60080085094.catalystserverless.in/server/ai_quickml/"
   }
 }

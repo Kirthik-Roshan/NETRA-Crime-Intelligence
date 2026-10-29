@@ -1,0 +1,19 @@
+{
+  "table_identifier": "Unit",
+  "operation": "upsert",
+  "find_by": "UnitID",
+  "fk_mapping": [
+    {
+      "local_column": "TypeID",
+      "reference_column": "UnitTypeID"
+    },
+    {
+      "local_column": "StateID",
+      "reference_column": "StateID"
+    },
+    {
+      "local_column": "DistrictID",
+      "reference_column": "DistrictID"
+    }
+  ]
+}

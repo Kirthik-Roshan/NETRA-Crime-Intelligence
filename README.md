@@ -1,198 +1,139 @@
-# 👁️ NETRA — AI Crime Investigation Intelligence Platform
+# NETRA Crime Intelligence
 
-> **Network-Enabled Tactical Reasoning & Analytics**
-> An AI Investigation *Operating System* for the Karnataka State Police (SCRB).
-> Built for **Datathon 2026**.
+NETRA is an investigator-facing intelligence workspace for the Karnataka State
+Police and KSP Datathon 2026. It combines the organizer-specified FIR data model
+with conversational search, link analysis, geospatial trends, predictive
+signals, evidence analysis, voice interaction, PDF reporting, and auditability.
 
-NETRA lets investigators reason over FIRs, criminal networks, evidence and
-geography using **natural language** — and every answer is **explainable and
-audited**. It is *not* "ChatGPT with crime data": the assistant is one module
-inside a full investigative workspace (dashboards, case workspaces, criminal
-network graphs, hotspot maps, predictive briefings).
+## Current Architecture
 
----
+```text
+Next.js 14 static Web Client / Catalyst Slate
+                    |
+                    | HTTPS + Catalyst user token
+                    v
+Catalyst Advanced I/O Function: ai_quickml
+        |              |              |
+        v              v              v
+Cloud Scale       QuickML / Zia   Stratus / Cache
+28 KSP tables     RAG, voice, OCR  evidence, audit
+```
 
-## ✨ What's inside
+The browser never reads a local database. Core investigation records are read
+from the 28 official KSP Cloud Scale tables. The Function joins those normalized
+tables into in-memory investigator views for the UI:
 
-| Module | What it does |
-|--------|--------------|
-| **Investigation Dashboard** | Intelligence briefings, crime trends, live Karnataka hotspot map, AI alerts, audit feed |
-| **AI Assistant** | Natural-language + Kannada queries → validated SQL → explainable answers (confidence, evidence, reasoning, audit ID) · **voice input & read-aloud** · **multi-turn conversation memory** · **conversation → PDF export** |
-| **Predictive Intel** | Hotspot forecasts, repeat-offense probability, escalation warnings, crime-type momentum — every prediction with confidence + factors + evidence records |
-| **Cases** | Three-panel investigation workspace: case info · timeline + evidence + chargesheet/court · AI intelligence panel |
-| **Criminal Intelligence** | Dynamic profiles: risk score, aliases, associates, phones, vehicles, addresses, arrest history |
-| **Network Graph** | Interactive criminal network — expand people, phones, vehicles, FIRs, organizations |
-| **Analytics** | BI charts: trend, type, district, time-of-day, severity, status, **socio-demographic insights** (official complainant/victim lookups) |
-| **Crime Maps** | Full interactive Karnataka heatmap with district ranking |
-| **Reports** | District / trend / network reports with **PDF export** |
-| **Administration** | Users & RBAC, immutable audit trail, AI configuration |
-| **Dynamic theming** | 5 live-swappable themes (Midnight · Nocturne · Carbon · Slate · Daylight) |
+- FIR and case views come from `CaseMaster` and its lookup relationships.
+- accused profiles come from `Accused`, linked by `CaseMasterID`.
+- arrests come from `ArrestSurrender` and
+  `inv_arrestsurrenderaccused`.
+- victims, complainants, legal sections, stations, officers, courts, and
+  chargesheets come from their official tables.
+- network edges are derived from shared-case/co-accused relationships.
 
-> 🗄️ **The database is the official KSP FIR schema.** Every table, column, key
-> and relationship from the provided *Police FIR System — ER Diagram* PDF is
-> implemented verbatim (structured CrimeNo format included), plus a namespaced
-> `intel_*` AI layer. See **[SCHEMA.md](./SCHEMA.md)**.
+Names such as `Firs`, `Cases`, and `Criminals` are API read-model names only.
+They are not legacy physical Cloud Scale tables.
 
----
+`Evidence`, `Notifications`, and `OcrResult` are isolated application-output
+tables. They do not replace or alter the official crime schema.
 
-## 🚀 Run it on any laptop (one command)
+## Official Data Contract
 
-**Prerequisites:** [Node.js 18+](https://nodejs.org) (that's it — the database
-seeds itself on first run).
+The source-of-truth schema and Catalyst import material live in
+[`data/cloudscale-import`](./data/cloudscale-import):
+
+- exactly 28 official CSV files;
+- Catalyst-compatible `Date`, `DateTime`, `Boolean`, numeric, and text values;
+- per-table import configurations and FK mappings;
+- a generated schema manifest and table-creation runbook.
+
+Validate the data before every import or release:
 
 ```bash
-# 1. install dependencies
-npm install
+npm run schema:audit
+npm run read-model:test
+```
 
-# 2. start the app  (the crime database auto-seeds on first boot)
+The audit checks all tables and fields, mandatory values, dates, storage types,
+and every declared foreign-key relationship. The read-model test proves that
+the investigator views are generated only from the official tables.
+
+## Product Surfaces
+
+The final refinement is scoped to Challenge 01. See
+[`TRACK1-READINESS.md`](./TRACK1-READINESS.md) for requirement mappings,
+conversational analysis, supported filters and the demonstration sequence.
+
+| Workspace | Capability |
+|---|---|
+| Dashboard | statewide workload, district trends, hotspots, case velocity |
+| Assistant | English/Kannada conversation, contextual retrieval, voice, citations, PDF |
+| Cases | live case record, accused, victim, complainant, arrest and chargesheet context |
+| Investigation Workbench | source-backed cross-case comparisons, conflicting evidence, source exclusions, preserved brief revisions and saved watches |
+| Investigation Workbench | source-backed comparisons, conflicting evidence, exclusions, saved watches and revisioned briefs |
+| Accused | resolved profile, linked FIRs, arrests and co-accused associations |
+| Link Analysis | two-hop accused, FIR, victim, complainant and police-station network |
+| Crime Map | geolocated FIRs and district hotspot exploration |
+| Crime Analytics | offence, modus, demographic, social-context and source-coverage analysis |
+| Predictions | explainable momentum, seasonality, repeat-offence and escalation signals |
+| Evidence AI | OCR/number plate, face/crowd comparison, objects, safety and barcode |
+| Database | live explorer for all 28 organizer-specified tables |
+| Administration | Catalyst users, infrastructure posture and immutable audit records |
+
+## Local Development
+
+```bash
+npm install
 npm run dev
 ```
 
-Open **<http://localhost:3000>** and sign in with any demo account:
+Open <http://localhost:3000>. Local UI requests use the deployed Catalyst
+Development Function by default. Therefore the Development Cloud Scale tables
+must contain data if you want live records locally. Public deployments prefer
+the Production Function.
 
-| Officer ID | Role | Password |
-|------------|------|----------|
-| `admin` | Administrator | `police123` |
-| `dcp.mysuru` | Senior Officer | `police123` |
-| `io.bengaluru` | Investigation Officer | `police123` |
-| `analyst.scrb` | Analyst | `police123` |
-| `desk.hubli` | Read-only Officer | `police123` |
-
-> First boot seeds a realistic Karnataka dataset in the **official KSP FIR
-> schema** — **500 CaseMaster records, 700+ Accused, 70 resolved criminal
-> profiles, 24 police stations, 72 employees, 6 gangs, 1100+ relationship
-> links** across 12 districts. To rebuild it from scratch: `npm run db:reset`.
-
-### Production build
+Useful checks:
 
 ```bash
-npm run build && npm run start
+npm run release:gate
+npm run release:live
+npm run evidence:test
+npm run voice:test
 ```
 
----
+`release:gate` validates the local schema, relationship projection,
+conversational grounding, TypeScript, Catalyst build and refreshable static
+routes. Run `release:live` after deployment to verify the Development Function,
+live row projections, Search, contextual RAG, SmartBrowz PDF and schema
+guardrails.
 
-## 🧠 The AI — Zoho Catalyst only (no ChatGPT / Gemini / Ollama)
+## Deployment
 
-NETRA uses **exactly one AI product: Zoho Catalyst** (QuickML for the LLM + RAG,
-Zia for voice & translation). No external AI service is contacted — ever. The
-pipeline runs in layered tiers, automatically, so it stays fast and always
-answers:
-
-```
-User query
-   │
-   ▼
-0. Entity dossier ── CrimeNo / phone / plate / name → full linked record  (≈1 ms)
-   ▼
-0.5 Semantic     ── "similar cases / same modus operandi"  (vector search)
-   ▼
-1. Template SQL  ── fast, verified, no LLM needed  (≈1 ms)   ← ~70% of queries
-   │  (repeat offenders, hotspots, trends, crime+district, gangs, arrests…)
-   ▼
-2. Catalyst QuickML ── generates SQL (VALIDATED: SELECT-only, table whitelist)
-   │                   then executes + phrases the answer;  + RAG over the KB
-   ▼
-3. Built-in engine ── deterministic keyword fallback so it ALWAYS answers offline
-```
-
-**You don't need a GPU — or even a network — to demo this.** With no Catalyst
-token set, tiers 0, 0.5, 1 & 3 keep the whole app working on any laptop using
-the built-in deterministic engine. To enable full free-text / Kannada reasoning,
-set your Catalyst QuickML credentials in `.env` (see `.env.example`):
+Deploy local code to Catalyst Development:
 
 ```bash
-CATALYST_QUICKML_TOKEN=<your Bearer token>   # from the Catalyst Console
-CATALYST_PROJECT_ID=52939000000021001
-CATALYST_ORG=60079036047
-CATALYST_LLM_MODEL=VL-Qwen3.6-35B-A3B
+npm run release:gate
+catalyst deploy --only functions:ai_quickml,client
+npm run release:live
 ```
 
-Once the token is set, the AI-status dot in the top bar turns green and every
-free-text query is answered by **Catalyst QuickML**. The token is read from the
-environment only — **never hardcoded and never sent to the browser**.
+Catalyst requires subsequent Function/Web Client promotion to Production from
+the web console. Slate can be deployed directly with `--production`. See
+[`DEPLOY.md`](./DEPLOY.md) for the guarded release sequence.
 
-> In **production on Zoho Catalyst**, QuickML serves the model on GPU, so
-> responses stay under the 5 s target. See [`DEPLOY.md`](./DEPLOY.md).
+## Security And Provenance
 
----
+- QuickML and Zia credentials remain in Function configuration, never browser
+  bundles or git.
+- Catalyst Authentication supplies the officer identity; Function-side role
+  checks guard privileged modes.
+- assistant, search, evidence and report operations emit auditable records.
+- source/result evidence objects and audit records are archived in Stratus.
+- generated predictions expose factors and supporting FIR identifiers.
+- operational decisions must be verified against source records by an officer.
 
-## 🏗️ Architecture
+All repository crime records are synthetic and generated against the supplied
+KSP schema for Datathon demonstration use.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Next.js 14 App Router (TypeScript · Tailwind · React Flow)   │  ← AppSail
-│  Dashboard · Assistant · Cases · Criminals · Network · Maps   │
-└───────────────┬──────────────────────────────────────────────┘
-                │  server components + /api routes
-                ▼
-┌──────────────────────────────────────────────────────────────┐
-│  Intelligence pipeline (src/lib)                              │
-│  intent → RBAC → template/LLM SQL → validate → execute →      │
-│  explainability → audit log                                   │
-└───────────────┬──────────────────────────────────────────────┘
-                ▼
-┌──────────────────────────────────────────────────────────────┐
-│  Data layer — SQLite (dev)  →  Catalyst Data Store (prod)     │
-└──────────────────────────────────────────────────────────────┘
-```
-
-**Stack:** Next.js 14 · TypeScript · Tailwind (CSS-variable theming) ·
-better-sqlite3 · React Flow · Recharts · Leaflet (self-hosted GeoJSON, no map
-tiles) · Zustand · Zoho Catalyst QuickML + Zia.
-
-### Project layout
-```
-src/
-├── app/
-│   ├── (app)/          # authenticated shell: dashboard, assistant, cases, …
-│   ├── api/            # auth, assistant/query, network, ai/status
-│   ├── login/          # sign-in
-│   ├── fonts/          # self-hosted woff2 (no Google Fonts)
-│   └── layout.tsx      # fonts + flash-free theme init
-├── components/         # ui, charts, network graph, maps, sidebar/topbar
-├── lib/                # db, schema.sql, auth, audit, catalyst, nl2sql, queries
-└── store/              # Zustand (theme, language)
-scripts/seed.mjs        # deterministic Karnataka data generator
-functions/ai_quickml/   # Catalyst serverless LLM proxy (production)
-catalyst.json           # Catalyst project manifest
-app-config.json         # Catalyst AppSail (Next.js) config
-DEPLOY.md               # Zoho Catalyst deployment guide
-```
-
----
-
-## 🔐 Security & explainability (built in, not bolted on)
-
-- **RBAC** — 5 roles with a capability matrix; every AI request checks the
-  officer's session before touching records.
-- **SQL guard** — generated SQL is `SELECT`-only, table-whitelisted, and
-  auto-`LIMIT`ed. No writes ever reach the model path.
-- **Explainable AI** — every answer ships confidence, reasoning, the exact
-  records used, alternative follow-ups, and a traceable **audit ID**.
-- **Immutable audit trail** — logins, AI queries, case views, network views —
-  all recorded (see *Administration*).
-- **Human-in-the-loop** — the AI assists; the officer decides.
-
----
-
-## 📦 npm scripts
-
-| Script | Purpose |
-|--------|---------|
-| `npm run dev` | Dev server (auto-seeds DB) |
-| `npm run build` | Production build |
-| `npm run start` | Run the production build |
-| `npm run seed` | Seed the DB (no-op if already seeded) |
-| `npm run db:reset` | Wipe & rebuild the seed data |
-
----
-
-## ☁️ Deploying to Zoho Catalyst
-
-Deployment is **mandatory** for Datathon submission. NETRA maps cleanly onto
-Catalyst services — full step-by-step in **[`DEPLOY.md`](./DEPLOY.md)**.
-
----
-
-*NETRA · Karnataka State Police · Datathon 2026. For authorized
-law-enforcement / educational use. All crime data is synthetic seed data.*
+See [Investigation Workbench](./INVESTIGATION-WORKBENCH.md) for its review flow,
+storage, watch timing and deployment checks.

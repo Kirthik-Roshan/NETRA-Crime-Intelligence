@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { transcriptText } = require('../functions/ai_quickml/voice-response.js');
+assert.equal(transcriptText({ transcribed_text: ' Show cases ' }), 'Show cases');
+assert.equal(transcriptText({ data: { text: 'ಮೈಸೂರು ಪ್ರಕರಣಗಳು' } }), 'ಮೈಸೂರು ಪ್ರಕರಣಗಳು');
+assert.equal(transcriptText({ result: [{ transcript: 'Show' }, { transcript: 'cases' }] }), 'Show cases');
+assert.equal(transcriptText({ output: { segments: [{ text: 'First line' }, { text: 'second line' }] } }), 'First line second line');
+assert.equal(transcriptText({ error: 'not authorized', text: 'Access denied' }), '');
+assert.equal(transcriptText({ message: 'Service unavailable' }), '');
+assert.equal(transcriptText({ data: null }), '');
+console.log('Voice response normalization: flat/nested transcripts, Kannada, segments and error responses passed.');

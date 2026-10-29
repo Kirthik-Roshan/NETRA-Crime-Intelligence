@@ -1,0 +1,84 @@
+/* Administration surfaces share one visual language. Screen-only so the
+   independent, paper-safe report theme is unaffected. */
+@media screen {
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) {
+    --muted: 70 94 120;
+    --subtle: 39 66 94;
+    --ops-accent: 0 116 190;
+    background-color: #e2edf7;
+    background-image: radial-gradient(ellipse at 80% 0%, #cbe6f780, transparent 60%);
+  }
+  :root:not([data-theme="daylight"]):not([data-theme="sandstone"]) .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) {
+    --muted: 165 189 214;
+    --subtle: 205 222 240;
+    --ops-accent: 53 183 242;
+    background-color: rgb(var(--bg));
+    background-image: radial-gradient(ellipse at 80% 0%, rgb(var(--accent) / .1), transparent 60%);
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) .card {
+    border-radius: 14px;
+    border-color: rgb(var(--ops-accent) / .22);
+    box-shadow: 0 5px 18px #153d6410, 0 1px 2px #153d6410;
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) :is(h1,h2,h3,strong) {
+    color: rgb(var(--fg));
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) .workspace-page-heading h1 {
+    font-size: clamp(28px, 2.6vw, 39px); letter-spacing: -.035em;
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) .workspace-panel-heading {
+    padding-bottom: 14px; border-bottom: 1px solid rgb(var(--ops-accent) / .13);
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) .workspace-panel-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    color: rgb(var(--ops-accent)); border-color: rgb(var(--ops-accent) / .22);
+    background: linear-gradient(140deg, rgb(var(--ops-accent) / .17), rgb(var(--ops-accent) / .035));
+    box-shadow: inset 0 1px 0 #ffffff60;
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) .stat-label {
+    font-weight: 700; color: rgb(var(--subtle)); letter-spacing: .025em; line-height: 1.6;
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) :is(.input,.seg) {
+    border-color: rgb(var(--ops-accent) / .23); border-radius: 9px;
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) .input::placeholder {
+    color: rgb(var(--muted)); opacity: 1;
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) th {
+    color: rgb(var(--subtle)); font-weight: 800; background: rgb(var(--elevated));
+    border-bottom: 1px solid rgb(var(--ops-accent) / .22);
+  }
+  .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) td {
+    color: rgb(var(--fg)); line-height: 1.65;
+  }
+  .netra-workspace[data-page="database"] .database-workspace > aside { border-top: 3px solid #078bcd; }
+  .netra-workspace[data-page="database"] .database-workspace > section { border-top: 3px solid #5274db; }
+  .netra-workspace[data-page="database"] .database-workspace aside button { border-radius: 7px; }
+  .netra-workspace[data-page="database"] .database-workspace aside button:hover { background: rgb(var(--ops-accent) / .12); }
+  .netra-workspace[data-page="admin"] .workspace-stat {
+    border-top: 3px solid rgb(var(--ops-accent));
+    background: radial-gradient(circle at 100% 0, rgb(var(--ops-accent) / .13), transparent 65%), rgb(var(--surface));
+  }
+  .netra-workspace[data-page="admin"] .workspace-stat[data-tone="success"] { border-top-color: #08a082; }
+  .netra-workspace[data-page="admin"] section[aria-label] article:hover { background: rgb(var(--ops-accent) / .045); }
+  .netra-workspace[data-page="admin"] .officer-roster { border-top: 3px solid #087fc5; }
+  .netra-workspace[data-page="settings"] .settings-section { border-top: 3px solid #158bd2; }
+  .netra-workspace[data-page="settings"] .settings-section:nth-child(3n + 2) { border-top-color: #8270e7; }
+  .netra-workspace[data-page="settings"] .settings-section:nth-child(3n) { border-top-color: #04a88d; }
+  .netra-workspace[data-page="settings"] .settings-theme { border-radius: 10px; padding: 10px; }
+  .netra-workspace[data-page="settings"] .settings-theme[aria-pressed="true"] { box-shadow: 0 0 0 2px rgb(var(--accent) / .3), 0 5px 15px rgb(var(--accent) / .17); }
+  .netra-workspace[data-page="settings"] .settings-toggle > svg { box-sizing: content-box; padding: 9px; border-radius: 10px; background: rgb(var(--ops-accent) / .1); color: rgb(var(--ops-accent)); }
+  .netra-workspace[data-page="reports"] .report-document { border-top: 4px solid #087fc5; padding: clamp(16px, 2.4vw, 32px); }
+  .netra-workspace[data-page="reports"] .report-masthead { border-bottom: 2px solid rgb(var(--ops-accent) / .4); }
+  .netra-workspace[data-page="reports"] .report-kpi { background: linear-gradient(135deg, rgb(var(--ops-accent) / .09), rgb(var(--surface))); border-top: 3px solid #1599df; }
+  .netra-workspace[data-page="reports"] .report-kpi:nth-child(3) { border-top-color: #e6a22a; }
+  .netra-workspace[data-page="reports"] .report-kpi:nth-child(4) { border-top-color: #0ca387; }
+  .netra-workspace[data-page="reports"] .report-section > div:first-child { padding: 10px 12px; border-radius: 8px; background: rgb(var(--ops-accent) / .08); }
+  .ops-heading-icon { display: inline-flex; align-items: center; gap: 8px; }
+  .ops-heading-icon > svg { flex-shrink: 0; color: rgb(var(--accent)); }
+  @media (hover: hover) {
+    .netra-workspace:is([data-page="database"], [data-page="reports"], [data-page="admin"], [data-page="settings"]) .card:hover {
+      border-color: rgb(var(--ops-accent) / .65); box-shadow: 0 0 0 1px rgb(var(--ops-accent) / .16), 0 9px 24px rgb(var(--ops-accent) / .14);
+    }
+  }
+}

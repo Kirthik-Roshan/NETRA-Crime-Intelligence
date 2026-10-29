@@ -252,7 +252,7 @@ export function AmbientBackground({ intensity = "quiet" }: AmbientBackgroundProp
   }, [intensity]);
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg">
+    <div aria-hidden className="netra-ambient pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg">
       <canvas ref={canvasRef} className={`absolute inset-0 ${intensity === "active" ? "opacity-100" : "opacity-70"}`} />
       <div
         className="absolute inset-0 opacity-[0.32]"

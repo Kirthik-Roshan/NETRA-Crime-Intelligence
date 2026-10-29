@@ -1,0 +1,11 @@
+.assistant-analysis { min-width: 0; display: grid; gap: 18px; padding-block: 14px; border-block: 1px solid rgb(var(--border)); }
+.assistant-analysis .investigation-graph { height: 340px; width: 100%; min-width: 0; border: 1px solid rgb(var(--border)); border-radius: 6px; overflow: hidden; }
+.assistant-analysis .analysis-table-scroll { width: 100%; overflow-x: auto; margin-top: 10px; }
+.assistant-analysis table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.assistant-analysis th { color: rgb(var(--muted)); font-weight: 600; text-align: left; }
+.assistant-analysis td, .assistant-analysis th { padding: 9px 10px; border-bottom: 1px solid rgb(var(--border)); vertical-align: top; }
+.assistant-analysis .analysis-finding { border: 1px solid rgb(var(--border)); border-radius: 6px; padding: 10px; background: rgb(var(--surface)); overflow-wrap: anywhere; }
+.assistant-analysis .analysis-finding:hover, .assistant-analysis .analysis-finding[aria-pressed=true] { border-color: rgb(var(--accent)); background: rgb(var(--accent) / .08); }
+.assistant-analysis [aria-pressed=true] { color: rgb(var(--accent)); }
+@media (max-width: 640px) { .assistant-analysis .btn-ghost { font-size: 11px; } .assistant-analysis .investigation-graph { height: 300px; } }
+@media print { .assistant-analysis details { display: block; } .assistant-analysis .investigation-graph { break-inside: avoid; } }

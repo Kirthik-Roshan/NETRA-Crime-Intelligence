@@ -1,0 +1,23 @@
+{
+  "table_identifier": "ComplainantDetails",
+  "operation": "upsert",
+  "find_by": "ComplainantID",
+  "fk_mapping": [
+    {
+      "local_column": "CaseMasterID",
+      "reference_column": "CaseMasterID"
+    },
+    {
+      "local_column": "OccupationID",
+      "reference_column": "OccupationID"
+    },
+    {
+      "local_column": "ReligionID",
+      "reference_column": "ReligionID"
+    },
+    {
+      "local_column": "CasteID",
+      "reference_column": "caste_master_id"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "table_identifier": "ReligionMaster",
+  "operation": "upsert",
+  "find_by": "ReligionID"
+}

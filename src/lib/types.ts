@@ -26,6 +26,9 @@ export interface Criminal {
   home_district: string;
   first_seen: string;
   photo_seed: string;
+  portrait_asset?: string;
+  portrait_key?: string;
+  portrait_synthetic?: boolean;
   notes: string | null;
 }
 
@@ -63,7 +66,7 @@ export interface CaseRow {
 
 export interface GraphNode {
   id: string;
-  type: "criminal" | "phone" | "vehicle" | "address" | "fir" | "organization" | "witness";
+  type: "criminal" | "fir" | "victim" | "complainant" | "station" | "phone" | "vehicle" | "address" | "organization" | "witness";
   label: string;
   meta?: Record<string, unknown>;
 }
@@ -86,6 +89,8 @@ export interface AiSource {
 /** Structured, explainable answer returned by the AI pipeline. */
 export interface AiInsight {
   answer: string;
+  analysis?: import('./assistant-analysis').AssistantAnalysis;
+  source_chart?: import('@/components/assistant/SourceChart').SourceChartData;
   sql?: string;
   columns?: string[];
   rows?: Record<string, unknown>[];
@@ -93,14 +98,16 @@ export interface AiInsight {
   /** Grounding documents (RAG). Optional — present only for retrieved answers. */
   sources?: AiSource[];
   explain: {
-    confidence: number; // 0..1
+    confidence: number | null; // 0..1 only when measured; otherwise unavailable
+    response_kind?: "conversation" | "clarification" | "records" | "no_data";
+    response_scope?: 'documents' | 'supplied';
     reasoning: string;
     records_used: number;
     evidence: string[];
     alternatives: string[];
     /** Entities carried over from earlier turns (conversation memory). */
     context_used?: string[];
-    source: "template-sql" | "llm" | "cache" | "demo-engine" | "semantic" | "lookup" | "rag";
+    source: "template-sql" | "llm" | "cache" | "demo-engine" | "semantic" | "lookup" | "rag" | "conversation";
     audit_id: string;
     processing_ms: number;
     ai_model: string;

@@ -1,0 +1,11 @@
+{
+  "table_identifier": "CrimeSubHead",
+  "operation": "upsert",
+  "find_by": "CrimeSubHeadID",
+  "fk_mapping": [
+    {
+      "local_column": "CrimeHeadID",
+      "reference_column": "CrimeHeadID"
+    }
+  ]
+}

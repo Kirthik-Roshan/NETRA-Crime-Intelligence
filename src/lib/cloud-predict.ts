@@ -1,6 +1,6 @@
 "use client";
 
-import { listRecords } from "./ai-client";
+import { listRecordBundle } from "./ai-client";
 
 type Row = Record<string, unknown>;
 const DAY = 86400000;
@@ -13,14 +13,23 @@ export interface CloudPredictionData {
   repeat: { id: number; name: string; home_district: string; risk_score: number; fir_count: number; days_since_last: number | null; district_count: number; probability: number; factors: string[]; evidence: string[] }[];
   escalations: { id: number; name: string; detail: string; confidence: number; evidence: string[] }[];
   types: { crime_type: string; recent: number; baselineMonthly: number; ratio: number; trend: "rising" | "stable" | "cooling" }[];
+  seasonality: {
+    months: { label: string; count: number; index: number }[];
+    weekdays: { label: string; count: number; share: number }[];
+    peakMonth: string;
+    peakWeekday: string;
+    sampleSize: number;
+    eventCalendarAvailable: false;
+  };
   model: "explainable-baseline" | "zia-automl";
   automlAuditIds?: string[];
 }
 
 export async function fetchCloudPredictions(): Promise<CloudPredictionData> {
-  const [firs, criminals, links] = await Promise.all([
-    listRecords("Firs", 5000), listRecords("Criminals", 5000), listRecords("FirCriminals", 5000),
-  ]);
+  const bundle = await listRecordBundle(["Firs", "Criminals", "FirCriminals"]);
+  const firs = bundle.Firs || [];
+  const criminals = bundle.Criminals || [];
+  const links = bundle.FirCriminals || [];
   const validTimes = firs.map((row) => time(row, "occurred_at")).filter(Boolean);
   const anchor = validTimes.length ? Math.max(...validTimes) : Date.now();
   const firById = new Map(firs.map((row) => [n(row, "id"), row]));
@@ -96,5 +105,36 @@ export async function fetchCloudPredictions(): Promise<CloudPredictionData> {
       evidence: [...linked].sort((a, b) => time(b, "occurred_at") - time(a, "occurred_at")).slice(0, 4).map((fir) => `${s(fir, "fir_number")} (${s(fir, "severity")})`),
     }];
   }).slice(0, 8);
-  return { hotspots, repeat, escalations, types, model: "explainable-baseline" };
+
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const monthCounts = Array.from({ length: 12 }, () => 0);
+  const weekdayCounts = Array.from({ length: 7 }, () => 0);
+  for (const occurred of validTimes) {
+    const date = new Date(occurred);
+    monthCounts[date.getUTCMonth()] += 1;
+    weekdayCounts[date.getUTCDay()] += 1;
+  }
+  const averageMonth = validTimes.length / 12 || 1;
+  const months = monthLabels.map((label, index) => ({
+    label,
+    count: monthCounts[index],
+    index: Math.round((monthCounts[index] / averageMonth) * 100),
+  }));
+  const weekdays = weekdayLabels.map((label, index) => ({
+    label,
+    count: weekdayCounts[index],
+    share: validTimes.length ? Math.round((weekdayCounts[index] / validTimes.length) * 1000) / 10 : 0,
+  }));
+  const peakMonth = [...months].sort((a, b) => b.count - a.count)[0]?.label || "Not available";
+  const peakWeekday = [...weekdays].sort((a, b) => b.count - a.count)[0]?.label || "Not available";
+  const seasonality = {
+    months,
+    weekdays,
+    peakMonth,
+    peakWeekday,
+    sampleSize: validTimes.length,
+    eventCalendarAvailable: false as const,
+  };
+  return { hotspots, repeat, escalations, types, seasonality, model: "explainable-baseline" };
 }

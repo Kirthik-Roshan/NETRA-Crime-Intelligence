@@ -1,4 +1,6 @@
 "use client";
+import { UiText } from '@/components/UiText';
+
 import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { getClientUser, replaceAppRoute } from "@/lib/auth-client";
@@ -19,7 +21,7 @@ export function useOfficer(): SessionUser | null {
 /** Renders the officer's first name once hydrated (blank during SSG). */
 export function OfficerFirstName() {
   const u = useOfficer();
-  return <>{u ? u.full_name.split(" ")[0] : "Officer"}</>;
+  return <><UiText text={u ? u.full_name.split(" ")[0] : "Officer"} /></>;
 }
 
 /** Role badge for the current officer. */
@@ -28,7 +30,7 @@ export function RoleBadge() {
   if (!u) return null;
   return (
     <Badge tone="accent">
-      <ShieldCheck className="h-3 w-3" /> {ROLE_LABEL[u.role]}
+      <ShieldCheck className="h-3 w-3" /> <UiText text={ROLE_LABEL[u.role]} />
     </Badge>
   );
 }

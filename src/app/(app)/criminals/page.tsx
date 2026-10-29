@@ -1,4 +1,6 @@
 "use client";
+import { useUiText } from '@/components/UiText';
+
 import { useEffect, useState } from "react";
 import { CriminalsList, type CrimRow } from "@/components/criminals/CriminalsList";
 import { fetchCriminals } from "@/lib/cloudscale";
@@ -13,8 +15,9 @@ export default function CriminalsPage() {
 
 // Structure-matched loading state so the layout doesn't jump when data lands.
 function CriminalsSkeleton() {
+  const ui = useUiText();
   return (
-    <div className="animate-fade-in" aria-busy="true" aria-label="Loading criminal profiles from Cloud Scale">
+    <div className="animate-fade-in" aria-busy="true" aria-label={ui("Loading criminal profiles from Cloud Scale")}>
       <div className="mb-6 flex items-center gap-3">
         <span className="h-7 w-1 rounded-full bg-accent/40" />
         <div className="space-y-2">

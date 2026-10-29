@@ -1,41 +1,29 @@
-# Catalyst Search setup for NETRA
+# Catalyst Search Setup
 
-NETRA already calls Catalyst Search from `platform.js`. Until the columns below
-are indexed, it deliberately uses a bounded Cloud Scale row scan and reports the
-fallback in the response.
+NETRA searches the official KSP schema. If Catalyst Search is unavailable or a
+column is not indexed, the Function performs a bounded relational scan over the
+same official records and reports `ksp-relational-scan`.
 
-Search Index is a schema constraint. Catalyst currently requires it to be
-enabled in the console; the CLI and public Data Store APIs do not create or edit
-table schemas.
+In **Cloud Scale → Data Store → Schema View**, enable Search Index for:
 
-## Enable in Development and Production
+- `CaseMaster`: `CrimeNo`, `CaseNo`, `BriefFacts`
+- `Accused`: `AccusedName`, `PersonID`
+- `ComplainantDetails`: `ComplainantName`
+- `Victim`: `VictimName`
+- `CrimeSubHead`: `CrimeHeadName`
+- `Unit`: `UnitName`
+- `District`: `DistrictName`
+- optional `Evidence`: `type`, `description`, `storage_ref`
 
-Open **Cloud Scale -> Data Store**, select each table, and use **Schema View ->
-column menu -> Edit -> Search Index -> Update**.
-
-Enable these columns:
-
-- `Firs`: `fir_number`, `crime_type`, `ipc_sections`, `district`, `taluk`,
-  `status`, `severity`, `modus`, `description`
-- `Cases`: `case_number`, `title`, `status`, `case_priority`, `district`,
-  `summary`
-- `Criminals`: `name`, `aliases`, `status`, `crime_category`,
-  `known_locations`, `home_district`, `notes`
-- `Evidence`: `type`, `description`, `storage_ref`
-- `Vehicles` when provisioned: `plate`, `make`, `model`, `color`, `type`
-
-Wait for the Catalyst indexing-complete notification before testing. Repeat the
-same schema change in Production because Catalyst environments have separate
-schemas and indexes.
-
-## Verify
+Repeat the configuration in every environment whose Function will be called.
+Wait for Catalyst's indexing-complete notification before verification.
 
 ```bash
-curl -sS "https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/" \
-  -H "Content-Type: text/plain" \
-  --data '{"mode":"search:records","query":"burglary Mysuru","max":5}'
+curl -sS -X POST \
+  -H 'Content-Type: text/plain' \
+  --data '{"mode":"search:records","query":"burglary Mysuru","max":5}' \
+  https://ksphacks-60080085094.catalystserverless.in/server/ai_quickml/
 ```
 
-The response is complete when `engine` is `catalyst-search` and `warning` is
-empty. `bounded-datastore-fallback` means at least one configured column still
-lacks its Search Index.
+Expected engines are `catalyst-search+ksp-relational` or, if Search is not
+available, `ksp-relational-scan`. Both paths return official KSP-derived rows.

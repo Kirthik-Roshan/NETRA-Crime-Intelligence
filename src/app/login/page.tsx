@@ -1,51 +1,161 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
+  ArrowRightCircle,
   AtSign,
   BadgeCheck,
-  ExternalLink,
-  KeyRound,
+  Database,
+  FileText,
   Loader2,
   LockKeyhole,
+  MapPin,
+  MessageSquareText,
   Network,
-  Radio,
   ShieldCheck,
-  Sparkles,
+  Users,
 } from "lucide-react";
-import { AmbientBackground } from "@/components/AmbientBackground";
 import { Emblem } from "@/components/Emblem";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
   beginCatalystSignIn,
   getClientUser,
   mountCatalystSignIn,
   replaceAppRoute,
+  registerCatalystOfficer,
 } from "@/lib/auth-client";
+import statistics from "@/data/login-statistics.json";
+import styles from "./login.module.css";
+import { LoginNetwork } from "./LoginNetwork";
 
+const BASE =
+  process.env.NEXT_PUBLIC_CATALYST_WEB_CLIENT === "true" ? "/app" : "";
 const CAPABILITIES = [
-  { icon: Sparkles, label: "Natural language", sub: "English and Kannada" },
-  { icon: Network, label: "Criminal networks", sub: "Relationship analysis" },
-  { icon: ShieldCheck, label: "Explainable AI", sub: "Cited and audited" },
+  {
+    icon: MessageSquareText,
+    label: "Natural Language",
+    description:
+      "Query cases, evidence and criminal records in English and Kannada",
+    tone: "blue",
+  },
+  {
+    icon: Network,
+    label: "Criminal Networks",
+    description: "Discover hidden relationships and cross-district links",
+    tone: "teal",
+  },
+  {
+    icon: FileText,
+    label: "Explainable AI",
+    description: "Cited sources, transparent insights and auditable results",
+    tone: "violet",
+  },
 ];
-
+const CITIES = [
+  { name: "Belagavi", x: 47.6, y: 25.8 },
+  { name: "Kalaburagi", x: 57.6, y: 21.8 },
+  { name: "Dharwad", x: 42.7, y: 37.1 },
+  { name: "Bengaluru", x: 57.9, y: 57.7 },
+  { name: "Mysuru", x: 46.8, y: 65.5 },
+  { name: "Mangaluru", x: 44.6, y: 73.6 },
+];
 type AuthView = "checking" | "embedded" | "redirect" | "error";
 
 export default function LoginPage() {
   const [authView, setAuthView] = useState<AuthView>("checking");
   const [error, setError] = useState("");
-  const [officerEmail, setOfficerEmail] = useState("");
+  const [online, setOnline] = useState(false);
+  const [authMode, setAuthMode] = useState<"providers" | "email" | "signup">(
+    "providers",
+  );
+  const [registering, setRegistering] = useState(false);
+  const [registrationEmail, setRegistrationEmail] = useState("");
+  const [email, setEmail] = useState("");
 
-  async function mountProvider() {
+  async function mountProvider(
+    mode: "providers" | "email" = authMode === "email" ? "email" : "providers",
+  ) {
     setAuthView("checking");
     setError("");
     try {
-      const mounted = await mountCatalystSignIn("netra-catalyst-signin");
+      const mounted = await mountCatalystSignIn("netra-catalyst-signin", mode);
       setAuthView(mounted ? "embedded" : "redirect");
     } catch {
       setAuthView("error");
-      setError("Catalyst Authentication could not be loaded. Use the secure redirect to continue.");
+      setError(
+        "Secure sign-in could not be loaded. Please continue using the hosted sign-in.",
+      );
+    }
+  }
+
+  function selectMode(mode: "providers" | "email" | "signup") {
+    setAuthMode(mode);
+    setError("");
+    if (mode !== "signup") void mountProvider(mode);
+  }
+
+  async function continueWithEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthMode("email");
+    setAuthView("checking");
+    setError("");
+    try {
+      const mounted = await mountCatalystSignIn(
+        "netra-catalyst-signin",
+        "email",
+      );
+      if (!mounted)
+        throw new Error(
+          "Catalyst sign-in is unavailable. Please retry or use secure hosted sign-in.",
+        );
+      const frame = document.querySelector<HTMLIFrameElement>(
+        "#netra-catalyst-signin iframe",
+      );
+      const input = frame?.contentDocument?.getElementById(
+        "login_id",
+      ) as HTMLInputElement | null;
+      const next = frame?.contentDocument?.getElementById(
+        "nextbtn",
+      ) as HTMLButtonElement | null;
+      if (!input || !next)
+        throw new Error("The email sign-in form did not load. Please retry.");
+      input.value = email.trim();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      next.click();
+      setAuthView("embedded");
+    } catch (error) {
+      setAuthView("error");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Email sign-in could not be started.",
+      );
+    }
+  }
+
+  async function createAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const values = new FormData(event.currentTarget);
+    const email = String(values.get("email") || "");
+    setRegistering(true);
+    setError("");
+    try {
+      await registerCatalystOfficer(
+        String(values.get("firstName") || ""),
+        String(values.get("lastName") || ""),
+        email,
+      );
+      setRegistrationEmail(email);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Account creation failed. Please try again.",
+      );
+    } finally {
+      setRegistering(false);
     }
   }
 
@@ -62,165 +172,367 @@ export default function LoginPage() {
           const mounted = await mountCatalystSignIn("netra-catalyst-signin");
           if (active) setAuthView(mounted ? "embedded" : "redirect");
         } catch {
-          if (!active) return;
-          setAuthView("error");
-          setError("Catalyst Authentication could not be loaded. Use the secure redirect to continue.");
+          if (active) {
+            setAuthView("error");
+            setError(
+              "Secure sign-in could not be loaded. Please continue using the hosted sign-in.",
+            );
+          }
         }
       })
       .catch(() => {
-        if (!active) return;
-        setAuthView("error");
-        setError("Catalyst could not verify the current officer session.");
+        if (active) {
+          setAuthView("error");
+          setError("Your session could not be verified. Please sign in again.");
+        }
       });
-    return () => { active = false; };
+    const controller = new AbortController();
+    if (window.location.hostname.endsWith(".catalystserverless.in")) {
+      void fetch("/server/ai_quickml/", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ mode: "ping" }),
+        signal: controller.signal,
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((result) => {
+          if (active) setOnline(result?.ok === true);
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
-  const checking = authView === "checking";
-  const showRedirect = authView === "redirect" || authView === "error";
-
   return (
-    <div className="relative isolate grid min-h-screen overflow-x-hidden bg-bg lg:grid-cols-[minmax(0,1.2fr)_minmax(430px,0.8fr)]">
-      <AmbientBackground intensity="active" />
-
-      <section className="relative hidden min-h-screen flex-col justify-between border-r border-border p-12 lg:flex xl:p-16">
-        <div className="flex items-start justify-between gap-6">
-          <div className="flex items-center gap-3.5">
-            <Emblem size={48} />
-            <div>
-              <div className="font-display text-lg font-bold">Crime Intelligence</div>
-              <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted">Karnataka State Police</div>
-            </div>
+    <main className={styles.page} data-theme="daylight">
+      <div className={styles.scene} aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`${BASE}/login/intelligence-backdrop.webp`}
+          alt=""
+          fetchPriority="high"
+        />
+        <LoginNetwork />
+        {CITIES.map((city) => (
+          <span
+            key={city.name}
+            className={city.name === "Bengaluru" ? styles.capital : styles.city}
+            style={{ left: `${city.x}%`, top: `${city.y}%` }}
+          >
+            {city.name}
+          </span>
+        ))}
+      </div>
+      <header className={styles.header}>
+        <div className={styles.brand}>
+          <Emblem size={68} glass={false} />
+          <div>
+            <strong>KARNATAKA STATE POLICE</strong>
+            <span>Crime Intelligence</span>
           </div>
-          <span className="chip text-[10px] uppercase tracking-[0.14em]"><LockKeyhole className="h-3 w-3" /> Restricted</span>
         </div>
-
-        <div className="max-w-2xl space-y-7">
-          <div className="space-y-3">
-            <span className="eyebrow block">Officer workspace</span>
-            <h1 className="max-w-xl font-display text-4xl font-bold leading-tight xl:text-5xl">
-              Advanced Criminal Intelligence Platform
-            </h1>
-            <p className="max-w-xl text-sm leading-relaxed text-muted">
-              Investigate FIRs, criminal networks, evidence, and geography through one intelligence workspace.
-            </p>
-          </div>
-
-          <div className="grid max-w-xl grid-cols-3 gap-3">
+        <div className={styles.restriction}>
+          <span>
+            <LockKeyhole size={16} /> RESTRICTED
+          </span>
+          <b>NETRA v1.1</b>
+        </div>
+      </header>
+      <div className={styles.content}>
+        <section className={styles.introduction}>
+          <p className={styles.eyebrow}>
+            NETRA | INTELLIGENCE • ANALYSIS • ACTION
+          </p>
+          <h1>
+            Advanced Criminal
+            <br className={styles.titleBreak} /> Intelligence Platform
+          </h1>
+          <p className={styles.tagline}>
+            One unified intelligence workspace for a safer Karnataka.
+          </p>
+          <p className={styles.description}>
+            Investigate FIRs, uncover criminal networks, analyse evidence,
+            <br className={styles.desktopBreak} /> and leverage AI to accelerate
+            investigations across the state.
+          </p>
+          <div className={styles.capabilities}>
             {CAPABILITIES.map((item) => (
-              <div key={item.label} className="rounded-md border border-border bg-surface/90 p-3.5 shadow-sm">
-                <item.icon className="mb-2.5 h-4 w-4 text-accent" />
-                <div className="text-xs font-semibold text-subtle">{item.label}</div>
-                <div className="mt-0.5 text-[11px] text-muted">{item.sub}</div>
+              <article
+                key={item.label}
+                className={`${styles.capability} ${styles[item.tone]}`}
+              >
+                <span className={styles.featureIcon}>
+                  <item.icon size={25} />
+                </span>
+                <h2>{item.label}</h2>
+                <p>{item.description}</p>
+                <ArrowRightCircle
+                  className={styles.featureArrow}
+                  size={22}
+                  aria-hidden="true"
+                />
+              </article>
+            ))}
+          </div>
+          <div
+            className={styles.statistics}
+            aria-label="Imported database statistics"
+          >
+            {[
+              {
+                icon: Database,
+                value: statistics.firs,
+                label: "FIR Records",
+                sub: "Integrated",
+              },
+              {
+                icon: Users,
+                value: statistics.accused,
+                label: "Accused Profiles",
+                sub: "Linked",
+              },
+              {
+                icon: MapPin,
+                value: statistics.districts,
+                label: "Districts with",
+                sub: "FIR Records",
+              },
+              {
+                icon: ShieldCheck,
+                value: statistics.stations,
+                label: "Police Stations",
+                sub: "Linked",
+              },
+            ].map((stat) => (
+              <div key={stat.label} className={styles.stat}>
+                <stat.icon size={30} />
+                <div>
+                  <strong>{stat.value.toLocaleString("en-IN")}</strong>
+                  <span>
+                    {stat.label}
+                    <br />
+                    {stat.sub}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="flex items-center gap-4 border-t border-border pt-4 text-[11px] text-muted">
-          <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Cloud Scale connected</span>
-          <span className="ml-auto font-mono">NETRA v1.1</span>
-        </div>
-      </section>
-
-      <section className="relative flex min-h-screen items-start justify-center bg-surface/35 px-5 pb-10 pt-24 backdrop-blur-[2px] sm:px-10 lg:items-center lg:py-10 xl:px-14">
-        <div className="absolute right-5 top-5"><ThemeSwitcher /></div>
-        <div className="w-full max-w-[470px]">
-          <div className="mb-5 flex items-center gap-3 lg:hidden">
-            <Emblem size={46} />
-            <div>
-              <div className="font-display text-lg font-bold">Crime Intelligence</div>
-              <div className="text-[10px] uppercase tracking-[0.14em] text-muted">Karnataka State Police</div>
-            </div>
+        </section>
+        <section
+          className={styles.gateway}
+          aria-labelledby="officer-access-title"
+        >
+          <div className={styles.gatewayTitle}>
+            <Emblem size={100} glass={false} />
+            <p>KARNATAKA STATE POLICE</p>
+            <h2 id="officer-access-title">Secure Officer Access</h2>
+            <span>Sign in to NETRA Crime Intelligence Gateway</span>
           </div>
-
-          <div className="login-gateway card card-static overflow-hidden">
-            <div className="px-6 pb-6 pt-8 text-center sm:px-7">
-              <Emblem size={112} glass={false} className="mx-auto" />
-              <span className="stat-label mt-4 block text-accent">Karnataka State Police</span>
-              <h2 className="mt-1 font-display text-2xl font-bold">Secure officer sign in</h2>
-              <p className="mt-1 text-sm leading-relaxed text-muted">NETRA Crime Intelligence Gateway</p>
-            </div>
-
-            <div className="flex items-center gap-2 border-y border-border bg-elevated/55 px-6 py-2.5 text-[11px] text-muted sm:px-7">
-              <BadgeCheck className="h-3.5 w-3.5 text-success" />
-              <span className="font-semibold text-subtle">Catalyst verified</span>
-              <span aria-hidden="true">/</span>
-              <span>Federated identity enabled</span>
-            </div>
-
-            <div className="px-6 py-6 sm:px-7">
-              <div className="mb-3 flex items-center justify-between gap-4">
-                <span className="stat-label">Identity provider</span>
-                <span className="flex items-center gap-1.5 text-[11px] text-success"><Radio className="h-3 w-3" /> Online</span>
+          <div className={styles.verification}>
+            <ShieldCheck size={19} />
+            <strong>Catalyst verified</strong>
+            <i />
+            <span>Federated identity enabled</span>
+            <b className={online ? styles.online : ""}>
+              <span />
+              {online ? "Online" : "Secure"}
+            </b>
+          </div>
+          {authMode === "providers" && (
+            <>
+              <form className={styles.emailEntry} onSubmit={continueWithEmail}>
+                <label htmlFor="officer-email">OFFICIAL EMAIL ADDRESS</label>
+                <div className={styles.emailInput}>
+                  <AtSign size={22} />
+                  <input
+                    id="officer-email"
+                    type="email"
+                    name="email"
+                    autoComplete="username"
+                    placeholder="name@ksp.gov.in"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    maxLength={254}
+                  />
+                </div>
+                <button type="submit" disabled={authView === "checking"}>
+                  Continue <ArrowRight size={19} />
+                </button>
+              </form>
+              <div className={styles.divider}>
+                <span />
+                Or sign in with
+                <span />
               </div>
-
-              <label htmlFor="officer-email" className="stat-label block">Official email address</label>
-              <div className="relative mt-2">
-                <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                <input
-                  id="officer-email"
-                  type="email"
-                  value={officerEmail}
-                  onChange={(event) => setOfficerEmail(event.target.value)}
-                  autoComplete="username"
-                  placeholder="name@ksp.gov.in"
-                  className="input h-11 pl-10"
-                />
+            </>
+          )}
+          {authMode === "email" && (
+            <div className={styles.emailBack}>
+              <button
+                type="button"
+                disabled={authView === "checking"}
+                onClick={() => selectMode("providers")}
+              >
+                ← Use another sign-in method
+              </button>
+            </div>
+          )}
+          <div
+            id={authMode === "providers" ? "sso-panel" : "email-panel"}
+            aria-label={
+              authMode === "providers" ? "Identity providers" : "Email sign-in"
+            }
+            className={`${styles.providers} ${authMode === "email" ? styles.manualProvider : ""}`}
+            style={{ display: authMode === "signup" ? "none" : undefined }}
+          >
+            <div
+              id="netra-catalyst-signin"
+              aria-label="Catalyst identity providers"
+              className={`catalyst-signin-frame ${authView === "checking" || authView === "embedded" ? "is-mounted" : ""}`}
+            />
+            {authView === "checking" && (
+              <div className={styles.checking}>
+                <Loader2 size={18} className="animate-spin" /> Connecting secure
+                sign-in…
               </div>
-
-              <div className="relative mt-4">
-                <div
-                  id="netra-catalyst-signin"
-                  aria-label="Catalyst officer sign in"
-                  className={`catalyst-signin-frame ${checking || authView === "embedded" ? "is-mounted" : ""}`}
-                />
-
-                {checking && (
-                  <div className="absolute inset-0 z-[1] flex items-center justify-center gap-2.5 rounded-md border border-border bg-elevated text-sm text-muted">
-                    <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                    Verifying secure session
-                  </div>
-                )}
-
-                {showRedirect && (
-                  <button
-                    type="button"
-                    onClick={beginCatalystSignIn}
-                    className="btn-accent h-12 w-full text-sm"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Open secure sign-in
+            )}
+            {(authView === "redirect" || authView === "error") && (
+              <button
+                className={styles.hostedSignIn}
+                onClick={beginCatalystSignIn}
+                type="button"
+              >
+                <LockKeyhole size={18} /> Open secure sign-in{" "}
+                <ArrowRight size={18} />
+              </button>
+            )}
+          </div>
+          {authMode === "signup" &&
+            (registrationEmail ? (
+              <div className={styles.registrationSuccess} role="status">
+                <BadgeCheck size={28} />
+                <h3>Check your email</h3>
+                <p>
+                  Catalyst has sent account verification and password setup
+                  instructions to <strong>{registrationEmail}</strong>.
+                </p>
+                <button type="button" onClick={() => selectMode("providers")}>
+                  Return to sign-in <ArrowRight size={16} />
+                </button>
+              </div>
+            ) : (
+              <form
+                className={styles.registrationForm}
+                onSubmit={createAccount}
+              >
+                <h3>Create your account</h3>
+                <div className={styles.nameFields}>
+                  <label>
+                    First name
+                    <input
+                      name="firstName"
+                      autoComplete="given-name"
+                      required
+                      maxLength={100}
+                    />
+                  </label>
+                  <label>
+                    Last name
+                    <input
+                      name="lastName"
+                      autoComplete="family-name"
+                      required
+                      maxLength={100}
+                    />
+                  </label>
+                </div>
+                <label>
+                  Email address
+                  <input
+                    type="email"
+                    name="email"
+                    defaultValue={email}
+                    autoComplete="email"
+                    required
+                    maxLength={254}
+                  />
+                </label>
+                <p>
+                  Verify your email with Catalyst to set your password and
+                  activate your account.
+                </p>
+                <button type="submit" disabled={registering}>
+                  {registering ? (
+                    <Loader2 size={17} className="animate-spin" />
+                  ) : (
+                    <ArrowRight size={17} />
+                  )}
+                  {registering ? "Creating account…" : "Create account"}
+                </button>
+              </form>
+            ))}
+          {error && (
+            <div role="alert" className={styles.error}>
+              <AlertTriangle size={17} />
+              <span>
+                {error}{" "}
+                {authMode !== "signup" && (
+                  <button onClick={() => void mountProvider()} type="button">
+                    Retry
                   </button>
                 )}
-              </div>
-
-              {error && (
-                <div role="alert" className="mt-4 flex items-start gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2.5 text-xs leading-relaxed text-danger">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {authView === "error" && (
-                <button type="button" onClick={() => void mountProvider()} className="btn-subtle mt-2 w-full text-xs">
-                  Retry embedded authentication
+              </span>
+            </div>
+          )}
+          <div className={styles.accountLinks}>
+            {authMode === "signup" ? (
+              <button
+                type="button"
+                disabled={registering}
+                onClick={() => selectMode("providers")}
+              >
+                Already have an account? Sign in
+              </button>
+            ) : (
+              <>
+                <span>New to NETRA?</span>
+                <button
+                  type="button"
+                  disabled={authView === "checking"}
+                  onClick={() => selectMode("signup")}
+                >
+                  Create an account <ArrowRight size={14} />
                 </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 divide-x divide-border border-t border-border bg-elevated/35 px-2 py-3.5 text-center text-[10px] text-muted">
-              <span className="flex items-center justify-center gap-1.5"><KeyRound className="h-3 w-3 text-accent" /> SSO protected</span>
-              <span className="flex items-center justify-center gap-1.5"><ShieldCheck className="h-3 w-3 text-accent" /> Role controlled</span>
-              <span className="flex items-center justify-center gap-1.5"><BadgeCheck className="h-3 w-3 text-accent" /> Audit logged</span>
-            </div>
+              </>
+            )}
           </div>
-
-          <p className="mt-5 flex items-start justify-center gap-2 px-2 text-center text-[11px] leading-relaxed text-muted">
-            <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0" />
-            <span>Authorized personnel only. Access and intelligence operations are monitored and audited.</span>
-          </p>
-        </div>
-      </section>
-    </div>
+          <div className={styles.security}>
+            <LockKeyhole size={18} />
+            <span>SSO protected</span>
+            <i />
+            <span>Role controlled</span>
+            <i />
+            <span>Audit logged</span>
+          </div>
+        </section>
+      </div>
+      <footer className={styles.footer}>
+        <span className={styles.connection}>
+          <span className={online ? styles.connected : ""} />
+          {online ? "Cloud Scale Connected" : "Catalyst Authentication"}
+          <i />
+          <small style={{ font: "inherit" }}>{statistics.source}</small>
+        </span>
+        <span className={styles.authorized}>
+          <BadgeCheck size={20} />
+          Authorized personnel only. Access and intelligence operations are
+          monitored and audited.
+        </span>
+      </footer>
+    </main>
   );
 }

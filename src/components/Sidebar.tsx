@@ -1,4 +1,6 @@
 "use client";
+import { UiText, useUiText } from '@/components/UiText';
+
 import Link from "@/components/AppLink";
 import { usePathname } from "next/navigation";
 import {
@@ -7,6 +9,7 @@ import {
   FolderKanban,
   Users,
   Network,
+  GitCompareArrows,
   BarChart3,
   Map,
   FileText,
@@ -45,6 +48,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/assistant", key: "nav.assistant", icon: Sparkles, cap: "ai" },
       { href: "/cases", key: "nav.cases", icon: FolderKanban, cap: "cases" },
+      { href: "/investigations", key: "nav.investigations", icon: GitCompareArrows, cap: "ai" },
       { href: "/evidence", key: "nav.evidence", icon: ScanSearch, cap: "evidence" },
     ],
   },
@@ -86,6 +90,7 @@ const ROLE_KEY: Record<string, TransKey> = {
 };
 
 export function Sidebar({ user, mobile = false, onClose }: { user: SessionUser; mobile?: boolean; onClose?: () => void }) {
+  const ui = useUiText();
   const pathname = usePathname();
   const storedCollapsed = useAppStore((s) => s.sidebarCollapsed);
   const collapsed = mobile ? false : storedCollapsed;
@@ -113,14 +118,14 @@ export function Sidebar({ user, mobile = false, onClose }: { user: SessionUser; 
   return (
     <aside
       className={cn(
-        "top-0 h-screen shrink-0 flex-col border-r border-border bg-surface shadow-[4px_0_24px_-22px_rgb(8_34_52/0.8)] transition-[width] duration-200",
+        "netra-sidebar top-0 h-screen shrink-0 flex-col border-r border-border bg-surface shadow-[4px_0_24px_-22px_rgb(8_34_52/0.8)] transition-[width] duration-200",
         mobile ? "fixed left-0 z-10 flex w-[min(86vw,296px)]" : "sticky hidden md:flex",
         !mobile && (collapsed ? "w-[72px]" : "w-[272px]")
       )}
     >
       {/* Brand */}
       <div className={cn("flex items-center gap-3 border-b border-border px-4 py-4", collapsed && "flex-col gap-2 px-2")}>
-        <Link href="/dashboard" className="shrink-0" title="Crime Intelligence">
+        <Link href="/dashboard" className="shrink-0" title={ui("Crime Intelligence")}>
           <Emblem size={34} />
         </Link>
         {!collapsed && (
@@ -142,7 +147,7 @@ export function Sidebar({ user, mobile = false, onClose }: { user: SessionUser; 
         </button>
       </div>
 
-      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4" aria-label="Primary navigation">
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4" aria-label={ui("Primary navigation")}>
         {NAV_SECTIONS.map((section, sectionIndex) => {
           const items = section.items.filter((item) =>
             (!item.cap || can(user.role, item.cap)) && (!item.roles || item.roles.includes(user.role))
@@ -173,7 +178,7 @@ export function Sidebar({ user, mobile = false, onClose }: { user: SessionUser; 
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{user.full_name}</div>
+              <div className="truncate text-sm font-medium"><UiText text={user.full_name} /></div>
               <div className="flex items-center gap-1.5 text-[11px] text-muted">
                 <span className="h-1.5 w-1.5 rounded-full bg-success" /> {t(ROLE_KEY[user.role] ?? "role.readonly")}
               </div>

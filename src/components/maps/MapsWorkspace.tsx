@@ -1,4 +1,6 @@
 "use client";
+import { UiText, useUiText } from '@/components/UiText';
+
 import { useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Link from "@/components/AppLink";
@@ -17,9 +19,7 @@ const KarnatakaGeoMap = dynamic(() => import("./KarnatakaGeoMap"), {
       aria-label="Loading Karnataka district map"
     >
       <div className="flex items-center gap-2 text-sm text-muted">
-        <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden />
-        Loading Karnataka map…
-      </div>
+        <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden /><UiText text={"Loading Karnataka map…"} /></div>
     </div>
   ),
 });
@@ -37,6 +37,7 @@ export function MapsWorkspace({
   crimeTypes: string[];
   hotspots: { district: string; cases: number }[];
 }) {
+  const ui = useUiText();
   const [style, setStyle] = useState<Style>("map");
   const [selected, setSelected] = useState<string | null>(hotspots[0]?.district ?? null);
   const [incident, setIncident] = useState<FirPoint | null>(null);
@@ -67,8 +68,8 @@ export function MapsWorkspace({
           ]}
         />
         <p className="min-w-0 flex-1 truncate text-xs text-muted">
-          {style === "map" && "Karnataka districts on a dark base map · choropleth by FIR volume · click a district for detail."}
-          {style === "layers" && "Full base map with heatmap & incident layers."}
+          {style === "map" && "Karnataka · District FIR volume"}
+          {style === "layers" && "Incident density & severity"}
         </p>
       </div>
 
@@ -83,26 +84,26 @@ export function MapsWorkspace({
               sub={detail ? "District profile" : "Click the map or a ranking row"}
               action={
                 detail && detail.rank > 0 ? (
-                  <Badge tone={detail.rank === 1 ? "danger" : detail.rank <= 3 ? "warning" : "muted"}>Rank #{detail.rank}</Badge>
+                  <Badge tone={detail.rank === 1 ? "danger" : detail.rank <= 3 ? "warning" : "muted"}><UiText text={"Rank #"} /><UiText text={detail.rank} /></Badge>
                 ) : undefined
               }
             />
             {detail ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
-                  <Tile label="FIRs" value={detail.cases} />
-                  <Tile label="State rank" value={detail.rank > 0 ? `#${detail.rank}` : "—"} />
+                  <Tile label={ui("FIRs")} value={detail.cases} />
+                  <Tile label={ui("State rank")} value={detail.rank > 0 ? `#${detail.rank}` : "—"} />
                 </div>
-                <div className="stat-label mb-2 mt-4">Top offences</div>
+                <div className="stat-label mb-2 mt-4"><UiText text={"Top offences"} /></div>
                 <div className="space-y-2">
-                  {detail.top.length === 0 && <p className="text-xs text-muted">No FIRs recorded for this district.</p>}
+                  {detail.top.length === 0 && <p className="text-xs text-muted"><UiText text={"No FIRs recorded for this district."} /></p>}
                   {detail.top.map(([type, n]) => {
                     const max = detail.top[0][1];
                     return (
                       <div key={type}>
                         <div className="flex items-center justify-between gap-3 text-xs">
-                          <span className="min-w-0 truncate text-subtle">{type}</span>
-                          <span className="shrink-0 font-mono tabular-nums text-muted">{n}</span>
+                          <span className="min-w-0 truncate text-subtle"><UiText text={type} /></span>
+                          <span className="shrink-0 font-mono tabular-nums text-muted"><UiText text={n} /></span>
                         </div>
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border">
                           <div
@@ -114,23 +115,23 @@ export function MapsWorkspace({
                     );
                   })}
                 </div>
-                <Link href="/database?table=firs" className="btn-ghost mt-4 h-8 w-full justify-center text-xs">
-                  <Database className="h-3.5 w-3.5" aria-hidden /> Open in database <ExternalLink className="h-3 w-3" aria-hidden />
+                <Link href="/database?table=CaseMaster" className="btn-ghost mt-4 h-8 w-full justify-center text-xs">
+                  <Database className="h-3.5 w-3.5" aria-hidden /><UiText text={" Open in database "} /><ExternalLink className="h-3 w-3" aria-hidden />
                 </Link>
               </>
             ) : (
-              <EmptyState icon={MapPin} title="No district selected" hint="Choose a district on the map to open its FIR profile." />
+              <EmptyState icon={MapPin} title={ui("No district selected")} hint={ui("Choose a district on the map to open its FIR profile.")} />
             )}
             <div className="mt-4 border-t border-border pt-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="stat-label">District ranking</span>
-                <span className="font-mono text-[10px] tabular-nums text-muted">{hotspots.length}</span>
+                <span className="stat-label"><UiText text={"District ranking"} /></span>
+                <span className="font-mono text-[10px] tabular-nums text-muted"><UiText text={hotspots.length} /></span>
               </div>
               <div className="max-h-56 space-y-0.5 overflow-y-auto pr-1">
                 {hotspots.map((h, i) => (
                   <RankRow key={h.district} rank={i + 1} district={h.district} cases={h.cases} on={selected === h.district} onClick={() => setSelected(h.district)} />
                 ))}
-                {hotspots.length === 0 && <p className="px-2 py-3 text-xs text-muted">No district data in Cloud Scale yet.</p>}
+                {hotspots.length === 0 && <p className="px-2 py-3 text-xs text-muted"><UiText text={"No district data in Cloud Scale yet."} /></p>}
               </div>
             </div>
           </div>
@@ -144,7 +145,7 @@ export function MapsWorkspace({
             <IncidentPanel p={incident} onClose={() => setIncident(null)} />
           ) : (
             <div className="card panel-pad">
-              <PanelHeader icon={ListOrdered} title="District ranking" sub="Click a marker on the Incidents layer for detail" />
+              <PanelHeader icon={ListOrdered} title={ui("District ranking")} sub={ui("Click a marker on the Incidents layer for detail")} />
               <div className="space-y-2">
                 {hotspots.map((h, i) => {
                   const max = hotspots[0]?.cases || 1;
@@ -153,9 +154,9 @@ export function MapsWorkspace({
                     <button key={h.district} onClick={() => setSelected(h.district)} aria-pressed={on} className="group block w-full text-left">
                       <div className="flex items-center justify-between gap-3 text-xs">
                         <span className={`min-w-0 truncate transition-colors ${on ? "text-accent" : "text-subtle group-hover:text-fg"}`}>
-                          <span className="mr-2 font-mono tabular-nums text-muted">{String(i + 1).padStart(2, "0")}</span> {h.district}
+                          <span className="mr-2 font-mono tabular-nums text-muted">{String(i + 1).padStart(2, "0")}</span> <UiText text={h.district} />
                         </span>
-                        <span className="shrink-0 font-mono tabular-nums text-muted">{h.cases}</span>
+                        <span className="shrink-0 font-mono tabular-nums text-muted"><UiText text={h.cases} /></span>
                       </div>
                       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-elevated ring-1 ring-inset ring-border">
                         <div
@@ -167,7 +168,7 @@ export function MapsWorkspace({
                   );
                 })}
                 {hotspots.length === 0 && (
-                  <EmptyState icon={ListOrdered} title="No district data" hint="Rankings appear once FIRs sync from Cloud Scale." />
+                  <EmptyState icon={ListOrdered} title={ui("No district data")} hint={ui("Rankings appear once FIRs sync from Cloud Scale.")} />
                 )}
               </div>
             </div>
@@ -187,9 +188,9 @@ function RankRow({ rank, district, cases, on, onClick }: { rank: number; distric
         on ? "bg-elevated ring-1 ring-inset ring-accent/40" : "hover:bg-elevated/60"
       }`}
     >
-      <span className={`w-6 shrink-0 text-right font-mono text-[10px] tabular-nums ${on ? "text-accent" : "text-muted"}`}>{rank}</span>
-      <span className={`min-w-0 flex-1 truncate ${on ? "text-fg" : "text-subtle"}`}>{district}</span>
-      <span className="shrink-0 font-mono tabular-nums text-muted">{cases}</span>
+      <span className={`w-6 shrink-0 text-right font-mono text-[10px] tabular-nums ${on ? "text-accent" : "text-muted"}`}><UiText text={rank} /></span>
+      <span className={`min-w-0 flex-1 truncate ${on ? "text-fg" : "text-subtle"}`}><UiText text={district} /></span>
+      <span className="shrink-0 font-mono tabular-nums text-muted"><UiText text={cases} /></span>
     </button>
   );
 }
@@ -197,8 +198,8 @@ function RankRow({ rank, district, cases, on, onClick }: { rank: number; distric
 function Tile({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-border bg-elevated/40 p-2.5">
-      <div className="stat-label">{label}</div>
-      <div className="mt-1 font-display text-lg font-bold tabular-nums">{value}</div>
+      <div className="stat-label"><UiText text={label} /></div>
+      <div className="mt-1 font-display text-lg font-bold tabular-nums"><UiText text={value} /></div>
     </div>
   );
 }
@@ -211,42 +212,40 @@ const SEV_TONE: Record<string, "danger" | "warning" | "info" | "success"> = {
 };
 
 function IncidentPanel({ p, onClose }: { p: FirPoint; onClose: () => void }) {
+  const ui = useUiText();
   return (
     <div className="card panel-pad animate-fade-in">
       <PanelHeader
         icon={MapPin}
         title={p.fir_number || "Incident"}
-        sub="First Information Report"
+        sub={ui("First Information Report")}
         action={
           <button
             onClick={onClose}
             className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-fg"
-            aria-label="Close incident"
+            aria-label={ui("Close incident")}
           >
             <X className="h-4 w-4" aria-hidden />
           </button>
         }
       />
       <dl className="space-y-2 text-xs">
-        <Row label="Type" value={p.crime_type || "—"} />
-        <Row label="District" value={p.district || "—"} />
+        <Row label={ui("Type")} value={p.crime_type || "—"} />
+        <Row label={ui("District")} value={p.district || "—"} />
         <Row
-          label="Severity"
-          value={p.severity ? <Badge tone={SEV_TONE[p.severity] ?? "muted"}>{p.severity}</Badge> : "—"}
+          label={ui("Severity")}
+          value={p.severity ? <Badge tone={SEV_TONE[p.severity] ?? "muted"}><UiText text={p.severity} /></Badge> : "—"}
         />
         <Row
-          label="Coordinates"
-          value={<span className="font-mono tabular-nums">{p.lat && p.lng ? `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}` : "—"}</span>}
+          label={ui("Coordinates")}
+          value={<span className="font-mono tabular-nums"><UiText text={p.lat && p.lng ? `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}` : "—"} /></span>}
         />
       </dl>
       {p.fir_number && (
-        <Link href={`/cases?fir=${encodeURIComponent(p.fir_number)}`} className="btn-ghost mt-4 h-8 w-full justify-center text-xs">
-          Open full case <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        <Link href={`/cases?fir=${encodeURIComponent(p.fir_number)}`} className="btn-ghost mt-4 h-8 w-full justify-center text-xs"><UiText text={"Open full case "} /><ExternalLink className="h-3.5 w-3.5" aria-hidden />
         </Link>
       )}
-      <p className="mt-3 border-t border-border pt-3 text-[11px] leading-relaxed text-muted">
-        Detail is limited to fields held in Cloud Scale. Suspect &amp; linkage joins appear once those tables are provisioned.
-      </p>
+      <p className="mt-3 border-t border-border pt-3 text-[11px] leading-relaxed text-muted"><UiText text={"Detail is limited to fields held in Cloud Scale. Suspect & linkage joins appear once those tables are provisioned."} /></p>
     </div>
   );
 }
@@ -254,8 +253,8 @@ function IncidentPanel({ p, onClose }: { p: FirPoint; onClose: () => void }) {
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="shrink-0 text-subtle">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-muted">{value}</dd>
+      <dt className="shrink-0 text-subtle"><UiText text={label} /></dt>
+      <dd className="min-w-0 truncate text-right text-muted"><UiText text={value} /></dd>
     </div>
   );
 }

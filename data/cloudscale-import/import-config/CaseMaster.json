@@ -1,0 +1,39 @@
+{
+  "table_identifier": "CaseMaster",
+  "operation": "upsert",
+  "find_by": "CaseMasterID",
+  "fk_mapping": [
+    {
+      "local_column": "PolicePersonID",
+      "reference_column": "EmployeeID"
+    },
+    {
+      "local_column": "PoliceStationID",
+      "reference_column": "UnitID"
+    },
+    {
+      "local_column": "CaseCategoryID",
+      "reference_column": "CaseCategoryID"
+    },
+    {
+      "local_column": "GravityOffenceID",
+      "reference_column": "GravityOffenceID"
+    },
+    {
+      "local_column": "CrimeMajorHeadID",
+      "reference_column": "CrimeHeadID"
+    },
+    {
+      "local_column": "CrimeMinorHeadID",
+      "reference_column": "CrimeSubHeadID"
+    },
+    {
+      "local_column": "CaseStatusID",
+      "reference_column": "CaseStatusID"
+    },
+    {
+      "local_column": "CourtID",
+      "reference_column": "CourtID"
+    }
+  ]
+}

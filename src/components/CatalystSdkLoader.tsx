@@ -8,6 +8,10 @@ const SDK_URL = "https://static.zohocdn.com/catalyst/sdk/js/4.6.2/catalystWebSDK
 
 type CatalystWindow = Window & { __netraCatalystReady?: boolean };
 
+function reportCatalystFailure(stage: string) {
+  window.dispatchEvent(new CustomEvent("netra:catalyst-error", { detail: { stage } }));
+}
+
 function markCatalystReady(script: HTMLScriptElement) {
   script.dataset.netraLoaded = "true";
   (window as CatalystWindow).__netraCatalystReady = true;
@@ -20,6 +24,10 @@ export function CatalystSdkLoader() {
     const hostedBuild = process.env.NEXT_PUBLIC_CATALYST_WEB_CLIENT === "true";
     const catalystHost = window.location.hostname.endsWith(".catalystserverless.in");
     if (!hostedBuild && !catalystHost) return;
+
+    if (catalystHost && "serviceWorker" in navigator) {
+      void navigator.serviceWorker.register("/app/netra-static-sw.js", { scope: "/app/" }).catch(() => undefined);
+    }
 
     const loadInit = () => {
       const existingInit = document.getElementById(INIT_ID) as HTMLScriptElement | null;
@@ -36,6 +44,7 @@ export function CatalystSdkLoader() {
       init.src = "/__catalyst/sdk/init.js";
       init.defer = true;
       init.addEventListener("load", () => markCatalystReady(init), { once: true });
+      init.addEventListener("error", () => reportCatalystFailure("initialization"), { once: true });
       document.head.appendChild(init);
     };
 
@@ -51,6 +60,7 @@ export function CatalystSdkLoader() {
     sdk.src = SDK_URL;
     sdk.defer = true;
     sdk.addEventListener("load", loadInit, { once: true });
+    sdk.addEventListener("error", () => reportCatalystFailure("web-sdk"), { once: true });
     document.head.appendChild(sdk);
   }, []);
 

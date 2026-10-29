@@ -1,9 +1,12 @@
 "use client";
+import { UiText, useUiText } from '@/components/UiText';
+
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui";
 import { MapsWorkspace } from "@/components/maps/MapsWorkspace";
 import { useT } from "@/lib/i18n-client";
 import { fetchMaps, type MapsData } from "@/lib/cloudscale";
+import { LoginNetwork } from "@/app/login/LoginNetwork";
 
 // Severity legend — token-driven so all seven themes re-skin it with the app.
 const SEV = [
@@ -22,18 +25,19 @@ export default function MapsPage() {
   const geo = data?.points ?? [];
   const hotspots = data?.hotspots ?? [];
   return (
-    <div className="animate-fade-in">
+    <div className="relative isolate animate-fade-in">
+      <div aria-hidden className="pointer-events-none absolute -inset-5 -z-10 overflow-hidden opacity-25"><LoginNetwork /></div>
       <PageHeader
         title={t("maps.title")}
         subtitle={data === null ? "Syncing geospatial layers from Cloud Scale…" : `${geo.length} ${t("maps.subtitle")} ${hotspots.length} ${t("maps.districts")}`}
       >
         <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-surface/40 px-3 py-2">
-          <span className="stat-label shrink-0">Severity</span>
+          <span className="stat-label shrink-0"><UiText text={"Severity"} /></span>
           <span aria-hidden className="h-3.5 w-px shrink-0 bg-border" />
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {SEV.map((s) => (
               <span key={s.k} className="flex items-center gap-1.5 text-xs font-medium capitalize text-muted">
-                <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${s.c}`} /> {s.k}
+                <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${s.c}`} /> <UiText text={s.k} />
               </span>
             ))}
           </div>
@@ -51,8 +55,9 @@ export default function MapsPage() {
 // Structure-matched loading state — mirrors the workspace toolbar, map canvas
 // and detail rail so nothing shifts once Cloud Scale responds.
 function MapsSkeleton() {
+  const ui = useUiText();
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading map data from Cloud Scale">
+    <div className="space-y-4" aria-busy="true" aria-label={ui("Loading map data from Cloud Scale")}>
       <div className="flex flex-wrap items-center gap-3">
         <div className="skeleton h-9 w-[19rem] rounded-lg" />
         <div className="skeleton h-3 w-72 max-w-full" />

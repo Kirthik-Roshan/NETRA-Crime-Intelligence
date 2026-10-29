@@ -63,11 +63,29 @@ const TEXT_COLUMNS = new Set([
   "ChargesheetDetails.cstype",
 ]);
 const REAL_COLUMNS = new Set(["CaseMaster.latitude", "CaseMaster.longitude"]);
-const DATE_COLUMNS = new Set([
-  "CaseMaster.CrimeRegisteredDate", "CaseMaster.IncidentFromDate", "CaseMaster.IncidentToDate",
-  "CaseMaster.InfoReceivedPSDate", "ArrestSurrender.ArrestSurrenderDate", "Employee.EmployeeDOB",
-  "Employee.AppointmentDate", "ChargesheetDetails.csdate",
+const DATE_ONLY_COLUMNS = new Set([
+  "CaseMaster.CrimeRegisteredDate", "ArrestSurrender.ArrestSurrenderDate",
+  "Employee.EmployeeDOB", "Employee.AppointmentDate", "ChargesheetDetails.csdate",
 ]);
+const DATETIME_COLUMNS = new Set([
+  "CaseMaster.IncidentFromDate", "CaseMaster.IncidentToDate", "CaseMaster.InfoReceivedPSDate",
+  "Inv_OccuranceTime.OccuranceFrom", "Inv_OccuranceTime.OccuranceTo",
+]);
+const DATE_COLUMNS = new Set([...DATE_ONLY_COLUMNS, ...DATETIME_COLUMNS]);
+
+function isValidCatalystTemporal(value, dateTime) {
+  const text = String(value);
+  const pattern = dateTime
+    ? /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
+    : /^\d{4}-\d{2}-\d{2}$/;
+  if (!pattern.test(text)) return false;
+  const parsed = new Date(dateTime ? `${text.replace(" ", "T")}Z` : `${text}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const normalized = dateTime
+    ? parsed.toISOString().replace("T", " ").slice(0, 19)
+    : parsed.toISOString().slice(0, 10);
+  return normalized === text;
+}
 
 function expectedStorageType(table, column) {
   const field = `${table}.${column}`;
@@ -170,8 +188,9 @@ for (const [table, contract] of Object.entries(EXPECTED)) {
 
   for (const column of expected.filter((name) => DATE_COLUMNS.has(`${table}.${name}`) && actual.includes(name))) {
     const values = db.prepare(`SELECT ${qid(column)} AS value FROM ${qid(table)} WHERE ${qid(column)} IS NOT NULL AND trim(CAST(${qid(column)} AS TEXT)) != ''`).all();
-    const invalid = values.filter((row) => Number.isNaN(Date.parse(String(row.value)))).length;
-    if (invalid) dateWarnings.push(`${table}.${column}: ${invalid}/${values.length} invalid date value(s)`);
+    const dateTime = DATETIME_COLUMNS.has(`${table}.${column}`);
+    const invalid = values.filter((row) => !isValidCatalystTemporal(row.value, dateTime)).length;
+    if (invalid) dateWarnings.push(`${table}.${column}: ${invalid}/${values.length} invalid Catalyst ${dateTime ? "DateTime" : "Date"} value(s)`);
   }
 }
 

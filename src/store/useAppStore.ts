@@ -75,6 +75,7 @@ export const useAppStore = create<AppState>()(
         // Mirror into a cookie so server components can localize too.
         if (typeof document !== "undefined") {
           document.cookie = `netra-lang=${lang}; path=/; max-age=31536000; samesite=lax`;
+          document.documentElement.lang = lang;
         }
         set({ lang });
       },
@@ -101,6 +102,7 @@ export const useAppStore = create<AppState>()(
           // Keep the server-readable lang cookie in sync with persisted prefs.
           if (typeof document !== "undefined") {
             document.cookie = `netra-lang=${state.lang}; path=/; max-age=31536000; samesite=lax`;
+            document.documentElement.lang = state.lang;
           }
         }
       },

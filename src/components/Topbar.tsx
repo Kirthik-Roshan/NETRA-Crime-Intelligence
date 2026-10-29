@@ -1,4 +1,6 @@
 "use client";
+import { UiText, useUiText } from '@/components/UiText';
+
 import { useRouter } from "next/navigation";
 import { Search, LogOut, Languages, ShieldCheck, CornerDownLeft, Loader2, Menu } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -11,6 +13,7 @@ import { logout as clearAuth, navigateAppRoute, replaceAppRoute } from "@/lib/au
 import { useState, useEffect } from "react";
 
 export function Topbar({ user: _user, onMenu }: { user: SessionUser; onMenu?: () => void }) {
+  const ui = useUiText();
   const router = useRouter();
   const lang = useAppStore((s) => s.lang);
   const setLang = useAppStore((s) => s.setLang);
@@ -54,8 +57,8 @@ export function Topbar({ user: _user, onMenu }: { user: SessionUser; onMenu?: ()
         type="button"
         onClick={onMenu}
         className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border text-muted transition-colors hover:border-accent/50 hover:bg-elevated hover:text-fg md:hidden"
-        aria-label="Open navigation"
-        title="Open navigation"
+        aria-label={ui("Open navigation")}
+        title={ui("Open navigation")}
       >
         <Menu className="h-[18px] w-[18px]" />
       </button>
@@ -80,21 +83,21 @@ export function Topbar({ user: _user, onMenu }: { user: SessionUser; onMenu?: ()
           title={aiOnline ? "Catalyst intelligence service connected" : "Local analysis service active"}
         >
           <ShieldCheck className="h-3.5 w-3.5 text-accent" />
-          <span className="hidden lg:inline">Analysis service</span>
+          <span className="hidden lg:inline"><UiText text={"Analysis service"} /></span>
           <span className={`h-1.5 w-1.5 rounded-full ${aiOnline === null ? "bg-muted" : aiOnline ? "bg-success" : "bg-warning"}`} />
         </div>
 
         <button
           onClick={toggleLang}
           className="flex h-9 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-subtle transition-colors hover:border-muted/40 hover:bg-elevated hover:text-fg"
-          title="Toggle language"
+          title={ui("Toggle language")}
         >
           <Languages className="h-4 w-4" />
-          {lang === "en" ? "EN" : "ಕನ್ನಡ"}
+          <UiText text={lang === "en" ? "EN" : "ಕನ್ನಡ"} />
         </button>
 
         <ThemeSwitcher />
-        <NotificationsBell />
+        <NotificationsBell investigationAccess={_user.role !== "readonly"} />
 
         <button
           onClick={() => { void logout(); }}

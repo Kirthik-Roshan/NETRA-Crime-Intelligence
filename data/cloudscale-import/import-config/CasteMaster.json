@@ -1,0 +1,5 @@
+{
+  "table_identifier": "CasteMaster",
+  "operation": "upsert",
+  "find_by": "caste_master_id"
+}

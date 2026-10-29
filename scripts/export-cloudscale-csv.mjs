@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Export the prototype-facing SQLite views from data/netra.db into CSV files
- * that can be imported into Zoho Catalyst Cloud Scale Data Store.
+ * Export the 28 official KSP ER tables from data/netra.db into CSV files that
+ * can be imported into Zoho Catalyst Cloud Scale Data Store.
  *
  * The generated schema uses only Catalyst-supported field types:
  * Text, Var Char, Date, DateTime, Int, Double, Boolean, BigInt, Foreign Key,
@@ -15,6 +15,7 @@ const ROOT = process.cwd();
 const DB = join(ROOT, "data", "netra.db");
 const OUT = join(ROOT, "data", "cloudscale-import");
 const CSV_OUT = join(OUT, "csv");
+const CONFIG_OUT = join(OUT, "import-config");
 
 const CATALYST_TYPES = new Set([
   "Text", "Var Char", "Date", "DateTime", "Int", "Double", "Boolean",
@@ -42,12 +43,83 @@ const ER_DATETIME_FIELDS = new Set([
   "CaseMaster.IncidentFromDate",
   "CaseMaster.IncidentToDate",
   "CaseMaster.InfoReceivedPSDate",
+  "Inv_OccuranceTime.OccuranceFrom",
+  "Inv_OccuranceTime.OccuranceTo",
 ]);
 
 const ER_BOOLEAN_FIELDS = new Set([
   "ArrestSurrender.IsAccused",
   "ArrestSurrender.IsComplainantAccused",
   "Employee.PhysicallyChallenged",
+]);
+
+const ER_OPTIONAL_FIELDS = new Set([
+  "Unit.ParentUnit",
+  "CaseMaster.CourtID",
+  "ArrestSurrender.CourtID",
+]);
+
+const ER_SEARCH_FIELDS = new Set([
+  "State.StateName",
+  "District.DistrictName",
+  "Unit.UnitName",
+  "Employee.KGID",
+  "Employee.FirstName",
+  "Court.CourtName",
+  "Act.ActCode",
+  "Act.ShortName",
+  "Section.SectionCode",
+  "CrimeHead.CrimeGroupName",
+  "CrimeSubHead.CrimeHeadName",
+  "CaseMaster.CrimeNo",
+  "CaseMaster.CaseNo",
+  "ComplainantDetails.ComplainantName",
+  "Victim.VictimName",
+  "Accused.AccusedName",
+]);
+
+const ER_ADDITIONAL_UNIQUE_FIELDS = new Set([
+  "Employee.KGID",
+  "CaseMaster.CrimeNo",
+]);
+
+const ER_PII_FIELDS = new Set([
+  "Employee.KGID",
+  "Employee.FirstName",
+  "Employee.EmployeeDOB",
+  "ComplainantDetails.ComplainantName",
+  "ComplainantDetails.AgeYear",
+  "ComplainantDetails.OccupationID",
+  "ComplainantDetails.ReligionID",
+  "ComplainantDetails.CasteID",
+  "ComplainantDetails.GenderID",
+  "Victim.VictimName",
+  "Victim.AgeYear",
+  "Victim.GenderID",
+  "Accused.AccusedName",
+  "Accused.AgeYear",
+  "Accused.GenderID",
+  "Accused.PersonID",
+  "CaseMaster.latitude",
+  "CaseMaster.longitude",
+  "CaseMaster.BriefFacts",
+]);
+
+const ER_DEFAULTS = new Map([
+  ["State.Active", "true"],
+  ["District.Active", "true"],
+  ["UnitType.Active", "true"],
+  ["Unit.Active", "true"],
+  ["Rank.Active", "true"],
+  ["Designation.Active", "true"],
+  ["Employee.PhysicallyChallenged", "false"],
+  ["Court.Active", "true"],
+  ["Act.Active", "true"],
+  ["Section.Active", "true"],
+  ["CrimeHead.Active", "true"],
+  ["Victim.VictimPolice", "0"],
+  ["ArrestSurrender.IsAccused", "true"],
+  ["ArrestSurrender.IsComplainantAccused", "false"],
 ]);
 
 function officialCatalystType(table, column, declaredType) {
@@ -86,138 +158,12 @@ function officialTableDefinitions(db) {
   });
 }
 
-const tables = [
-  {
-    name: "Firs",
-    source: "firs",
-    tier: "must_import",
-    purpose: "Dashboard, maps, assistant search, predictions, FIR detail context.",
-    columns: [
-      ["id", "Int"],
-      ["fir_number", "Var Char"],
-      ["station_id", "Int"],
-      ["crime_type", "Var Char"],
-      ["ipc_sections", "Text"],
-      ["district", "Var Char"],
-      ["taluk", "Var Char"],
-      ["lat", "Double"],
-      ["lng", "Double"],
-      ["occurred_at", "DateTime"],
-      ["reported_at", "DateTime"],
-      ["status", "Var Char"],
-      ["severity", "Var Char"],
-      ["modus", "Var Char"],
-      ["description", "Text"],
-    ],
-  },
-  {
-    name: "Cases",
-    source: "cases",
-    tier: "must_import",
-    purpose: "Cases list, analytics, reports, case workspaces.",
-    columns: [
-      ["id", "Int"],
-      ["case_number", "Var Char"],
-      ["title", "Text"],
-      ["fir_id", "Int"],
-      ["status", "Var Char"],
-      ["case_priority", "Var Char"],
-      ["assigned_officer", "Int"],
-      ["officer", "Var Char"],
-      ["district", "Var Char"],
-      ["opened_at", "DateTime"],
-      ["updated_at", "DateTime"],
-      ["summary", "Text"],
-      ["crime_type", "Var Char"],
-    ],
-    sql: `
-      SELECT
-        c.id, c.case_number, c.title, c.fir_id, c.status, c.priority AS case_priority,
-        c.assigned_officer, c.officer, c.district, c.opened_at, c.updated_at,
-        c.summary, f.crime_type
-      FROM cases c
-      LEFT JOIN firs f ON f.id = c.fir_id
-    `,
-  },
-  {
-    name: "Criminals",
-    source: "criminals",
-    tier: "must_import",
-    purpose: "Criminal list, high-risk people, prediction and network seeds.",
-    columns: [
-      ["id", "Int"],
-      ["name", "Var Char"],
-      ["aliases", "Text"],
-      ["gender", "Var Char"],
-      ["age", "Int"],
-      ["status", "Var Char"],
-      ["risk_score", "Int"],
-      ["crime_category", "Var Char"],
-      ["known_locations", "Text"],
-      ["home_district", "Var Char"],
-      ["first_seen", "DateTime"],
-      ["photo_seed", "Var Char"],
-      ["notes", "Text"],
-      ["fir_count", "Int"],
-      ["arrest_count", "Int"],
-    ],
-    sql: `
-      SELECT
-        c.*,
-        (SELECT COUNT(*) FROM fir_criminals fc WHERE fc.criminal_id = c.id) AS fir_count,
-        (SELECT COUNT(*) FROM arrests a WHERE a.criminal_id = c.id) AS arrest_count
-      FROM criminals c
-    `,
-  },
-  {
-    name: "FirCriminals",
-    source: "fir_criminals",
-    tier: "must_import",
-    purpose: "Links FIRs to resolved criminal profiles.",
-    columns: [["fir_id", "Int"], ["criminal_id", "Int"], ["role", "Var Char"]],
-  },
-  {
-    name: "Arrests",
-    source: "arrests",
-    tier: "important",
-    purpose: "Arrest timelines, dashboard arrest counts, criminal profiles.",
-    columns: [
-      ["id", "Int"],
-      ["criminal_id", "Int"],
-      ["fir_id", "Int"],
-      ["arrested_at", "DateTime"],
-      ["arresting_officer", "Var Char"],
-      ["district", "Var Char"],
-      ["arrest_type", "Var Char"],
-    ],
-  },
-  {
-    name: "Victims",
-    source: "victims",
-    tier: "important",
-    purpose: "Case detail and demographic analytics.",
-    columns: [["id", "Int"], ["fir_id", "Int"], ["name", "Var Char"], ["gender", "Var Char"], ["age", "Int"]],
-  },
-  {
-    name: "Complainants",
-    source: "complainants",
-    tier: "important",
-    purpose: "Case detail and complainant occupation analytics.",
-    columns: [
-      ["id", "Int"],
-      ["fir_id", "Int"],
-      ["name", "Var Char"],
-      ["age", "Int"],
-      ["gender", "Var Char"],
-      ["occupation", "Var Char"],
-      ["religion", "Var Char"],
-    ],
-  },
+const PLATFORM_TABLE_DEFINITIONS = [
   {
     name: "Evidence",
-    source: "evidence",
-    tier: "important",
-    purpose: "Case timeline, evidence list, OCR/storage references.",
+    source: null,
+    tier: "runtime",
+    purpose: "Runtime evidence chain-of-custody metadata linked to official CaseMaster records.",
     columns: [
       ["id", "Int"],
       ["fir_id", "Int"],
@@ -225,141 +171,6 @@ const tables = [
       ["description", "Text"],
       ["collected_at", "DateTime"],
       ["storage_ref", "Text"],
-    ],
-  },
-  {
-    name: "Relationships",
-    source: "relationships",
-    tier: "network",
-    purpose: "Knowledge graph edges for the network explorer.",
-    columns: [
-      ["id", "Int"],
-      ["source_type", "Var Char"],
-      ["source_id", "Int"],
-      ["target_type", "Var Char"],
-      ["target_id", "Int"],
-      ["rel_type", "Var Char"],
-      ["confidence", "Double"],
-      ["frequency", "Int"],
-      ["note", "Text"],
-    ],
-  },
-  {
-    name: "Phones",
-    source: "phones",
-    tier: "network",
-    purpose: "Phone nodes and criminal profile contact data.",
-    columns: [["id", "Int"], ["number", "Var Char"], ["carrier", "Var Char"], ["owner_criminal_id", "Int"]],
-  },
-  {
-    name: "Vehicles",
-    source: "vehicles",
-    tier: "network",
-    purpose: "Vehicle nodes and criminal profile vehicle data.",
-    columns: [
-      ["id", "Int"],
-      ["plate", "Var Char"],
-      ["make", "Var Char"],
-      ["model", "Var Char"],
-      ["color", "Var Char"],
-      ["type", "Var Char"],
-      ["owner_criminal_id", "Int"],
-    ],
-  },
-  {
-    name: "Addresses",
-    source: "addresses",
-    tier: "network",
-    purpose: "Address nodes, map enrichment, criminal profile locations.",
-    columns: [
-      ["id", "Int"],
-      ["criminal_id", "Int"],
-      ["type", "Var Char"],
-      ["line", "Text"],
-      ["district", "Var Char"],
-      ["lat", "Double"],
-      ["lng", "Double"],
-    ],
-  },
-  {
-    name: "Organizations",
-    source: "organizations",
-    tier: "network",
-    purpose: "Gang/syndicate nodes.",
-    columns: [["id", "Int"], ["name", "Var Char"], ["type", "Var Char"], ["district", "Var Char"], ["notes", "Text"]],
-  },
-  {
-    name: "OrgMembers",
-    source: "org_members",
-    tier: "network",
-    purpose: "Links organizations to criminal profiles.",
-    columns: [["org_id", "Int"], ["criminal_id", "Int"], ["role", "Var Char"]],
-  },
-  {
-    name: "Weapons",
-    source: "weapons",
-    tier: "detail",
-    purpose: "Criminal profile weapon associations.",
-    columns: [["id", "Int"], ["criminal_id", "Int"], ["fir_id", "Int"], ["type", "Var Char"], ["description", "Text"]],
-  },
-  {
-    name: "Chargesheets",
-    source: "ChargesheetDetails",
-    tier: "detail",
-    purpose: "Case detail final-report/court panel.",
-    columns: [
-      ["id", "Int"],
-      ["fir_id", "Int"],
-      ["csdate", "DateTime"],
-      ["cstype", "Var Char"],
-      ["final_report", "Var Char"],
-      ["police_person_id", "Int"],
-      ["court", "Var Char"],
-    ],
-    sql: `
-      SELECT
-        cs.CSID AS id,
-        cs.CaseMasterID AS fir_id,
-        cs.csdate,
-        cs.cstype,
-        CASE cs.cstype
-          WHEN 'A' THEN 'Chargesheet'
-          WHEN 'B' THEN 'False Case'
-          WHEN 'C' THEN 'Undetected'
-          ELSE cs.cstype
-        END AS final_report,
-        cs.PolicePersonID AS police_person_id,
-        co.CourtName AS court
-      FROM ChargesheetDetails cs
-      LEFT JOIN CaseMaster cm ON cm.CaseMasterID = cs.CaseMasterID
-      LEFT JOIN Court co ON co.CourtID = cm.CourtID
-    `,
-  },
-  {
-    name: "PoliceStations",
-    source: "police_stations",
-    tier: "support",
-    purpose: "Station names/codes for filters and display.",
-    columns: [["id", "Int"], ["station_code", "Var Char"], ["name", "Var Char"], ["district", "Var Char"]],
-  },
-  {
-    name: "AuditLogs",
-    source: "audit_logs",
-    tier: "optional",
-    purpose: "Admin demo audit trail. Skip for public demo if you do not want seeded user activity.",
-    columns: [
-      ["id", "Int"],
-      ["ts", "DateTime"],
-      ["user_id", "Int"],
-      ["username", "Var Char"],
-      ["role", "Var Char"],
-      ["action", "Var Char"],
-      ["entity", "Var Char"],
-      ["entity_id", "Var Char"],
-      ["request_id", "Var Char"],
-      ["ai_model", "Var Char"],
-      ["processing_ms", "Int"],
-      ["detail", "Text"],
     ],
   },
   {
@@ -408,15 +219,46 @@ function csvEscape(value) {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-function formatValue(value, type) {
+function catalystDate(value, dateTime, field) {
+  const raw = String(value).trim();
+  const direct = dateTime
+    ? raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})/)
+    : raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  const formatted = direct
+    ? (dateTime ? `${direct[1]} ${direct[2]}` : direct[1])
+    : (() => {
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) return "";
+        return dateTime
+          ? parsed.toISOString().replace("T", " ").slice(0, 19)
+          : parsed.toISOString().slice(0, 10);
+      })();
+  if (!formatted) throw new Error(`${field}: invalid Catalyst ${dateTime ? "DateTime" : "Date"} value ${raw}`);
+  return formatted;
+}
+
+function formatValue(value, type, field) {
   if (value == null || value === "") return "";
-  if (type === "DateTime") {
-    const s = String(value);
-    const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})/);
-    return m ? `${m[1]} ${m[2]}` : s;
+  if (type === "DateTime") return catalystDate(value, true, field);
+  if (type === "Date") return catalystDate(value, false, field);
+  if (type === "Boolean") {
+    if (value === true || value === 1 || String(value).toLowerCase() === "true" || String(value) === "1") return "true";
+    if (value === false || value === 0 || String(value).toLowerCase() === "false" || String(value) === "0") return "false";
+    throw new Error(`${field}: invalid Catalyst Boolean value ${String(value)}`);
   }
-  if (type === "Date") {
-    return String(value).slice(0, 10);
+  if (type === "Int") {
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < -2147483648 || number > 2147483647) {
+      throw new Error(`${field}: invalid Catalyst Int value ${String(value)}`);
+    }
+  }
+  if (type === "Double" && !Number.isFinite(Number(value))) {
+    throw new Error(`${field}: invalid Catalyst Double value ${String(value)}`);
+  }
+  const string = String(value);
+  if (type === "Var Char" && string.length > 255) throw new Error(`${field}: Var Char exceeds 255 characters`);
+  if ((type === "Text" || type === "Encrypted Text") && string.length > 10000) {
+    throw new Error(`${field}: ${type} exceeds 10000 characters`);
   }
   return value;
 }
@@ -425,7 +267,7 @@ function writeCsv(path, rows, columns) {
   const names = columns.map(([name]) => name);
   const lines = [names.map(csvEscape).join(",")];
   for (const row of rows) {
-    lines.push(columns.map(([name, type]) => csvEscape(formatValue(row[name], type))).join(","));
+    lines.push(columns.map(([name, type]) => csvEscape(formatValue(row[name], type, `${path}:${name}`))).join(","));
   }
   writeFileSync(path, `${lines.join("\n")}\n`);
 }
@@ -455,13 +297,12 @@ function markdown(schema) {
     })
     .join("\n\n");
 
-  return `# NETRA Cloud Scale CSV Import
+  return `# NETRA Official KSP Cloud Scale Import
 
-Generated from \`data/netra.db\` by \`npm run cloudscale:export\`.
-
-This package now contains both the prototype-facing operational tables and all
-28 normalized tables from \`Police_FIR_ER_Diagram.pdf\`. Every generated field
-uses a Catalyst Cloud Scale-supported type.
+Generated from the 28 normalized KSP tables in \`data/netra.db\` by
+\`npm run cloudscale:export\`. The legacy prototype-facing operational views
+are deliberately excluded. Every generated field uses a Catalyst-supported
+Cloud Scale type.
 
 ## Schema Contract
 
@@ -477,17 +318,18 @@ unknown values remain empty and are shown in NETRA as \`Not recorded\`.
 
 ## Import Order
 
-1. Operational application tables: \`Firs\`, \`Cases\`, \`Criminals\`, then their detail/link tables.
-2. ER lookup tables: \`State\` through \`CrimeSubHead\` in the generated CSV table below.
-3. ER transactional tables: \`CaseMaster\`, then complainant/victim/accused/arrest/chargesheet tables.
+1. KSP lookup tables: \`State\` through \`CrimeSubHead\` in the generated CSV table below.
+2. KSP transactional tables: \`CaseMaster\`, then complainant, victim, accused,
+   arrest, occurrence and chargesheet tables.
 
 The generated CSVs keep relationship columns as \`Int\` so Catalyst can import
 them before foreign-key wiring. The schema manifest records every PK/FK target.
 
 ## Function Allowlist
 
-After importing beyond the first three tables, set the \`ai_quickml\` Function
-environment variable:
+Set the \`ai_quickml\` Function environment variable to the generated official
+allowlist. \`Evidence\`, \`Notifications\`, and \`OcrResult\` are isolated
+platform-output tables; they are not substituted crime-source tables.
 
 \`\`\`
 DATASTORE_TABLES=${allowlist}
@@ -513,16 +355,167 @@ ${fieldSections}
 `;
 }
 
+function yesNo(value) {
+  return value ? "Yes" : "No";
+}
+
+function creationGuide(schema) {
+  const officialTables = schema.tables.filter((table) => table.tier === "ksp_er");
+  const sections = officialTables.map((table, index) => {
+    const rows = table.fields.map((field) => {
+      const id = `${table.name}.${field.name}`;
+      const isForeignKey = Boolean(field.reference);
+      const catalystType = isForeignKey ? "Foreign Key" : field.type;
+      const key = field.key || "-";
+      const parent = field.reference ? `\`${field.reference}\`` : "-";
+      const required = !ER_OPTIONAL_FIELDS.has(id);
+      const unique =
+        (Boolean(field.key?.includes("PK")) && !isForeignKey) ||
+        ER_ADDITIONAL_UNIQUE_FIELDS.has(id);
+      const search = ER_SEARCH_FIELDS.has(id) && field.type !== "Text" && !isForeignKey;
+      const pii = ER_PII_FIELDS.has(id);
+      const defaultValue = ER_DEFAULTS.get(id) || "-";
+      const onDelete = isForeignKey ? "Null" : "-";
+      const maxLength = field.type === "Var Char" ? "255" : "-";
+      return `| \`${field.name}\` | ${catalystType} | ${maxLength} | ${key} | ${parent} | ${yesNo(required)} | ${yesNo(unique)} | ${yesNo(search)} | ${yesNo(pii)} | ${defaultValue} | ${onDelete} |`;
+    }).join("\n");
+
+    const fkMappings = table.fields
+      .filter((field) => field.reference)
+      .map((field) => {
+        const referenceColumn = field.reference.split(".")[1];
+        return `    { "local_column": "${field.name}", "reference_column": "${referenceColumn}" }`;
+      });
+    const primaryField = table.fields.find((field) => field.key?.includes("PK"));
+    const mappingJson = fkMappings.length
+      ? `,\n  "fk_mapping": [\n${fkMappings.join(",\n")}\n  ]`
+      : "";
+    const operationJson = primaryField && !primaryField.reference
+      ? `"operation": "upsert",\n  "find_by": "${primaryField.name}"`
+      : `"operation": "insert"`;
+
+    return `## ${index + 1}. ${table.name}
+
+CSV: \`${table.csv}\` (${table.row_count} rows)
+
+| Column | Catalyst type | Max length | Logical key | Parent business key | Mandatory | Unique | Search | PII | Default | On delete |
+|---|---|---:|---|---|---|---|---|---|---|---|
+${rows}
+
+Import configuration skeleton:
+
+\`\`\`json
+{
+  "table_identifier": "${table.name}",
+  ${operationJson}${mappingJson}
+}
+\`\`\``;
+  }).join("\n\n");
+
+  return `# KSP Cloud Scale Table Creation Runbook
+
+Generated from the 28 official KSP ER tables in \`data/netra.db\`.
+
+## Important Catalyst Rules
+
+- Do not create one Stratus bucket per table. Create one bucket, such as
+  \`netra-ksp-import\`, and keep all CSV objects in it. The tables themselves
+  are created under **Cloud Scale > Data Store**.
+- Catalyst automatically creates \`ROWID\`, \`CREATORID\`, \`CREATEDTIME\`, and
+  \`MODIFIEDTIME\`. Do not add those columns manually.
+- \`ROWID\` is the physical Catalyst primary key. A non-FK column marked
+  \`PK\` below is the KSP logical/business key: create it with
+  **IsUnique = Yes** and **IsMandatory = Yes**. A field marked \`PK + FK\`
+  is imported once with \`insert\` because Catalyst's FK control does not
+  expose \`IsUnique\`.
+- A column marked \`FK\` must be created with data type **Foreign Key** and the
+  listed parent table. Catalyst stores the parent record's \`ROWID\`; the import
+  \`fk_mapping\` resolves the CSV business-key value to that \`ROWID\`.
+- Choose **On Delete = Null** for every FK. In production, deny deletion of
+  referenced police records through roles/application logic; do not use Cascade
+  for evidentiary data.
+- Date CSV values use \`YYYY-MM-DD\`. DateTime values use
+  \`YYYY-MM-DD HH:mm:ss\`. Boolean values use \`true\` or \`false\`.
+- Catalyst cannot enforce composite keys. The three junction tables without a
+  single PK are deduplicated and validated by \`npm run schema:audit\`.
+
+## Console Steps
+
+1. Select the correct environment: **Development** while testing, or
+   **Production** only when you are ready to load production.
+2. Open **Cloud Scale > Data Store > Create a new Table**.
+3. Create the table using the exact case-sensitive name below.
+4. Open **Schema View > + New Column** for each row in that table's section.
+5. Set the data type and every flag exactly as listed. For \`Var Char\`, set max
+   length to 255. For an FK, select the parent table and **On Delete = Null**.
+6. Create all tables in the numbered order below. Parent tables must exist
+   before child FK columns can be configured.
+7. Before import, run \`npm run schema:audit\`. We will then import in the same
+   numbered order using the generated CSVs and the shown FK mappings.
+
+## Null Policy
+
+Only \`Unit.ParentUnit\`, \`CaseMaster.CourtID\`, and
+\`ArrestSurrender.CourtID\` are optional in the generated dataset. Every other
+listed field is populated and should be mandatory. The optional court fields
+represent cases that have not yet reached court; they are not fabricated.
+
+## Schema Notes
+
+- \`Unit.ParentUnit\` remains an optional \`Int\` because the supplied ER schema
+  does not formally declare its FK relationship.
+- \`CrimeHeadActSection.SectionCode\` remains \`Var Char\` for the same reason.
+- \`Inv_OccuranceTime.PlaceOfOccurance\`, \`OccuranceFrom\`, and \`OccuranceTo\`
+  are NETRA compatibility fields inferred around the matrix-listed
+  \`CaseMasterID\`; they are explicitly documented here rather than presented
+  as verbatim organizer fields.
+- \`ActSectionAssociation.ActID\` and \`SectionID\` are \`Var Char\`, matching
+  the actual \`ActCode\` and \`SectionCode\` parent key types.
+
+${sections}
+`;
+}
+
+function importConfigForTable(table) {
+  const primaryField = table.fields.find((field) => field.key?.includes("PK"));
+  const canUpsert = primaryField && !primaryField.reference;
+  const config = {
+    table_identifier: table.name,
+    operation: canUpsert ? "upsert" : "insert",
+  };
+
+  if (canUpsert) {
+    config.find_by = primaryField.name;
+  }
+
+  const fkMapping = table.fields
+    .filter((field) => field.reference)
+    .map((field) => ({
+      local_column: field.name,
+      reference_column: field.reference.split(".")[1],
+    }));
+
+  if (fkMapping.length) {
+    config.fk_mapping = fkMapping;
+  }
+
+  return config;
+}
+
 function main() {
   mkdirSync(CSV_OUT, { recursive: true });
+  mkdirSync(CONFIG_OUT, { recursive: true });
 
   const db = new Database(DB, { readonly: true });
-  const exportTables = [...tables, ...officialTableDefinitions(db)];
+  const exportTables = [
+    ...officialTableDefinitions(db),
+    ...PLATFORM_TABLE_DEFINITIONS,
+  ];
   assertTypes(exportTables);
   const schema = {
     generated_from: "data/netra.db",
     catalyst_supported_types: [...CATALYST_TYPES],
-    note: "All fields use Catalyst-supported types. Logical id/link fields stay Int for CSV import.",
+    note: "Only the 28 official KSP ER tables plus isolated platform-output tables are included. Investigator views are derived at runtime.",
     tables: [],
   };
 
@@ -559,8 +552,17 @@ function main() {
 
   writeFileSync(join(OUT, "schema.json"), `${JSON.stringify(schema, null, 2)}\n`);
   writeFileSync(join(OUT, "README.md"), markdown(schema));
+  writeFileSync(join(OUT, "KSP-CLOUDSCALE-CREATION.md"), creationGuide(schema));
+  for (const table of schema.tables.filter((entry) => entry.tier === "ksp_er")) {
+    writeFileSync(
+      join(CONFIG_OUT, `${table.name}.json`),
+      `${JSON.stringify(importConfigForTable(table), null, 2)}\n`,
+    );
+  }
   console.log(`[cloudscale-export] ${schema.tables.filter((t) => t.source).length} CSVs -> ${CSV_OUT}`);
   console.log("[cloudscale-export] schema -> data/cloudscale-import/schema.json");
+  console.log("[cloudscale-export] runbook -> data/cloudscale-import/KSP-CLOUDSCALE-CREATION.md");
+  console.log("[cloudscale-export] import configs -> data/cloudscale-import/import-config");
 }
 
 main();

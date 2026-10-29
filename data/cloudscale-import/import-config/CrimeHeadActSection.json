@@ -1,0 +1,14 @@
+{
+  "table_identifier": "CrimeHeadActSection",
+  "operation": "insert",
+  "fk_mapping": [
+    {
+      "local_column": "CrimeHeadID",
+      "reference_column": "CrimeHeadID"
+    },
+    {
+      "local_column": "ActCode",
+      "reference_column": "ActCode"
+    }
+  ]
+}

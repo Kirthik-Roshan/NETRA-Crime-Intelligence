@@ -1,0 +1,11 @@
+{
+  "table_identifier": "Victim",
+  "operation": "upsert",
+  "find_by": "VictimMasterID",
+  "fk_mapping": [
+    {
+      "local_column": "CaseMasterID",
+      "reference_column": "CaseMasterID"
+    }
+  ]
+}

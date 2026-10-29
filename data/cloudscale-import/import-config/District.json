@@ -1,0 +1,11 @@
+{
+  "table_identifier": "District",
+  "operation": "upsert",
+  "find_by": "DistrictID",
+  "fk_mapping": [
+    {
+      "local_column": "StateID",
+      "reference_column": "StateID"
+    }
+  ]
+}

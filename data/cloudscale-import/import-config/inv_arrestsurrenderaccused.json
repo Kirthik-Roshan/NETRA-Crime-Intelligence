@@ -1,0 +1,14 @@
+{
+  "table_identifier": "inv_arrestsurrenderaccused",
+  "operation": "insert",
+  "fk_mapping": [
+    {
+      "local_column": "ArrestSurrenderID",
+      "reference_column": "ArrestSurrenderID"
+    },
+    {
+      "local_column": "AccusedMasterID",
+      "reference_column": "AccusedMasterID"
+    }
+  ]
+}

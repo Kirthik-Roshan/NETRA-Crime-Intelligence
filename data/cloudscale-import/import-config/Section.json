@@ -1,0 +1,11 @@
+{
+  "table_identifier": "Section",
+  "operation": "upsert",
+  "find_by": "SectionCode",
+  "fk_mapping": [
+    {
+      "local_column": "ActCode",
+      "reference_column": "ActCode"
+    }
+  ]
+}

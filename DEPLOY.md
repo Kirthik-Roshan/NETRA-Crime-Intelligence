@@ -1,180 +1,164 @@
-# ☁️ Deploying NETRA to Zoho Catalyst
+# Deploying NETRA On Zoho Catalyst
 
-Deployment on Catalyst is **mandatory** for the Datathon 2026 submission. This
-guide takes you from a clean laptop to a live NETRA URL.
+NETRA uses a static Next.js Web Client/Slate frontend and the `ai_quickml`
+Advanced I/O Function. The Function is the only gateway to Cloud Scale,
+QuickML, Zia, Stratus, Cache, SmartBrowz, and Catalyst Authentication.
 
-> **The golden rule:** you build the files (they're in this repo); **you** run
-> `catalyst login` + `catalyst deploy` because those need *your* Zoho account.
+## 1. Preflight
 
----
-
-## 0. How NETRA maps onto Catalyst services
-
-| NETRA capability | Catalyst service |
-|------------------|------------------|
-| Next.js web app (SSR) | **AppSail** (managed Node runtime) — see `app-config.json` |
-| REST / AI proxy functions | **Serverless Functions** — see `functions/ai_quickml/` |
-| Crime database (relational) | **Data Store** (schema = `src/lib/schema.sql`) |
-| LLM serving + RAG + embeddings | **QuickML** (`VL-Qwen3.6-35B-A3B` — **no ChatGPT/Gemini/Ollama**) |
-| OCR · Speech-to-Text · Kannada translation | **Zia Services** |
-| Officer login / RBAC | **Authentication** |
-| Object storage (evidence, exported PDFs) | **Stratus** |
-| Query / semantic cache | **Cache** |
-| Routing · throttling · auth in front of functions | **API Gateway** |
-| Scheduled precompute (embeddings, hotspots) | **Cron / Job Scheduling** |
-
-`catalyst.json` in the repo root declares these components.
-
----
-
-## 1. Install the Catalyst CLI (one time)
+Run from the repository root:
 
 ```bash
-npm install -g zcatalyst-cli
-catalyst --version
+npm install
+npm run schema:audit
+npm run read-model:test
+npm run build
+npm run build:catalyst
+node --check functions/ai_quickml/index.js
+node --check functions/ai_quickml/platform.js
+node --check functions/ai_quickml/ksp-read-model.js
 ```
 
-## 2. Create a project + log in
+Expected data checks:
 
-1. Go to <https://catalyst.zoho.com> → **Create Project** → name it `netra`.
-   (Claim your Datathon credits first: the Catalyst credits link in the brief.)
-2. Authenticate the CLI:
+- 28/28 official ER tables present;
+- zero required-value, date/type, and foreign-key issues;
+- non-zero derived FIR/case/accused/link counts.
+
+## 2. Required Cloud Scale Tables
+
+Create and import the 28 case-sensitive table names documented in
+[`data/cloudscale-import/KSP-CLOUDSCALE-CREATION.md`](./data/cloudscale-import/KSP-CLOUDSCALE-CREATION.md).
+The generated CSVs are under `data/cloudscale-import/csv`.
+
+Create these separate platform-output tables only if their features are used:
+
+- `Evidence`: evidence analysis metadata linked by official `CaseMasterID`.
+- `Notifications`: application notification state.
+- `OcrResult`: OCR output metadata.
+
+Do not create/import the former prototype tables (`Firs`, `Cases`,
+`Criminals`, and similar). Those names now exist only as transient Function
+read models.
+
+## 3. Function Configuration
+
+Keep secrets in **Serverless → Functions → ai_quickml → Configuration**, not in
+source control. Use `.env.example` as the variable checklist. The allowlist is:
+
+```text
+State,District,UnitType,Unit,Rank,Designation,Employee,CaseCategory,GravityOffence,CaseStatusMaster,CasteMaster,ReligionMaster,OccupationMaster,Court,Act,Section,CrimeHead,CrimeSubHead,CrimeHeadActSection,CaseMaster,ComplainantDetails,Victim,Accused,ActSectionAssociation,Inv_OccuranceTime,ArrestSurrender,inv_arrestsurrenderaccused,ChargesheetDetails,Evidence,Notifications,OcrResult
+```
+
+Set `NEXT_PUBLIC_AI_FN_URL` only when overriding automatic environment routing.
+For a production build its value must be the production URL:
+
+```text
+https://ksphacks-60080085094.catalystserverless.in/server/ai_quickml/
+```
+
+## 4. Deploy To Development
+
+The Catalyst CLI deploy command targets Development:
 
 ```bash
-catalyst login          # opens the browser
+npm run release:gate
+catalyst deploy --only functions:ai_quickml,client
+npm run release:live
+npm run evidence:test
+npm run voice:test
 ```
 
-## 3. Bind this repo to your project
+Development Web Client:
 
-From the repo root:
+```text
+https://ksphacks-60080085094.development.catalystserverless.in/app/index.html
+```
+
+Smoke-test the Function:
 
 ```bash
-catalyst init
+curl -sS -X POST \
+  -H 'Content-Type: text/plain' \
+  --data '{"mode":"infra:health"}' \
+  https://ksphacks-60080085094.development.catalystserverless.in/server/ai_quickml/
 ```
 
-- Select your `netra` project when prompted.
-- Choose the components: **AppSail**, **Functions** (and enable Data Store,
-  Authentication, QuickML, Stratus, Cache from the console).
-- `catalyst init` writes your real `projectId` / environment into the config —
-  the `catalyst.json` / `app-config.json` here are templates it will reconcile.
+## 5. Promote To Production
 
----
+Catalyst Function promotion is console-managed:
 
-## 4. Provision the backing services (console)
+1. Open the Catalyst console in **Development**.
+2. Open **Settings → Environments** and start a deployment.
+3. Select the updated `ai_quickml` Function and Web Client code/configuration.
+4. Do not select deletions or empty Development Data Store data when Production
+   already contains the verified 28-table import.
+5. Review the diff, add release notes, and initiate deployment.
+6. Wait for the environment deployment to complete before testing Production.
 
-In the Catalyst console for your project:
+Any later Development code change requires another promotion before it appears
+at the production Function URL.
 
-1. **Data Store** → for the prototype, import the CSV bundle generated by:
-   `npm run cloudscale:export`. The import-ready files and Catalyst-compatible
-   field types are written to [`data/cloudscale-import`](./data/cloudscale-import).
-   Start with `Firs`, `Cases`, and `Criminals`; add the link/detail tables in
-   that README when enabling case detail, network, predictions, reports, and
-   audit screens. The full normalized SQLite DDL remains in
-   [`src/lib/schema.sql`](./src/lib/schema.sql) for reference.
-2. **Authentication** → enable email/password (or SSO) for officer login.
-3. **QuickML** → deploy the open LLM (**`VL-Qwen3.6-35B-A3B`**) as an
-   **LLM-serving** endpoint, and (optionally) a **RAG** pipeline over your
-   crime-intel Knowledge Base. Copy your project's Bearer token + org ID.
-4. **Stratus** → create a bucket `netra-evidence`.
-5. **Cache** → enable a cache segment `netra`.
-6. **Zia Services** → enable OCR, Speech-to-Text, and Translation (for Kannada).
+### Production social-login callback
 
----
+Configure this exact URI as the provider's web OAuth redirect URI. It is the
+Production callback shown by Catalyst for ZAID `50044437015`:
 
-## 5. Configure environment variables
-
-Set `NEXT_PUBLIC_AI_FN_URL` in the Slate/AppSail build environment. Set the
-remaining values only in the `ai_quickml` Function's Configuration →
-Environment Variables. Never commit real secrets.
-
-```
-NEXT_PUBLIC_AI_FN_URL  = https://<project>.catalystserverless.in/server/ai_quickml/
-
-QML_CLIENT_ID          = <OAuth client ID>
-QML_CLIENT_SECRET      = <OAuth client secret>
-QML_REFRESH_TOKEN      = <OAuth refresh token>
-QML_ORG                = <your org ID>
-QML_PROJECT_ID         = <your project ID>
-QML_ACCOUNTS_BASE      = https://accounts.zoho.in
-QML_DC_BASE            = https://api.catalyst.zoho.in
-QML_AUTH_SCHEME        = Zoho-oauthtoken
-QML_LLM_PATH           = llm/chat
-DATASTORE_TABLES       = Firs,Cases,Criminals,FirCriminals,Arrests,Victims,Complainants,Evidence
+```text
+https://ksphacks-60080085094.catalystserverless.in/accounts/pfs/50044437015/clientidpcallback
 ```
 
-The Function reads these directly (see `.env.example` and
-`functions/ai_quickml/index.js`). **Never commit the OAuth client secret or
-refresh token**; set the production values only in the Catalyst console.
+- Google: add it under **Authorized redirect URIs** and add
+  `https://ksphacks-60080085094.catalystserverless.in` under authorized origins.
+- Microsoft Entra: add it as a **Web** redirect URI. The URI must match exactly,
+  including host, path, case, and absence of a trailing slash.
+- Facebook Login: add it under **Valid OAuth Redirect URIs**, add the Production
+  host as an app domain, and make the Meta app Live/active. A Development-mode
+  Meta app only permits accounts assigned an app role.
 
----
+Provider activation and callback allowlists live in Google, Microsoft, and Meta
+developer consoles; deploying NETRA code cannot change them.
 
-## 5b. Validate the backend (optional but recommended)
+## 6. Deploy Slate
 
-Before deploying, confirm your token + model paths work end-to-end:
+Build the root-hosted artifact, then deploy the linked Slate app:
 
 ```bash
-npm run catalyst:check
+npm run build
+catalyst deploy slate netra-crime-intelligence-r2 --production \
+  -m "Official KSP schema read model"
 ```
 
-It hits all five endpoints (QuickML LLM, QuickML RAG, Zia STT/TTS/Translate)
-and prints ✅/❌ per endpoint. `401/403` = token issue; `404` = wrong model/path.
-Set the values in `.env` (or the environment) first.
+Do this after the Production Function is current. Public Slate hosts prefer the
+Production Function and fall back to Development only on endpoint failure.
 
----
+## 7. Production Verification
 
-## 6. Deploy
+Verify all of the following before deleting former prototype tables:
 
-```bash
-# optional: run everything locally against Catalyst emulators first
-catalyst serve
+1. `infra:health` returns `read_model: ksp-er-v2` and lists 28 official tables.
+2. `records:bundle` returns non-zero `Firs`, `Cases`, `Criminals`, and links.
+3. dashboard, cases, accused, maps, network, predictions and reports load.
+4. Assistant resolves a known official `Accused.AccusedName` and cites FIRs.
+5. Database Explorer lists exactly the 28 official tables and live row counts.
+6. Evidence uploads persist metadata and produce an audit identifier.
+7. direct refresh works on `/assistant/`, `/cases/record?id=...`, and all other
+   static routes.
+8. all four configured social providers complete login, logout and a fresh
+   login after session removal.
 
-# ship it — builds AppSail (npm install && npm run build) and pushes functions
-catalyst deploy
-```
-
-`catalyst deploy` prints your live URL (e.g. `https://netra-<id>.catalystserverless.com`).
-
-### Custom domain + SSL (optional)
-Catalyst console → **Domain Mappings** → add your domain; SSL is provisioned
-automatically.
-
----
-
-## 7. Verify
-
-- Open the live URL → sign in (`io.bengaluru` / `police123` if you seeded the
-  demo users, or your Authentication users).
-- Ask the assistant *"Which districts are crime hotspots?"* → you should get an
-  answer with a confidence score + audit ID.
-- Check **Administration → Audit Trail** to confirm actions are logged.
-- The top-bar AI dot is green when QuickML is reachable.
-
----
-
-## The AI backend (the "only Zoho Catalyst" bit)
-
-NETRA uses **exactly one AI product: Zoho Catalyst** — QuickML for the LLM + RAG,
-Zia for voice/translation. There is no Ollama, no OpenAI, no Gemini. There are
-also no other external services at runtime: **map tiles are self-hosted GeoJSON**
-and **fonts are self-hosted woff2**.
-
-The single integration point is `src/lib/catalyst.ts`. Set
-`CATALYST_QUICKML_TOKEN` and NETRA calls QuickML directly; you can alternatively
-route through the deployed `ai_quickml` Function for a Gateway boundary. The rest
-of the pipeline (`src/lib/nl2sql.ts`) is identical across dev and prod — when no
-token is set it runs on the built-in deterministic engine (offline).
-
----
+Only after these checks pass should the old physical operational tables be
+deleted from Production.
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---------|-----|
-| `catalyst: command not found` | Re-run `npm install -g zcatalyst-cli`; ensure global npm bin is on `PATH`. |
-| AppSail build fails | Confirm Node 18 stack; check `buildCommand` in `app-config.json`. |
-| AI answers but dot is amber | QuickML endpoint/key not set → NETRA is using the template + fallback tiers (still works). |
-| Empty data | Import `src/lib/schema.sql` into Data Store and seed it. |
-
----
-
-*Once deployed, keep your Catalyst credentials in the console — not in the repo.*
+| Symptom | Resolution |
+|---|---|
+| Development views return zero | Import official rows into Development, or test the Production Function after promotion. |
+| Production says Function not configured | Promote the latest Function configuration and code through Environments. |
+| UI still uses Development | remove a stale `NEXT_PUBLIC_AI_FN_URL`, rebuild, and redeploy. |
+| Search reports relational scan | enable Search Index on the official columns in `SEARCH-SETUP.md`. |
+| Direct route refresh returns 404 | rebuild so `prepare-slate.mjs` emits static-route fallback metadata, then redeploy. |
+| Evidence persists without a case | select a live FIR/case before analysis; the official schema remains the source of case identity. |
+| Microsoft reports `AADSTS50011` | add the exact Production callback above as a Web redirect URI for the same client ID configured in Catalyst. |
+| Facebook reports `App not active` | reactivate/publish the Meta app; this is not a redirect or NETRA frontend error. |

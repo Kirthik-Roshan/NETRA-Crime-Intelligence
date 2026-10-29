@@ -1,4 +1,6 @@
 "use client";
+import { UiText, useUiText } from '@/components/UiText';
+
 import { useState, type ReactNode } from "react";
 import { Sparkles, ScanSearch, FileText, Share2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui";
@@ -12,6 +14,7 @@ import { analyzeCase, type NlpExtract, type NlpSummary, type NlpEntities, type N
  * never a fabricated result.
  */
 export function CaseIntelligence({ text }: { text: string }) {
+  const ui = useUiText();
   const has = text.trim().length > 0;
   const [busy, setBusy] = useState<NlpOp | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -45,8 +48,8 @@ export function CaseIntelligence({ text }: { text: string }) {
     <div className="card panel-pad">
       <div className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-accent" />
-        <h3 className="text-sm font-semibold">AI Case Intelligence</h3>
-        <Badge tone="accent">QuickML</Badge>
+        <h3 className="text-sm font-semibold"><UiText text={"AI Case Intelligence"} /></h3>
+        <Badge tone="accent"><UiText text={"QuickML"} /></Badge>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -58,37 +61,37 @@ export function CaseIntelligence({ text }: { text: string }) {
             className="btn-ghost h-8 py-0 text-xs disabled:opacity-40"
           >
             {busy === a.op ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <a.icon className="h-3.5 w-3.5" />}
-            {a.label}
+            <UiText text={a.label} />
           </button>
         ))}
       </div>
 
-      {!has && <p className="mt-3 text-xs text-muted">No case text available to analyse yet.</p>}
-      {err && <p className="mt-3 text-xs text-danger">{err}</p>}
+      {!has && <p className="mt-3 text-xs text-muted"><UiText text={"No case text available to analyse yet."} /></p>}
+      {err && <p className="mt-3 text-xs text-danger"><UiText text={err} /></p>}
 
       {summary && (
-        <Section title="Summary" confidence={summary.confidence}>
+        <Section title={ui("Summary")} confidence={summary.confidence}>
           <p className="text-sm leading-relaxed text-subtle">{summary.summary || "—"}</p>
         </Section>
       )}
 
       {extract && (
-        <Section title="Extracted entities" confidence={extract.confidence}>
+        <Section title={ui("Extracted entities")} confidence={extract.confidence}>
           {(() => {
             const groups: [string, string[]][] = [
               ["Names", extract.names], ["Locations", extract.locations], ["Dates", extract.dates],
               ["Organizations", extract.organizations], ["Vehicles", extract.vehicles],
               ["Phones", extract.phones], ["Financial", extract.financial],
             ].filter(([, v]) => Array.isArray(v) && v.length > 0) as [string, string[]][];
-            if (!groups.length) return <p className="text-xs text-muted">No entities found in the text.</p>;
+            if (!groups.length) return <p className="text-xs text-muted"><UiText text={"No entities found in the text."} /></p>;
             return (
               <div className="space-y-2">
                 {groups.map(([label, vals]) => (
                   <div key={label}>
-                    <div className="stat-label mb-1">{label}</div>
+                    <div className="stat-label mb-1"><UiText text={label} /></div>
                     <div className="flex flex-wrap gap-1.5">
                       {vals.map((v, i) => (
-                        <span key={i} className="rounded-md border border-border bg-elevated px-2 py-0.5 text-[11px] text-subtle">{v}</span>
+                        <span key={i} className="rounded-md border border-border bg-elevated px-2 py-0.5 text-[11px] text-subtle"><UiText text={v} /></span>
                       ))}
                     </div>
                   </div>
@@ -100,16 +103,16 @@ export function CaseIntelligence({ text }: { text: string }) {
       )}
 
       {entities && (
-        <Section title="Entity links" confidence={entities.confidence}>
+        <Section title={ui("Entity links")} confidence={entities.confidence}>
           {entities.links.length === 0 ? (
-            <p className="text-xs text-muted">No relationships supported by the text.</p>
+            <p className="text-xs text-muted"><UiText text={"No relationships supported by the text."} /></p>
           ) : (
             <div className="space-y-1.5">
               {entities.links.map((l, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-xs">
-                  <span className="font-medium text-subtle">{l.from}</span>
-                  <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">{l.type}</span>
-                  <span className="font-medium text-subtle">{l.to}</span>
+                  <span className="font-medium text-subtle"><UiText text={l.from} /></span>
+                  <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent"><UiText text={l.type} /></span>
+                  <span className="font-medium text-subtle"><UiText text={l.to} /></span>
                   <span className="ml-auto font-mono text-[10px] text-muted">{Math.round(l.confidence * 100)}%</span>
                 </div>
               ))}
@@ -125,8 +128,8 @@ function Section({ title, confidence, children }: { title: string; confidence: n
   return (
     <div className="mt-3 border-t border-border/60 pt-3">
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="stat-label">{title}</span>
-        <span className="font-mono text-[10px] text-muted">confidence {Math.round((confidence || 0) * 100)}%</span>
+        <span className="stat-label"><UiText text={title} /></span>
+        <span className="font-mono text-[10px] text-muted"><UiText text={"confidence "} />{Math.round((confidence || 0) * 100)}%</span>
       </div>
       {children}
     </div>

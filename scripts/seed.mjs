@@ -149,7 +149,8 @@ const CRIME_CATEGORIES = ["Property Crime", "Violent Crime", "Cyber Crime", "Nar
 // Date helpers — spread FIRs across ~18 months ending 2026-07-15.
 const END = new Date("2026-07-15T00:00:00Z").getTime();
 const DAY = 86400000;
-const dateDaysAgo = (d) => new Date(END - d * DAY).toISOString();
+const dateTimeDaysAgo = (d) => new Date(END - d * DAY).toISOString().replace("T", " ").slice(0, 19);
+const dateDaysAgo = (d) => dateTimeDaysAgo(d).slice(0, 10);
 const fullName = (gender) => `${gender === "F" ? pick(FEMALE) : pick(MALE)} ${pick(SURNAMES)}`;
 const jitter = (base, spread = 0.18) => base + (rand() - 0.5) * spread;
 const genderId = (g) => (g === "F" ? 2 : g === "T" ? 3 : 1);
@@ -247,7 +248,7 @@ export function seedInto(db) {
     ].map(([u, name, role, rank], i) => {
       const unit = units[i % units.length];
       const empId = employeesByUnit.get(unit.id)[0];
-      const info = insUser.run(u, pw, name, role, rank, empId, unit.id, dateDaysAgo(400 - i * 10));
+      const info = insUser.run(u, pw, name, role, rank, empId, unit.id, dateTimeDaysAgo(400 - i * 10));
       return { id: Number(info.lastInsertRowid), role };
     });
 
@@ -269,7 +270,7 @@ export function seedInto(db) {
         name, JSON.stringify(aliases), gender, age,
         pick(["at_large", "at_large", "arrested", "on_bail", "convicted"]),
         rint(20, 98), pick(CRIME_CATEGORIES), JSON.stringify(locs), home,
-        dateDaysAgo(rint(200, 1200)), `c${i}-${Math.floor(rand() * 100000)}`,
+        dateTimeDaysAgo(rint(200, 1200)), `c${i}-${Math.floor(rand() * 100000)}`,
         chance(0.4) ? "History of repeat offenses across districts. Profile auto-resolved from Accused records." : null
       );
       criminals.push({ id: Number(info.lastInsertRowid), name, gender, age, home, locs });
@@ -310,9 +311,9 @@ export function seedInto(db) {
       const d = unit.district;
       // Bias toward recent months so trends, hotspots and forecasts are lively.
       const daysAgo = chance(0.55) ? rint(1, 180) : rint(181, 540);
-      const occurred = dateDaysAgo(daysAgo);
-      const reported = dateDaysAgo(Math.max(0, daysAgo - rint(0, 3)));
-      const year = new Date(reported).getUTCFullYear();
+      const occurred = dateTimeDaysAgo(daysAgo);
+      const reported = dateTimeDaysAgo(Math.max(0, daysAgo - rint(0, 3)));
+      const year = Number(reported.slice(0, 4));
       const catId = chance(0.9) ? 1 : pick([3, 8]); // mostly FIR, some UDR / Zero FIR
 
       // CrimeNo: 1-digit category + 4-digit district + 4-digit unit + 4-digit year + 5-digit serial
@@ -330,15 +331,15 @@ export function seedInto(db) {
       const brief = `${sub.name} reported under ${unit.id % 2 ? "city" : "rural"} limits of ${d.name}. Modus operandi: ${modus.replace(/_/g, " ")}.`;
 
       const info = insCase.run(
-        crimeNo, caseNo, reported, officer, unit.id, catId, heinous ? 1 : 2,
+        crimeNo, caseNo, reported.slice(0, 10), officer, unit.id, catId, heinous ? 1 : 2,
         sub.head, sub.id, statusId, courtId,
-        occurred, dateDaysAgo(Math.max(0, daysAgo - 1)), reported,
+        occurred, dateTimeDaysAgo(Math.max(0, daysAgo - 1)), reported,
         jitter(d.lat), jitter(d.lng), brief
       );
       const caseId = Number(info.lastInsertRowid);
       cases.push({ id: caseId, sub, district: d, unit, occurred, daysAgo, statusId, officer });
 
-      insOcc.run(caseId, `${pick(["Market Rd", "Bus Stand", "Layout", "NH-Bypass", "Old Town"])}, ${d.name}`, occurred, dateDaysAgo(Math.max(0, daysAgo - 1)));
+      insOcc.run(caseId, `${pick(["Market Rd", "Bus Stand", "Layout", "NH-Bypass", "Old Town"])}, ${d.name}`, occurred, dateTimeDaysAgo(Math.max(0, daysAgo - 1)));
 
       // Act-Section associations
       sub.sections.forEach(([act, sec], idx) => insAsa.run(caseId, act, sec, idx + 1, idx + 1));
@@ -371,7 +372,7 @@ export function seedInto(db) {
       insEnrich.run(
         caseId, modus, sub.sev, priority,
         `Investigation into ${sub.name.toLowerCase()} in ${d.name}. Modus operandi ${modus.replace(/_/g, " ")}. AI has linked this record to related incidents in the region.`,
-        dateDaysAgo(rint(0, 60))
+        dateTimeDaysAgo(rint(0, 60))
       );
       // Evidence (intel layer — evidence metadata)
       for (let e = 0; e < rint(0, 3); e++) {
@@ -461,7 +462,7 @@ export function seedInto(db) {
       const u = pick(userRows);
       const act = pick(actions);
       insAudit.run(
-        dateDaysAgo(rint(0, 30)), u.id, null, u.role, act, pick(["case", "fir", "criminal", "query"]),
+        dateTimeDaysAgo(rint(0, 30)), u.id, null, u.role, act, pick(["case", "fir", "criminal", "query"]),
         String(rint(1, 300)), `req_${Math.floor(rand() * 1e9).toString(36)}`,
         act.includes("AI") || act.includes("PREDICTION") ? "VL-Qwen3.6-35B-A3B" : null, rint(120, 3200), null
       );

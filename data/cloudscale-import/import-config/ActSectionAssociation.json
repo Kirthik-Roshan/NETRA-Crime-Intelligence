@@ -1,0 +1,18 @@
+{
+  "table_identifier": "ActSectionAssociation",
+  "operation": "insert",
+  "fk_mapping": [
+    {
+      "local_column": "CaseMasterID",
+      "reference_column": "CaseMasterID"
+    },
+    {
+      "local_column": "ActID",
+      "reference_column": "ActCode"
+    },
+    {
+      "local_column": "SectionID",
+      "reference_column": "SectionCode"
+    }
+  ]
+}

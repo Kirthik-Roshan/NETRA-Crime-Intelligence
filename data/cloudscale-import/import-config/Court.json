@@ -1,0 +1,15 @@
+{
+  "table_identifier": "Court",
+  "operation": "upsert",
+  "find_by": "CourtID",
+  "fk_mapping": [
+    {
+      "local_column": "DistrictID",
+      "reference_column": "DistrictID"
+    },
+    {
+      "local_column": "StateID",
+      "reference_column": "StateID"
+    }
+  ]
+}

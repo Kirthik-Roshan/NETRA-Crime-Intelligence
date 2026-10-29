@@ -1,0 +1,64 @@
+/* One visual system for the operational pages, including record subpages.
+   Screen-only: the dedicated branded report print stylesheet stays authoritative. */
+@media screen {
+  .netra-workspace {
+    background-color: rgb(var(--elevated));
+    background-image: radial-gradient(ellipse at 90% 0%, rgb(var(--info) / .075), transparent 55%);
+  }
+  .netra-workspace :is(.card, .investigation-panel) {
+    border-radius: 12px;
+    border-color: rgb(var(--accent) / .19);
+    background-color: rgb(var(--surface) / .98);
+    box-shadow: 0 5px 18px rgb(12 54 88 / .075), 0 1px 3px rgb(12 54 88 / .04);
+    transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+  }
+  .netra-workspace .workspace-page-heading {
+    border-bottom: 1px solid rgb(var(--accent) / .16);
+    padding-bottom: 16px;
+  }
+  .netra-workspace :is(.workspace-panel-heading, .report-section > div:first-child) {
+    border-bottom: 1px solid rgb(var(--border) / .7);
+    padding-bottom: 12px;
+  }
+  .netra-workspace .workspace-panel-icon {
+    background: linear-gradient(135deg, rgb(var(--info) / .15), rgb(var(--accent) / .055));
+    border-radius: 10px;
+    color: rgb(var(--info));
+  }
+  .netra-workspace .workspace-stat {
+    border-top: 3px solid rgb(var(--accent) / .75);
+    background: linear-gradient(135deg, rgb(var(--surface)), rgb(var(--accent) / .045));
+  }
+  .netra-workspace .workspace-stat[data-tone="danger"] { border-top-color: rgb(var(--danger)); }
+  .netra-workspace .workspace-stat[data-tone="warning"] { border-top-color: rgb(var(--warning)); }
+  .netra-workspace .workspace-stat[data-tone="success"] { border-top-color: rgb(var(--success)); }
+  .netra-workspace .workspace-stat[data-tone="info"] { border-top-color: rgb(var(--info)); }
+  .netra-workspace .workspace-stat[data-tone="danger"] .workspace-stat-value { color: rgb(var(--danger)); }
+  .netra-workspace .workspace-stat[data-tone="warning"] .workspace-stat-value { color: rgb(var(--warning)); }
+  .netra-workspace .workspace-stat[data-tone="success"] .workspace-stat-value { color: rgb(var(--success)); }
+  .netra-workspace .workspace-stat[data-tone="info"] .workspace-stat-value { color: rgb(var(--info)); }
+  .netra-workspace th { color: rgb(var(--fg)); background-color: rgb(var(--elevated)); font-weight: 700; }
+  .netra-workspace tbody tr:nth-child(even) { background-color: rgb(var(--elevated) / .5); }
+  .netra-workspace :is(.report-masthead, .record-overview) { border-color: rgb(var(--accent) / .55); }
+  .netra-workspace .report-kpi { border-top: 3px solid rgb(var(--info)); background-color: rgb(var(--info) / .055); }
+  .netra-workspace .report-kpi:nth-child(3) { border-top-color: rgb(var(--warning)); }
+  .netra-workspace .report-kpi:nth-child(4) { border-top-color: rgb(var(--success)); }
+  .netra-workspace :is(.input, .btn, .seg, .chip) { border-radius: 8px; }
+  .netra-workspace .btn-accent { background-image: linear-gradient(120deg, rgb(var(--accent)), rgb(var(--info))); box-shadow: 0 3px 9px rgb(var(--accent) / .19); }
+  .netra-workspace .investigation-tabs { border-radius: 8px 8px 0 0; background-color: rgb(var(--elevated) / .55); }
+  .netra-workspace .investigation-tabs > button[aria-selected="true"] { font-weight: 700; }
+  @media (hover: hover) and (pointer: fine) {
+    .netra-workspace :is(.card, .investigation-panel):not(.report-document):hover {
+      border-color: rgb(var(--info) / .65);
+      box-shadow: 0 0 0 1px rgb(var(--info) / .18), 0 8px 24px rgb(var(--accent) / .13);
+    }
+    .netra-workspace :is(a.card, button.card, .lift-row):hover { transform: translateY(-2px); }
+    .netra-workspace .card:has(.card:hover) { transform: none; }
+  }
+}
+@media screen and (prefers-reduced-motion: reduce) {
+  .netra-workspace :is(.card, .investigation-panel, .lift-row) { transition: none !important; transform: none !important; }
+}
+@media screen {
+  :root[data-motion="reduced"] .netra-workspace :is(.card, .investigation-panel, .lift-row) { transition: none !important; transform: none !important; }
+}

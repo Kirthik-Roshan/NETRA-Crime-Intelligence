@@ -1,7 +1,8 @@
 "use client";
 
-import { clearCachedCatalystAccessToken, fetchAuthenticatedOfficer } from "./ai-client";
+import { clearCachedCatalystAccessToken, fetchAuthenticatedOfficer, recordAuthenticationAudit } from "./ai-client";
 import type { Role, SessionUser } from "./types";
+import { endPortalPresence } from './session-presence';
 
 const KEY = "netra_session_user_v2";
 const LEGACY_KEY = "netra_user";
@@ -10,7 +11,8 @@ const LOCAL_PASSWORD = "police123";
 const HOSTED_DEMO_ACCESS_ENABLED = process.env.NEXT_PUBLIC_DEMO_ACCESS_ENABLED === "true";
 const CATALYST_WEB_CLIENT = process.env.NEXT_PUBLIC_CATALYST_WEB_CLIENT === "true";
 const CATALYST_DEVELOPMENT_ORIGIN = "https://ksphacks-60080085094.development.catalystserverless.in";
-const CATALYST_APP_ORIGIN = process.env.NEXT_PUBLIC_CATALYST_APP_ORIGIN || CATALYST_DEVELOPMENT_ORIGIN;
+const CATALYST_PRODUCTION_ORIGIN = "https://ksphacks-60080085094.catalystserverless.in";
+const CATALYST_APP_ORIGIN = process.env.NEXT_PUBLIC_CATALYST_APP_ORIGIN || CATALYST_PRODUCTION_ORIGIN;
 const CATALYST_PROJECT_ID = "56798000000013049";
 
 type CatalystWindow = Window & {
@@ -30,6 +32,7 @@ type CatalystAuth = {
   isUserAuthenticated: () => Promise<unknown>;
   generateAuthToken?: () => Promise<{ access_token?: string } | string>;
   signIn: (elementId: string, config?: Record<string, unknown>) => Promise<unknown> | unknown;
+  signUp: (config: { first_name: string; last_name: string; email_id: string; platform_type: string; redirect_url: string }) => Promise<unknown>;
   signOut: (redirectUrl?: string) => void;
 };
 
@@ -75,7 +78,10 @@ export function replaceAppRoute(route: string): void {
 export function navigateAppRoute(route: string, clientNavigate: (route: string) => void): void {
   if (typeof window === "undefined") return;
   if (CATALYST_WEB_CLIENT) {
-    window.location.assign(appDocumentPath(route));
+    clientNavigate(route);
+    window.setTimeout(() => {
+      window.history.replaceState(window.history.state, "", appDocumentPath(route));
+    }, 0);
     return;
   }
   clientNavigate(route);
@@ -99,21 +105,35 @@ export function beginCatalystSignIn(): void {
 
 function remember(user: SessionUser | null) {
   if (typeof localStorage === "undefined") return;
-  if (user) localStorage.setItem(KEY, JSON.stringify(user));
-  else {
-    localStorage.removeItem(KEY);
-    localStorage.removeItem(LEGACY_KEY);
+  try {
+    if (user) localStorage.setItem(KEY, JSON.stringify(user));
+    else {
+      localStorage.removeItem(KEY);
+      localStorage.removeItem(LEGACY_KEY);
+    }
+  } catch {
+    // A verified Catalyst session must remain usable when browser privacy
+    // settings, storage quotas, or stale site data make localStorage throw.
   }
 }
 
 function localSignedOut(): boolean {
-  return typeof localStorage !== "undefined" && localStorage.getItem(LOCAL_SIGNED_OUT_KEY) === "1";
+  if (typeof localStorage === "undefined") return false;
+  try {
+    return localStorage.getItem(LOCAL_SIGNED_OUT_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 function setLocalSignedOut(value: boolean): void {
   if (typeof localStorage === "undefined") return;
-  if (value) localStorage.setItem(LOCAL_SIGNED_OUT_KEY, "1");
-  else localStorage.removeItem(LOCAL_SIGNED_OUT_KEY);
+  try {
+    if (value) localStorage.setItem(LOCAL_SIGNED_OUT_KEY, "1");
+    else localStorage.removeItem(LOCAL_SIGNED_OUT_KEY);
+  } catch {
+    // Local demo state is optional and must not break hosted authentication.
+  }
 }
 
 export function getCachedUser(): SessionUser | null {
@@ -192,6 +212,36 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 
 let clientUserPromise: Promise<SessionUser | null> | null = null;
 let signInMountPromise: Promise<boolean> | null = null;
+let signInMountMode: "providers" | "email" = "providers";
+const AUTH_AUDIT_SESSION_KEY = "netra_auth_audit_session_v1";
+
+/** Allow the UI to retry after an SDK timeout or stale browser session. */
+export function resetClientAuthResolution(): void {
+  clientUserPromise = null;
+  signInMountPromise = null;
+  clearCachedCatalystAccessToken();
+}
+
+async function auditVerifiedSession(user: SessionUser): Promise<void> {
+  if (typeof sessionStorage === "undefined") return;
+  const marker = `${user.id}:${user.username}`;
+  try {
+    if (sessionStorage.getItem(AUTH_AUDIT_SESSION_KEY) === marker) return;
+  } catch {
+    // Audit delivery can continue even when the browser blocks sessionStorage.
+  }
+  if (await recordAuthenticationAudit("AUTH_LOGIN").catch(() => false)) {
+    try {
+      sessionStorage.setItem(AUTH_AUDIT_SESSION_KEY, marker);
+    } catch {
+      // The server audit succeeded; the local de-duplication marker is optional.
+    }
+  }
+}
+
+async function authenticatedSdkUser(sdk: CatalystAuth): Promise<SessionUser | null> {
+  return mapSdkUser(await withTimeout(sdk.isUserAuthenticated(), 7000));
+}
 
 async function resolveClientUser(): Promise<SessionUser | null> {
   if (isDemoAccessMode()) {
@@ -205,11 +255,18 @@ async function resolveClientUser(): Promise<SessionUser | null> {
   const sdk = await waitForAuthSdk();
   if (sdk) {
     try {
-      const user = mapSdkUser(await withTimeout(sdk.isUserAuthenticated(), 7000));
+      let user = await authenticatedSdkUser(sdk);
+      if (!user) {
+        // The hosted SDK can briefly report an empty result immediately after
+        // an OAuth callback while its Catalyst cookie is still settling.
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        user = await authenticatedSdkUser(sdk);
+      }
       if (user) {
         const verified = await withTimeout(fetchAuthenticatedOfficer(), 7000).catch(() => null);
         const resolved = verified?.authenticated && verified.user ? verified.user : user;
         remember(resolved);
+        void auditVerifiedSession(resolved);
         return resolved;
       }
     } catch {
@@ -228,18 +285,39 @@ export function getClientUser(): Promise<SessionUser | null> {
 }
 
 /** Mount Catalyst's embedded sign-in widget into the supplied element. */
-export function mountCatalystSignIn(elementId: string): Promise<boolean> {
+export function mountCatalystSignIn(elementId: string, mode: "providers" | "email" = "providers"): Promise<boolean> {
+  if (mode !== signInMountMode) {
+    signInMountPromise = null;
+    signInMountMode = mode;
+  }
   if (!signInMountPromise) {
     signInMountPromise = (async () => {
       const sdk = await waitForAuthSdk(12000);
       if (!sdk) return false;
       const redirect = new URL(appDocumentPath("/dashboard"), window.location.origin).toString();
-      const authCss = new URL(appDocumentPath("/catalyst-auth.css"), window.location.origin).toString();
+      const authCss = new URL(appDocumentPath(mode === "email" ? "/catalyst-email-auth.css?v=gateway-4" : "/catalyst-auth.css?v=gateway-4"), window.location.origin).toString();
       await withTimeout(Promise.resolve(sdk.signIn(elementId, {
         service_url: redirect,
-        signin_providers_only: true,
+        signin_providers_only: mode === "providers",
         css_url: authCss,
       })), 12000);
+      // signIn() starts an asynchronous iframe load but returns void in SDK v4.
+      await withTimeout(new Promise<void>((resolve, reject) => {
+        const deadline = Date.now() + 11500;
+        const stylesheet = mode === "email" ? "catalyst-email-auth.css" : "catalyst-auth.css";
+        const check = () => {
+          try {
+            const frame = document.querySelector<HTMLIFrameElement>(`#${elementId} iframe`);
+            if (frame?.src.includes(stylesheet) && frame.contentDocument?.readyState === "complete" && frame.contentDocument.getElementById("login_id")) {
+              resolve();
+              return;
+            }
+          } catch { /* The frame may still be navigating. */ }
+          if (Date.now() >= deadline) reject(new Error("Catalyst sign-in form took too long to load."));
+          else window.setTimeout(check, 100);
+        };
+        check();
+      }), 12000);
       return true;
     })().then((mounted) => {
       if (!mounted) signInMountPromise = null;
@@ -250,6 +328,17 @@ export function mountCatalystSignIn(elementId: string): Promise<boolean> {
     });
   }
   return signInMountPromise;
+}
+
+export async function registerCatalystOfficer(firstName: string, lastName: string, email: string): Promise<void> {
+  const sdk = await waitForAuthSdk(12000);
+  if (!sdk?.signUp) throw new Error("Catalyst account registration is unavailable. Please try again.");
+  try {
+    await withTimeout(sdk.signUp({ first_name: firstName.trim(), last_name: lastName.trim(), email_id: email.trim(), platform_type: "web", redirect_url: new URL(appDocumentPath("/login"), window.location.origin).toString() }), 15000);
+  } catch (error) {
+    const detail = error as { message?: string; content?: { message?: string } };
+    throw new Error(detail?.content?.message || detail?.message || "Account creation could not be completed. Check your details or sign in if you already have an account.");
+  }
 }
 
 /** Local-only account selection. It is unreachable on a hosted build. */
@@ -264,6 +353,13 @@ export function loginLocal(username = "admin", password = LOCAL_PASSWORD): Sessi
 
 /** Clear NETRA state and return true when Catalyst owns the redirect. */
 export async function logout(): Promise<boolean> {
+  const signedInUser = getCachedUser();
+  if (signedInUser) {
+    await withTimeout(Promise.allSettled([recordAuthenticationAudit("AUTH_LOGOUT"), endPortalPresence()]), 3000).catch(() => false);
+  }
+  if (typeof sessionStorage !== "undefined") {
+    try { sessionStorage.removeItem(AUTH_AUDIT_SESSION_KEY); } catch { /* storage may be blocked */ }
+  }
   clientUserPromise = null;
   signInMountPromise = null;
   remember(null);

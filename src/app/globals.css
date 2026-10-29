@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+.netra-sidebar { background: linear-gradient(160deg, #0a2339, #12334f) !important; color: #edf6ff; border-color: #24465f !important; }
+.netra-sidebar .text-muted, .netra-sidebar [class*="text-muted/"] { color: #9fbed6 !important; }
+.netra-sidebar .border-border { border-color: #27465d; }
+.netra-sidebar .link-row { color: #c2dbef; border-radius: 5px; transition: background .18s, box-shadow .18s, color .18s; }
+.netra-sidebar .link-row:hover { background: #006fd4 !important; color: white !important; box-shadow: 0 3px 18px #007fff50; }
+.netra-sidebar .link-row-active { background: linear-gradient(90deg, #087fbd, #244963) !important; color: white !important; box-shadow: inset 4px 0 #26c4ff; }
+.netra-sidebar .link-row:hover svg, .netra-sidebar .link-row-active svg { color: white !important; }
+.netra-sidebar > div:last-child { background: #102e48 !important; }
+.netra-sidebar > div:last-child .bg-elevated { background: #35668b !important; color: white; border-radius: 50%; }
+.netra-workspace .card { border-radius: 7px; box-shadow: 0 3px 15px rgb(18 90 135 / .055); background: rgb(var(--surface) / .96); }
+.netra-workspace .btn-accent { background: linear-gradient(135deg, #078cc4, #0865a2); border-color: #087ab6; color: white; }
+.netra-workspace .input:focus { box-shadow: 0 0 0 3px rgb(14 143 210 / .12); }
+.netra-profiles .card { transition: transform .18s, box-shadow .18s; }
+.netra-profiles a.card:hover { transform: translateY(-2px); box-shadow: 0 7px 22px rgb(17 112 172 / .13); }
+
 /* ============================================================
    NETRA design system — CSS-variable driven dynamic themes.
    Values are space-separated RGB triplets so Tailwind can do
@@ -236,6 +251,156 @@
 }
 .react-flow__edge:hover .react-flow__edge-text { fill: rgb(var(--fg)) !important; font-weight: 600; }
 .react-flow__node:hover { filter: drop-shadow(0 0 8px rgb(var(--accent) / 0.5)); }
+
+/* Network intelligence board. These entity-specific shapes mirror the
+   investigation grammar: people, FIRs, stations, and one focused profile. */
+.netra-network-canvas {
+  box-shadow: inset 0 0 0 1px rgb(var(--accent) / 0.08), 0 10px 28px -24px rgb(var(--fg) / 0.45);
+}
+.netra-network-zone {
+  position: absolute;
+  width: 310px;
+  height: 390px;
+  top: 50%;
+  border-radius: 50%;
+  filter: blur(42px);
+  opacity: 0.12;
+  transform: translateY(-50%);
+}
+.netra-network-zone-people { left: 3%; background: rgb(var(--warning)); }
+.netra-network-zone-focus { left: 42%; width: 220px; background: rgb(var(--danger)); opacity: 0.1; }
+.netra-network-zone-firs { right: 20%; background: rgb(var(--info)); }
+.netra-network-zone-context { right: -2%; background: rgb(var(--success)); }
+.netra-entity-node {
+  position: relative;
+  width: 168px;
+  min-height: 52px;
+  border: 1px solid rgb(var(--border));
+  border-radius: 8px;
+  background: linear-gradient(110deg, rgb(var(--surface) / 0.98), rgb(var(--elevated) / 0.93));
+  padding: 7px 10px;
+  box-shadow: 0 8px 22px -17px rgb(var(--fg) / 0.5);
+}
+.netra-entity-person {
+  border-color: rgb(var(--warning) / 0.34);
+  box-shadow: 0 0 0 1px rgb(var(--warning) / 0.08), 0 8px 22px -14px rgb(var(--warning) / 0.45);
+}
+.netra-entity-fir {
+  border-color: rgb(var(--info) / 0.42);
+  background: linear-gradient(110deg, rgb(var(--surface) / 0.98), rgb(var(--info) / 0.1));
+  box-shadow: 0 0 18px -10px rgb(var(--info) / 0.7);
+}
+.netra-entity-station {
+  border-color: rgb(var(--success) / 0.42);
+  background: linear-gradient(110deg, rgb(var(--surface) / 0.98), rgb(var(--success) / 0.12));
+  box-shadow: 0 0 18px -10px rgb(var(--success) / 0.72);
+}
+.netra-entity-context { border-color: rgb(var(--danger) / 0.32); }
+.netra-node-avatar {
+  margin-left: -17px;
+  padding: 3px;
+  border: 2px solid rgb(var(--warning) / 0.78);
+  border-radius: 999px;
+  background: rgb(var(--surface));
+  box-shadow: 0 0 0 5px rgb(var(--warning) / 0.1), 0 0 18px -5px rgb(var(--warning));
+}
+.netra-node-avatar > div { border-radius: 999px !important; }
+.netra-node-glyph {
+  margin-left: -18px;
+  box-shadow: 0 0 0 5px rgb(var(--accent) / 0.08), 0 0 16px -5px currentColor;
+}
+.netra-entity-fir .netra-node-glyph { background: rgb(var(--info)); color: white; border-color: rgb(var(--info)); }
+.netra-entity-station .netra-node-glyph { background: rgb(var(--success)); color: white; border-color: rgb(var(--success)); }
+.netra-focus-node {
+  position: relative;
+  display: grid;
+  width: 150px;
+  height: 158px;
+  place-items: center;
+  transition: filter 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+.netra-focus-orbit,
+.netra-focus-orbit::before,
+.netra-focus-orbit::after {
+  position: absolute;
+  inset: 6px;
+  content: "";
+  border: 1px dashed rgb(var(--danger) / 0.32);
+  border-radius: 999px;
+}
+.netra-focus-orbit::before { inset: -15px; border-color: rgb(var(--danger) / 0.2); }
+.netra-focus-orbit::after { inset: -31px; border-color: rgb(var(--warning) / 0.16); }
+.netra-focus-ring {
+  z-index: 1;
+  padding: 7px;
+  border: 3px solid rgb(var(--danger));
+  border-radius: 999px;
+  background: rgb(var(--surface));
+  box-shadow: 0 0 0 5px rgb(var(--surface)), 0 0 0 7px rgb(var(--danger) / 0.23), 0 0 30px 4px rgb(var(--danger) / 0.2);
+}
+.netra-focus-ring > div { border-radius: 999px !important; }
+.netra-focus-name {
+  z-index: 2;
+  max-width: 145px;
+  margin-top: -19px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgb(var(--surface) / 0.97);
+  padding: 3px 8px;
+  box-shadow: 0 2px 9px rgb(var(--fg) / 0.12);
+  color: rgb(var(--fg));
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.netra-focus-badge {
+  z-index: 2;
+  margin-top: -14px;
+  border-radius: 999px;
+  background: rgb(var(--danger));
+  padding: 3px 11px;
+  color: white;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: 0 5px 13px -8px rgb(var(--danger));
+}
+.netra-focus-node.is-selected { transform: scale(1.04); filter: drop-shadow(0 0 10px rgb(var(--danger) / 0.35)); }
+.netra-link-handle {
+  width: 7px !important;
+  height: 7px !important;
+  border: 2px solid rgb(var(--surface)) !important;
+  background: currentColor !important;
+  box-shadow: 0 0 0 1px currentColor;
+}
+.netra-entity-person .netra-link-handle { color: rgb(var(--warning)); }
+.netra-entity-fir .netra-link-handle { color: rgb(var(--info)); }
+.netra-entity-station .netra-link-handle { color: rgb(var(--success)); }
+.netra-focus-node .netra-link-handle { color: rgb(var(--danger)); }
+@media (min-width: 640px) {
+  .netra-vertical-handle { display: none !important; }
+}
+.netra-lane-count {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: rgb(var(--surface) / 0.9);
+  padding: 5px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 7px 18px -14px currentColor;
+}
+.netra-lane-count-warning { color: rgb(var(--warning)); }
+.netra-lane-count-accent { color: rgb(var(--info)); }
+.netra-lane-count-success { color: rgb(var(--success)); }
+.netra-network-canvas .react-flow__edge-path { filter: drop-shadow(0 0 2px rgb(var(--surface))); }
+.netra-network-canvas .react-flow__node { cursor: pointer; }
 
 html {
   color-scheme: light;
@@ -552,12 +717,12 @@ body * {
     break-inside: avoid;
   }
   /* Conversation transcript export: readable on white paper */
-  main, main * {
+  main:not(:has(.report-document)), main:not(:has(.report-document)) * {
     color: #111 !important;
   }
-  main .card,
-  main .chip,
-  main [class*="bg-"] {
+  main:not(:has(.report-document)) .card,
+  main:not(:has(.report-document)) .chip,
+  main:not(:has(.report-document)) [class*="bg-"] {
     background: #fff !important;
     border-color: #ddd !important;
   }

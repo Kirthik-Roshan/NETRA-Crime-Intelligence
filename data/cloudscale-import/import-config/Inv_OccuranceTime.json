@@ -1,0 +1,10 @@
+{
+  "table_identifier": "Inv_OccuranceTime",
+  "operation": "insert",
+  "fk_mapping": [
+    {
+      "local_column": "CaseMasterID",
+      "reference_column": "CaseMasterID"
+    }
+  ]
+}

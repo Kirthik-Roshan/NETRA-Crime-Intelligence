@@ -1,9 +1,9 @@
 "use client";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Volume2, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
-import { synthesizeSpeech } from "@/lib/ai-client";
+import { playSpeech, type SpeechPlayback } from "@/lib/speech-playback";
 import { naturalizeForSpeech } from "@/lib/answer-format";
 
 /**
@@ -14,40 +14,37 @@ import { naturalizeForSpeech } from "@/lib/answer-format";
 export function ReadAloud({ text, label = "Listen" }: { text: string; label?: string }) {
   const lang = useAppStore((s) => s.lang);
   const [state, setState] = useState<"idle" | "loading" | "playing" | "error">("idle");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [voiceStatus, setVoiceStatus] = useState("");
+  const audioRef = useRef<SpeechPlayback | null>(null);
+  useEffect(() => () => audioRef.current?.stop(), [text, lang]);
 
   const onClick = useCallback(async () => {
-    if (state === "playing") {
-      audioRef.current?.pause();
+    if (state === "playing" || state === "loading") {
+      audioRef.current?.stop();
       audioRef.current = null;
       setState("idle");
       return;
     }
-    if (state === "loading" || !text.trim()) return;
+    if (!text.trim()) return;
     setState("loading");
     // Never send raw Markdown / IDs / metadata to TTS — speak a concise,
     // naturalised version (FIR numbers → natural phrases, no audit IDs, etc.).
     const spoken = naturalizeForSpeech(text, lang === "kn" ? "kn" : "en");
-    const b64 = await synthesizeSpeech(spoken, lang === "kn" ? "kn-IN" : "en-IN");
-    if (!b64) {
-      setState("error");
-      setTimeout(() => setState("idle"), 1800);
-      return;
-    }
-    const audio = new Audio(b64.startsWith("data:") ? b64 : `data:audio/wav;base64,${b64}`);
-    audioRef.current = audio;
-    audio.onended = () => setState("idle");
-    audio.onerror = () => setState("idle");
-    audio.play().then(() => setState("playing")).catch(() => setState("idle"));
+    audioRef.current = playSpeech(spoken, lang === "kn" ? "kn-IN" : "en-IN", {
+      onStart: () => setState("playing"), onEnd: () => setState("idle"),
+      onStop: () => setState("idle"), onError: () => setState("error"),
+      onProgress: setVoiceStatus,
+      onVoice: source => setVoiceStatus(source === "neural-kn" ? "On-device Kannada neural voice" : source === "basic-kn" ? "Basic Kannada fallback voice" : source === "device" ? "Device voice" : "Catalyst speech"),
+    });
   }, [state, text, lang]);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={!text.trim() || state === "loading"}
+      disabled={!text.trim()}
       className={cn("btn-ghost h-8 py-0 text-xs disabled:opacity-40", state === "playing" && "text-accent")}
-      title={state === "playing" ? "Stop" : label}
+      title={state === "playing" || state === "loading" ? "Stop" : voiceStatus || label}
       aria-label={label}
     >
       {state === "loading" ? (

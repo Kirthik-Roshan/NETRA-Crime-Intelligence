@@ -3,19 +3,13 @@
  * Cloud Scale data layer for the operational pages.
  *
  * Every page reads through the Catalyst Function (`records` mode → Data Store).
- * A read-only synchronized snapshot keeps the prototype usable when one cloud
- * environment or an optional intelligence table is temporarily unavailable.
+ * Core records are read from virtual investigator views generated from the 28
+ * official KSP tables. No legacy operational snapshot is used as a fallback.
  *
- * Data Store column names are owned by whoever loads the tables, so mapping is
- * defensive (tries several field names). Adjust the keys here to match the
- * actual columns once the schema is fixed.
- *
- * ponytail: stats are computed client-side over the first ≤200 rows the
- * `records` mode returns. Fine while data is small/empty; add ZCQL COUNT/GROUP
- * modes to the Function when the dataset outgrows a single page.
+ * Field mapping accepts both the read-model names and their official-schema
+ * equivalents so the UI remains resilient while displaying the KSP records.
  */
-import { listRecordCounts, listRecords } from "./ai-client";
-import { getSnapshotCount, getSnapshotRows } from "./record-snapshot";
+import { listRecordBundle, listRecords } from "./ai-client";
 import type { CaseRow } from "@/components/cases/CasesList";
 import type { CrimRow } from "@/components/criminals/CriminalsList";
 import type { FirPoint, DistrictAgg } from "@/components/maps/CrimeMap";
@@ -25,8 +19,7 @@ const str = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) r
 const num = (r: Row, ...k: string[]) => { for (const x of k) if (r[x] != null) { const n = Number(r[x]); if (!Number.isNaN(n)) return n; } return 0; };
 
 async function records(table: string, max: number, refresh = false): Promise<Row[]> {
-  const cloudRows = await listRecords(table, max, refresh);
-  return cloudRows.length ? cloudRows : getSnapshotRows(table, max);
+  return listRecords(table, max, refresh);
 }
 
 export async function fetchCases(refresh = false): Promise<CaseRow[]> {
@@ -52,7 +45,7 @@ export async function fetchCriminals(refresh = false): Promise<CrimRow[]> {
     aliases: str(r, "aliases", "Aliases"),
     age: num(r, "age", "Age"),
     gender: str(r, "gender", "Gender") || "M",
-    status: str(r, "status", "Status") || "at_large",
+    status: str(r, "status", "Status") || "no_arrest_record",
     risk_score: num(r, "risk_score", "RiskScore"),
     crime_category: str(r, "crime_category", "CrimeCategory"),
     home_district: str(r, "home_district", "HomeDistrict", "District"),
@@ -123,16 +116,25 @@ export interface DashboardData {
 
 export interface IntelligenceDimensions {
   victimGender: { label: string; count: number }[];
+  victimAgeBands: { label: string; count: number }[];
+  complainantGender: { label: string; count: number }[];
+  complainantAgeBands: { label: string; count: number }[];
   complainantOccupations: { label: string; count: number }[];
-  entities: { phones: number; vehicles: number; addresses: number; organizations: number; relationships: number };
+  complainantReligions: { label: string; count: number }[];
+  complainantCastes: { label: string; count: number }[];
+  incidentSettings: { label: string; count: number }[];
+  vulnerability: { minors: number; seniors: number; policePersonnel: number };
+  coverage: { label: string; status: "available" | "proxy" | "not-supplied"; source: string }[];
+  entities: { victims: number; complainants: number; relationships: number; stations: number };
 }
 
 export async function fetchIntelligenceDimensions(): Promise<IntelligenceDimensions> {
-  const [victims, complainants, phones, vehicles, addresses, organizations, relationships] = await Promise.all([
-    records("Victims", 5000), records("Complainants", 5000), records("Phones", 5000),
-    records("Vehicles", 5000), records("Addresses", 5000), records("Organizations", 5000),
-    records("Relationships", 5000),
-  ]);
+  const bundle = await listRecordBundle(["Victims", "Complainants", "Relationships", "PoliceStations", "Firs"], true);
+  const victims = bundle.Victims || [];
+  const complainants = bundle.Complainants || [];
+  const relationships = bundle.Relationships || [];
+  const stations = bundle.PoliceStations || [];
+  const firs = bundle.Firs || [];
   const group = (rows: Row[], keys: string[], fallback: string) => {
     const counts = new Map<string, number>();
     for (const row of rows) {
@@ -141,10 +143,43 @@ export async function fetchIntelligenceDimensions(): Promise<IntelligenceDimensi
     }
     return [...counts.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
   };
+  const ageBand = (age: number) => age <= 0 ? "Not stated"
+    : age < 18 ? "Under 18"
+      : age < 25 ? "18-24"
+        : age < 35 ? "25-34"
+          : age < 45 ? "35-44"
+            : age < 60 ? "45-59" : "60+";
+  const withAgeBands = (rows: Row[]) => rows.map((row) => ({ age_band: ageBand(num(row, "age", "AgeYear")) }));
+  const settingRows = firs.map((row) => {
+    const narrative = `${str(row, "location")} ${str(row, "description")}`.toLowerCase();
+    const setting = /\b(rural|village)\b/.test(narrative) ? "Rural narrative"
+      : /\b(urban|city|metro)\b/.test(narrative) ? "Urban narrative"
+        : "Not classified";
+    return { setting };
+  });
   return {
     victimGender: group(victims, ["gender", "Gender"], "Not stated"),
+    victimAgeBands: group(withAgeBands(victims), ["age_band"], "Not stated"),
+    complainantGender: group(complainants, ["gender", "Gender"], "Not stated"),
+    complainantAgeBands: group(withAgeBands(complainants), ["age_band"], "Not stated"),
     complainantOccupations: group(complainants, ["occupation", "Occupation"], "Not stated"),
-    entities: { phones: phones.length, vehicles: vehicles.length, addresses: addresses.length, organizations: organizations.length, relationships: relationships.length },
+    complainantReligions: group(complainants, ["religion", "Religion"], "Not stated"),
+    complainantCastes: group(complainants, ["caste", "Caste"], "Not stated"),
+    incidentSettings: group(settingRows, ["setting"], "Not classified"),
+    vulnerability: {
+      minors: victims.filter((row) => { const age = num(row, "age", "AgeYear"); return age > 0 && age < 18; }).length,
+      seniors: victims.filter((row) => num(row, "age", "AgeYear") >= 60).length,
+      policePersonnel: victims.filter((row) => ["1", "true"].includes(str(row, "police_personnel", "VictimPolice").toLowerCase())).length,
+    },
+    coverage: [
+      { label: "Age and gender", status: "available", source: "Victim, ComplainantDetails" },
+      { label: "Occupation, religion and caste", status: "available", source: "Organizer lookup tables" },
+      { label: "Urban or rural setting", status: "proxy", source: "Case narrative wording" },
+      { label: "Education, migration and income", status: "not-supplied", source: "Not present in the 28-table schema" },
+      { label: "Financial accounts and transactions", status: "not-supplied", source: "Requires an approved source extension" },
+      { label: "Public-event calendar", status: "not-supplied", source: "Required for event attribution" },
+    ],
+    entities: { victims: victims.length, complainants: complainants.length, relationships: relationships.length, stations: stations.length },
   };
 }
 
@@ -197,10 +232,33 @@ function intelligenceConfidence(firs: Row[]): Confidence {
 
 /** Pull the base tables and derive the dashboard stats client-side. */
 export async function fetchDashboard(refresh = true): Promise<DashboardData> {
-  const [firs, cases, criminals, arrests, counts] = await Promise.all([
-    fetchFirs(refresh), fetchCases(refresh), fetchCriminals(refresh), records("Arrests", 1000, refresh),
-    listRecordCounts(["Firs"], refresh),
-  ]);
+  const bundle = await listRecordBundle(["Firs", "Cases", "Criminals", "Arrests"], refresh);
+  const firs = bundle.Firs || [];
+  const cases = (bundle.Cases || []).map((r, i) => ({
+    id: num(r, "id", "ROWID") || i + 1,
+    case_number: str(r, "case_number", "CaseNo", "CrimeNo"),
+    title: str(r, "title", "Title", "BriefFacts"),
+    status: str(r, "status", "CaseStatus") || "registered",
+    priority: str(r, "case_priority", "priority", "Priority") || "medium",
+    district: str(r, "district", "District"),
+    updated_at: str(r, "updated_at", "CREATEDTIME", "MODIFIEDTIME"),
+    crime_type: str(r, "crime_type", "CrimeType", "CrimeHeadName"),
+    officer: str(r, "officer", "Officer", "IO"),
+  })) as CaseRow[];
+  const criminals = (bundle.Criminals || []).map((r, i) => ({
+    id: num(r, "id", "ROWID") || i + 1,
+    name: str(r, "name", "Name", "AccusedName"),
+    aliases: str(r, "aliases", "Aliases"),
+    age: num(r, "age", "Age"),
+    gender: str(r, "gender", "Gender") || "M",
+    status: str(r, "status", "Status") || "no_arrest_record",
+    risk_score: num(r, "risk_score", "RiskScore"),
+    crime_category: str(r, "crime_category", "CrimeCategory"),
+    home_district: str(r, "home_district", "HomeDistrict", "District"),
+    fir_count: num(r, "fir_count", "FirCount"),
+    arrest_count: num(r, "arrest_count", "ArrestCount"),
+  })) as CrimRow[];
+  const arrests = bundle.Arrests || [];
   const active = cases.filter((c) => c.status === "registered" || c.status === "under_investigation");
   const solved = cases.filter((c) => c.status === "charge_sheeted" || c.status === "closed");
   const byMonth = new Map<string, number>();
@@ -218,8 +276,8 @@ export async function fetchDashboard(refresh = true): Promise<DashboardData> {
     stats: {
       activeCases: active.length,
       critical: active.filter((c) => c.priority === "critical").length,
-      totalFirs: Math.max(firs.length, counts.Firs || 0, getSnapshotCount("Firs")),
-      atLarge: criminals.filter((c) => c.status === "at_large").length,
+      totalFirs: firs.length,
+      atLarge: criminals.filter((c) => c.status === "no_arrest_record").length,
       arrests30: (() => {
         const dates = arrests.map((row) => Date.parse(str(row, "arrested_at", "ArrestedAt", "CREATEDTIME"))).filter((value) => !Number.isNaN(value));
         if (!dates.length) return 0;

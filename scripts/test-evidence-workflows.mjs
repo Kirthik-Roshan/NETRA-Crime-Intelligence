@@ -29,6 +29,8 @@ function summary(label, payload) {
   const intelligence = payload.intelligence || payload.correlation?.intelligence;
   console.log(JSON.stringify({
     workflow: label,
+    detected_fir_number: payload.detected_fir_number || null,
+    case_match: payload.case_intelligence?.fir?.fir_number || null,
     plate: payload.plate || null,
     matched: payload.match?.matched ?? null,
     confidence: payload.match?.confidence ?? null,
@@ -41,9 +43,44 @@ function summary(label, payload) {
   }, null, 2));
 }
 
-const plate = imageData("public/demo-evidence/vehicle-ka03ab7161.png");
-const crowd = imageData("public/demo-evidence/crowd-watch-ganesh-nayak.png");
-const reference = imageData("public/demo-evidence/watchlist-ganesh-nayak.png");
+const firScan = imageData("public/demo-evidence/fir-104060011202600001-v2.png");
+const plate = imageData("public/demo-evidence/vehicle-ka03ab7161-v2.png");
+const crowd = imageData("public/demo-evidence/crowd-watch-ganesh-nayak-v2.png");
+const reference = imageData("public/synthetic-profiles/profile-000015.webp");
+const configuredFirId = Number(process.env.EVIDENCE_FIR_ID);
+const firId = Number.isSafeInteger(configuredFirId) && configuredFirId > 0 ? configuredFirId : undefined;
+
+const ocrResult = await call({
+  mode: "ocr",
+  image: firScan.data,
+  name: firScan.name,
+  mime: firScan.mime,
+  language: "eng",
+  description: "Synthetic NETRA FIR-document OCR smoke test.",
+});
+summary("fir-document-ocr", ocrResult);
+if (ocrResult.detected_fir_number !== "104060011202600001") {
+  throw new Error(`FIR OCR mismatch: expected 104060011202600001, received ${ocrResult.detected_fir_number || "none"}`);
+}
+
+const plateOcrResult = await call({
+  mode: "ocr",
+  image: plate.data,
+  name: plate.name,
+  mime: plate.mime,
+  language: "eng",
+  description: "Synthetic NETRA registration OCR layout regression test.",
+});
+summary("registration-ocr", plateOcrResult);
+if (plateOcrResult.plate !== "KA03AB7161") {
+  throw new Error(`Registration OCR mismatch: expected KA03AB7161, received ${plateOcrResult.plate || "none"}`);
+}
+if ((plateOcrResult.correlation?.associated_firs || []).length !== 2) {
+  throw new Error(`Vehicle linkage mismatch: expected 2 FIRs, received ${plateOcrResult.correlation?.associated_firs?.length || 0}`);
+}
+if (/ {2,}/.test(plateOcrResult.text || "")) {
+  throw new Error("Registration OCR output still contains layout spacing.");
+}
 
 const plateResult = await call({
   mode: "plate",
@@ -51,6 +88,7 @@ const plateResult = await call({
   name: plate.name,
   mime: plate.mime,
   language: "eng",
+  ...(firId ? { fir_id: firId } : {}),
   description: "Synthetic NETRA vehicle-stop smoke test.",
 });
 summary("vehicle-stop", plateResult);
@@ -63,7 +101,7 @@ const crowdResult = await call({
   image2: reference.data,
   name2: reference.name,
   mime2: reference.mime,
-  criminal_id: 66,
+  ...(firId ? { fir_id: firId } : {}),
   description: "Synthetic NETRA crowd-watch smoke test.",
 });
 summary("crowd-watch", crowdResult);
